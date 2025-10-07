@@ -379,18 +379,41 @@ const GoalPlanning = () => {
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
-            <span className="text-base font-semibold text-foreground">Required monthly contribution</span>
+            <span className="text-base font-semibold text-foreground">
+              {result.goalMet && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Required monthly contribution'}
+            </span>
             <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
           </div>
+          {result.goalMet && result.excessContribution > 0 && (
+            <div className="bg-green-50 p-3 rounded-md border border-green-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">You can reduce your contribution by</span>
+                <span className="font-semibold text-green-800">{formatCurrency(result.excessContribution)}/month</span>
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                Your current contribution of {formatCurrency(monthlyContribution)} is {formatCurrency(monthlyContribution - result.requiredMonthlyContribution)} more than needed
+              </p>
+            </div>
+          )}
         </div>
 
         {result.goalMet ? (
-          <Alert>
-            <AlertDescription className="text-green-800">
-              🎉 Congratulations! With your current monthly contribution of {formatCurrency(monthlyContribution)},
-              you will achieve your goal comfortably.
-            </AlertDescription>
-          </Alert>
+          result.excessContribution > 0 ? (
+            <Alert>
+              <AlertDescription className="text-green-800">
+                🎉 Excellent! Your current monthly contribution of {formatCurrency(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatCurrency(result.excessContribution)} to {formatCurrency(result.requiredMonthlyContribution)} per month
+                while still achieving your goal comfortably.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <AlertDescription className="text-green-800">
+                🎉 Perfect! With your current monthly contribution of {formatCurrency(monthlyContribution)},
+                you will achieve your goal exactly as planned.
+              </AlertDescription>
+            </Alert>
+          )
         ) : (
           <Alert>
             <AlertDescription className="text-orange-800">
@@ -431,6 +454,7 @@ const GoalPlanning = () => {
           totalAchieved: result.totalAchieved,
           shortfall: result.shortfall,
           requiredMonthlyContribution: result.requiredMonthlyContribution,
+          excessContribution: result.excessContribution,
           goalMet: result.goalMet ? 1 : 0,
           inflationAdjustedGoal: 'inflationAdjustedGoal' in result ? result.inflationAdjustedGoal : goalAmount
         } as Record<string, number>}

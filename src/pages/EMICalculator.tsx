@@ -21,8 +21,12 @@ const EMICalculator = () => {
 
   // Prepayment options
   const [prepaymentEnabled, setPrepaymentEnabled] = useState(false);
+  const [monthsCompleted, setMonthsCompleted] = useState(0); // EMIs already paid
+  const [remainingLoanAmount, setRemainingLoanAmount] = useState(0); // Optional field
   const [prepaymentAmount, setPrepaymentAmount] = useState(100000);
   const [prepaymentOption, setPrepaymentOption] = useState<'reduce_emi' | 'reduce_tenure'>('reduce_tenure');
+  const [prepaymentChargeType, setPrepaymentChargeType] = useState<'fixed' | 'percentage'>('percentage');
+  const [prepaymentChargeValue, setPrepaymentChargeValue] = useState(0); // Fixed amount or percentage
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -33,6 +37,39 @@ const EMICalculator = () => {
   const totalTenureMonths = useMemo(() => {
     return tenureYears * 12 + tenureMonths;
   }, [tenureYears, tenureMonths]);
+
+  // Calculate remaining loan balance after specified months completed
+  const calculateRemainingBalance = (baseResult: {principal: number; tenure: number; emi: number}, monthsCompleted: number): number => {
+    if (monthsCompleted <= 0) {
+      return baseResult.principal;
+    }
+
+    if (monthsCompleted >= baseResult.tenure) {
+      return 0;
+    }
+
+    const monthlyRate = interestRate / (12 * 100);
+    let balance = baseResult.principal;
+
+    // If 0% interest rate, use simple division
+    if (monthlyRate === 0) {
+      const monthlyPrincipalPayment = baseResult.principal / baseResult.tenure;
+      return Math.max(0, baseResult.principal - (monthlyPrincipalPayment * monthsCompleted));
+    }
+
+    // Calculate remaining balance using amortization formula
+    for (let month = 1; month <= monthsCompleted; month++) {
+      const interestPayment = balance * monthlyRate;
+      const principalPayment = baseResult.emi - interestPayment;
+      balance -= principalPayment;
+
+      if (balance <= 0) {
+        return 0;
+      }
+    }
+
+    return Math.max(0, balance);
+  };
 
   const calculateEMI = () => {
     const principal = loanAmount;
@@ -63,16 +100,37 @@ const EMICalculator = () => {
   };
 
   const calculatePrepayment = () => {
-    if (!prepaymentEnabled || prepaymentAmount <= 0) {
+    if (!prepaymentEnabled) {
       return calculateEMI();
     }
 
     const baseResult = calculateEMI();
     const monthlyRate = interestRate / (12 * 100);
 
+    // Calculate the actual remaining balance based on months completed
+    const currentPrincipal = calculateRemainingBalance(baseResult, monthsCompleted);
+
+    // Handle zero prepayment amount
+    if (prepaymentAmount <= 0) {
+      return {
+        ...baseResult,
+        interestSaved: 0,
+        prepaymentAmount: 0,
+        prepaymentCharges: 0
+      };
+    }
+
+    // Calculate prepayment charges
+    const prepaymentCharges = prepaymentChargeType === 'fixed'
+      ? prepaymentChargeValue
+      : (prepaymentAmount * prepaymentChargeValue) / 100;
+
+    // Net prepayment amount after charges
+    const netPrepaymentAmount = prepaymentAmount - prepaymentCharges;
+
     if (prepaymentOption === 'reduce_emi') {
       // Reduce EMI, keep tenure same
-      const newPrincipal = baseResult.principal - prepaymentAmount;
+      const newPrincipal = currentPrincipal - netPrepaymentAmount;
       const newEmi = newPrincipal * monthlyRate * Math.pow(1 + monthlyRate, baseResult.tenure) /
                      (Math.pow(1 + monthlyRate, baseResult.tenure) - 1);
 
@@ -87,22 +145,26 @@ const EMICalculator = () => {
         totalPayment: Math.round(newTotalPayment),
         principal: Math.round(newPrincipal),
         interestSaved: Math.round(interestSaved),
-        prepaymentAmount
+        prepaymentAmount,
+        prepaymentCharges: Math.round(prepaymentCharges),
+        netPrepaymentAmount: Math.round(netPrepaymentAmount)
       };
     } else {
       // Reduce tenure, keep EMI same
       const targetEmi = baseResult.emi;
-      const remainingPrincipal = baseResult.principal - prepaymentAmount;
+      const remainingPrincipal = currentPrincipal - netPrepaymentAmount;
       let monthsNeeded = 0;
 
       if (monthlyRate === 0) {
         monthsNeeded = Math.ceil(remainingPrincipal / targetEmi);
       } else {
-        // Use EMI formula rearranged to solve for months
-        monthsNeeded = Math.ceil(
-          Math.log(targetEmi / (targetEmi - remainingPrincipal * monthlyRate)) /
-          Math.log(1 + monthlyRate)
-        );
+        // Use EMI formula rearranged to solve for months with improved accuracy
+        const factor = targetEmi / (targetEmi - remainingPrincipal * monthlyRate);
+        if (factor <= 1) {
+          monthsNeeded = 0; // Already paid off
+        } else {
+          monthsNeeded = Math.ceil(Math.log(factor) / Math.log(1 + monthlyRate));
+        }
       }
 
       const newTenureYears = Math.floor(monthsNeeded / 12);
@@ -122,7 +184,9 @@ const EMICalculator = () => {
         tenureMonths: newTenureMonths,
         interestSaved: Math.round(interestSaved),
         tenureReduced: Math.round(tenureReduced),
-        prepaymentAmount
+        prepaymentAmount,
+        prepaymentCharges: Math.round(prepaymentCharges),
+        netPrepaymentAmount: Math.round(netPrepaymentAmount)
       };
     }
   };
@@ -139,6 +203,8 @@ const EMICalculator = () => {
   type PrepaymentResult = BaseResult & {
     interestSaved: number;
     prepaymentAmount: number;
+    prepaymentCharges?: number;
+    netPrepaymentAmount?: number;
     tenureReduced?: number;
     tenureYears?: number;
     tenureMonths?: number;
@@ -147,7 +213,8 @@ const EMICalculator = () => {
   const result = useMemo((): BaseResult | PrepaymentResult => {
     return prepaymentEnabled ? calculatePrepayment() : calculateEMI();
   }, [loanAmount, interestRate, totalTenureMonths, processingFee, prepaymentEnabled,
-      prepaymentAmount, prepaymentOption]);
+      monthsCompleted, remainingLoanAmount, prepaymentAmount, prepaymentOption,
+      prepaymentChargeType, prepaymentChargeValue]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -160,8 +227,12 @@ const EMICalculator = () => {
     setTenureMonths(0);
     setProcessingFee(0);
     setPrepaymentEnabled(false);
+    setMonthsCompleted(0);
+    setRemainingLoanAmount(0);
     setPrepaymentAmount(100000);
     setPrepaymentOption('reduce_tenure');
+    setPrepaymentChargeType('percentage');
+    setPrepaymentChargeValue(0);
     setIsCalculated(false);
   };
 
@@ -171,14 +242,22 @@ const EMICalculator = () => {
     let balance = result.principal;
     const monthlyRate = interestRate / (12 * 100);
 
-    for (let month = 1; month <= Math.min(12, result.tenure); month++) {
+    // For prepayment scenarios, use the correct starting balance
+    if (prepaymentEnabled && monthsCompleted > 0 && 'principal' in result) {
+      balance = calculateRemainingBalance(result, monthsCompleted);
+    }
+
+    const emiToUse = result.emi;
+    const tenureToUse = result.tenure;
+
+    for (let month = 1; month <= Math.min(12, tenureToUse); month++) {
       const interestPayment = balance * monthlyRate;
-      const principalPayment = result.emi - interestPayment;
+      const principalPayment = emiToUse - interestPayment;
       balance -= principalPayment;
 
       schedule.push({
         month,
-        emi: result.emi,
+        emi: emiToUse,
         principalPayment: Math.round(principalPayment),
         interestPayment: Math.round(interestPayment),
         balance: Math.round(Math.max(0, balance))
@@ -189,6 +268,15 @@ const EMICalculator = () => {
   };
 
   const amortizationSchedule = generateAmortizationSchedule();
+
+  // Calculate and display the actual remaining balance for user reference
+  const actualRemainingBalance = useMemo(() => {
+    if (!prepaymentEnabled || monthsCompleted <= 0) {
+      return loanAmount;
+    }
+    const baseResult = calculateEMI();
+    return calculateRemainingBalance(baseResult, monthsCompleted);
+  }, [loanAmount, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -296,14 +384,89 @@ const EMICalculator = () => {
           {prepaymentEnabled && (
             <div className="space-y-4">
               <CalculatorInput
+                label="Months completed"
+                value={monthsCompleted}
+                onChange={setMonthsCompleted}
+                min={0}
+                max={totalTenureMonths}
+                step={1}
+                suffix="EMIs paid"
+                placeholder="0"
+              />
+
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-700 mb-1">Calculated Remaining Balance:</p>
+                <p className="text-sm font-semibold text-blue-800">
+                  {monthsCompleted > 0 ? formatCurrency(actualRemainingBalance) : formatCurrency(loanAmount)}
+                </p>
+                <p className="text-xs text-blue-600">
+                  {monthsCompleted > 0 ? `After ${monthsCompleted} EMI payments` : 'Original loan amount'}
+                </p>
+              </div>
+
+              <CalculatorInput
+                label="Override Remaining Amount (optional)"
+                value={remainingLoanAmount}
+                onChange={setRemainingLoanAmount}
+                min={0}
+                max={loanAmount}
+                step={10000}
+                prefix="₹"
+                placeholder="Leave empty to use calculated balance"
+              />
+
+              <CalculatorInput
                 label="Prepayment amount"
                 value={prepaymentAmount}
                 onChange={setPrepaymentAmount}
-                min={10000}
-                max={result.principal}
+                min={0}
+                max={calculateRemainingBalance(result, monthsCompleted)}
                 step={10000}
                 prefix="₹"
+                placeholder="100000"
               />
+
+              <div className="grid grid-cols-2 gap-3">
+                <CalculatorInput
+                  label="Prepayment charges"
+                  value={prepaymentChargeValue}
+                  onChange={setPrepaymentChargeValue}
+                  min={0}
+                  max={prepaymentChargeType === 'percentage' ? 10 : prepaymentAmount}
+                  step={prepaymentChargeType === 'percentage' ? 0.1 : 1000}
+                  prefix={prepaymentChargeType === 'fixed' ? '₹' : ''}
+                  suffix={prepaymentChargeType === 'percentage' ? '%' : ''}
+                  placeholder={prepaymentChargeType === 'fixed' ? '5000' : '2'}
+                />
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-foreground">Charge Type</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPrepaymentChargeType('fixed')}
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+                        prepaymentChargeType === 'fixed'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                      }`}
+                    >
+                      Fixed (₹)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrepaymentChargeType('percentage')}
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+                        prepaymentChargeType === 'percentage'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                      }`}
+                    >
+                      Percentage (%)
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Choose prepayment option:</Label>
@@ -426,40 +589,64 @@ const EMICalculator = () => {
 
         {/* Prepayment Results */}
         {prepaymentEnabled && 'interestSaved' in result && (
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h4 className="font-semibold text-green-800 mb-2">🎉 Prepayment Benefits</h4>
+          <div className={`p-4 rounded-lg border ${result.prepaymentAmount > 0 ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+            <h4 className={`font-semibold mb-3 ${result.prepaymentAmount > 0 ? 'text-green-800' : 'text-blue-800'}`}>
+              {result.prepaymentAmount > 0 ? '🎉 Prepayment Benefits' : '💡 Prepayment Analysis'}
+            </h4>
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">Interest saved</span>
-                <span className="font-semibold text-green-800">{formatCurrency(result.interestSaved)}</span>
-              </div>
-              {prepaymentOption === 'reduce_emi' ? (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700">New EMI</span>
-                  <span className="font-semibold text-green-800">{formatCurrency(result.emi)}</span>
+              {result.prepaymentAmount > 0 && result.prepaymentCharges > 0 && (
+                <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-yellow-700">Prepayment charges</span>
+                    <span className="font-semibold text-yellow-800">{formatCurrency(result.prepaymentCharges)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-yellow-700">Net prepayment amount</span>
+                    <span className="font-semibold text-yellow-800">{formatCurrency(result.netPrepaymentAmount)}</span>
+                  </div>
                 </div>
+              )}
+
+              <div className="flex justify-between items-center">
+                <span className={`text-sm ${result.prepaymentAmount > 0 ? 'text-green-700' : 'text-blue-700'}`}>Interest saved</span>
+                <span className={`font-semibold ${result.prepaymentAmount > 0 ? 'text-green-800' : 'text-blue-800'}`}>
+                  {formatCurrency(result.interestSaved)}
+                </span>
+              </div>
+
+              {result.prepaymentAmount > 0 ? (
+                prepaymentOption === 'reduce_emi' ? (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-green-700">New EMI</span>
+                    <span className="font-semibold text-green-800">{formatCurrency(result.emi)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700">Tenure reduced by</span>
+                      <span className="font-semibold text-green-800">
+                        {result.tenureReduced ? `${Math.ceil(result.tenureReduced / 12)} years ${result.tenureReduced % 12} months` : '0 months'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700">New tenure</span>
+                      <span className="font-semibold text-green-800">
+                        {result.tenureYears ? `${result.tenureYears}y ${result.tenureMonths}m` : `${Math.ceil(result.tenure / 12)}y ${result.tenure % 12}m`}
+                      </span>
+                    </div>
+                  </>
+                )
               ) : (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-green-700">Tenure reduced by</span>
-                    <span className="font-semibold text-green-800">
-                      {result.tenureReduced ? `${Math.ceil(result.tenureReduced / 12)} years ${result.tenureReduced % 12} months` : '0 months'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-green-700">New tenure</span>
-                    <span className="font-semibold text-green-800">
-                      {result.tenureYears ? `${result.tenureYears}y ${result.tenureMonths}m` : `${Math.ceil(result.tenure / 12)}y ${result.tenure % 12}m`}
-                    </span>
-                  </div>
-                </>
+                <div className="text-sm text-blue-700 italic">
+                  Enter prepayment amount above ₹0 to see benefits
+                </div>
               )}
             </div>
           </div>
         )}
 
         {/* Financial Recommendation */}
-        {prepaymentEnabled && 'interestSaved' in result && (
+        {prepaymentEnabled && 'interestSaved' in result && result.prepaymentAmount > 0 && (
           <Alert>
             <AlertDescription className="text-green-800">
               💡 <strong>Recommendation:</strong> {prepaymentOption === 'reduce_tenure'
@@ -485,8 +672,32 @@ const EMICalculator = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="emi"
-        inputs={{ loanAmount, interestRate, tenureYears, processingFee }}
-        results={result}
+        inputs={{
+          loanAmount,
+          interestRate,
+          tenureYears,
+          tenureMonths,
+          processingFee,
+          monthsCompleted,
+          remainingLoanAmount,
+          prepaymentAmount,
+          prepaymentOption,
+          prepaymentChargeType,
+          prepaymentChargeValue
+        }}
+        results={{
+          emi: result.emi,
+          totalInterest: result.totalInterest,
+          totalPayment: result.totalPayment,
+          principal: result.principal,
+          ...(prepaymentEnabled && 'interestSaved' in result && {
+            interestSaved: result.interestSaved,
+            prepaymentAmount: result.prepaymentAmount,
+            prepaymentCharges: result.prepaymentCharges || 0,
+            netPrepaymentAmount: result.netPrepaymentAmount || 0,
+            tenureReduced: result.tenureReduced || 0
+          })
+        }}
       />
     </div>
   );

@@ -56,7 +56,8 @@ const History = () => {
 
   const formatResultValue = (key: string, value: number) => {
     // Format currency values
-    if (key.toLowerCase().includes('amount') || key.toLowerCase().includes('principal') || key.toLowerCase().includes('total') || key.toLowerCase().includes('invested') || key.toLowerCase().includes('returns') || key.toLowerCase().includes('interest') || key.toLowerCase().includes('maturity') || key.toLowerCase().includes('value') || key.toLowerCase().includes('future') || key.toLowerCase().includes('shortfall') || key.toLowerCase().includes('required') || key.toLowerCase().includes('achieved') || key.toLowerCase().includes('savings') || key.toLowerCase().includes('contributions')) {
+    const currencyKeys = ['amount', 'principal', 'total', 'invested', 'returns', 'interest', 'maturity', 'value', 'future', 'shortfall', 'required', 'achieved', 'savings', 'contributions', 'withdrawn', 'balance', 'withdrawal'];
+    if (currencyKeys.some(currencyKey => key.toLowerCase().includes(currencyKey))) {
       return formatCurrency(value);
     }
     // Format percentage values
@@ -169,11 +170,18 @@ const History = () => {
                     <div className="space-y-1">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calculation Results</h4>
                       <div className="space-y-2">
-                        {Array.from({ length: Math.ceil(Object.keys(item.results).length / 3) }, (_, rowIndex) => (
-                          <div key={rowIndex} className="grid grid-cols-3 gap-2">
-                            {Object.entries(item.results)
-                              .slice(rowIndex * 3, (rowIndex + 1) * 3)
-                              .map(([key, value]) => (
+                        {(() => {
+                          // Hide inflation adjusted goal field for Goal Planning in history
+                          const filteredResults = Object.entries(item.results).filter(([key]) => {
+                            if (item.type === 'goalplanning' && key.toLowerCase().includes('inflationadjustedgoal')) {
+                              return false;
+                            }
+                            return true;
+                          });
+
+                          return filteredResults.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {filteredResults.slice(0, 6).map(([key, value]) => (
                                 <div key={key} className="bg-gradient-to-r from-primary/5 to-primary/10 p-2 rounded-md border border-primary/20">
                                   <div className="text-xs text-muted-foreground font-medium mb-0.5">
                                     {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
@@ -189,8 +197,9 @@ const History = () => {
                                   </div>
                                 </div>
                               ))}
-                          </div>
-                        ))}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </div>

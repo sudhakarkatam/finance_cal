@@ -195,10 +195,18 @@ const CalculatorHistory = ({ calculatorType, title = "History" }: CalculatorHist
                       <div className="space-y-1">
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calculation Results</h4>
                         <div className="space-y-2">
-                          {Array.from({ length: Math.ceil(Object.keys(item.results).length / 3) }, (_, rowIndex) => (
-                            <div key={rowIndex} className="grid grid-cols-3 gap-2">
-                              {Object.entries(item.results)
-                                .slice(rowIndex * 3, (rowIndex + 1) * 3)
+                          {(() => {
+                            const filteredResults = Object.entries(item.results).filter(([key]) => {
+                              // Hide inflation adjusted goal field for Goal Planning in history
+                              if (item.type === 'goalplanning' && key.toLowerCase().includes('inflationadjustedgoal')) {
+                                return false;
+                              }
+                              return true;
+                            });
+                            return Array.from({ length: Math.ceil(filteredResults.length / 3) }, (_, rowIndex) => (
+                              <div key={rowIndex} className="grid grid-cols-3 gap-2">
+                                {filteredResults
+                                  .slice(rowIndex * 3, (rowIndex + 1) * 3)
                                 .map(([key, value]) => (
                                   <div key={key} className="bg-gradient-to-r from-primary/5 to-primary/10 p-2 rounded-md border border-primary/20">
                                     <div className="text-xs text-muted-foreground font-medium mb-0.5">
@@ -216,8 +224,9 @@ const CalculatorHistory = ({ calculatorType, title = "History" }: CalculatorHist
                                   </div>
                                 ))}
                             </div>
-                          ))}
-                        </div>
+                          ));
+                        })()}
+                      </div>
                       </div>
                     </div>
                   </div>

@@ -62,24 +62,84 @@ export const calculateSWP = (
   investmentAmount: number,
   withdrawalPerMonth: number,
   expectedReturn: number,
-  years: number
+  years?: number,
+  inflationRate: number = 0
 ) => {
-  const months = years * 12;
   const monthlyRate = expectedReturn / (12 * 100);
+  const monthlyInflationRate = inflationRate / (12 * 100);
 
   let balance = investmentAmount;
   let totalWithdrawn = 0;
+  let totalInterest = 0;
+  let months = 0;
+  let depletionMonth: number | null = null;
+  const amortizationData: Array<{
+    month: number;
+    startingBalance: number;
+    interestEarned: number;
+    withdrawal: number;
+    endingBalance: number;
+  }> = [];
 
-  for (let i = 0; i < months; i++) {
-    balance = balance * (1 + monthlyRate) - withdrawalPerMonth;
+  // If years is provided, use fixed period; otherwise, run until depletion
+  const maxMonths = years ? years * 12 : 1000; // Safety limit for infinite case
+
+  for (let i = 0; i < maxMonths; i++) {
+    months = i + 1;
+    const startingBalance = balance;
+    const interestEarned = balance * monthlyRate;
+    const endingBalance = balance * (1 + monthlyRate) - withdrawalPerMonth;
+
+    // Track data for amortization table
+    amortizationData.push({
+      month: months,
+      startingBalance: Math.round(startingBalance),
+      interestEarned: Math.round(interestEarned),
+      withdrawal: withdrawalPerMonth,
+      endingBalance: Math.round(endingBalance)
+    });
+
+    totalInterest += interestEarned;
     totalWithdrawn += withdrawalPerMonth;
-    if (balance <= 0) break;
+    balance = endingBalance;
+
+    // Check if balance becomes negative
+    if (balance <= 0 && !depletionMonth) {
+      depletionMonth = months;
+      if (!years) break; // Stop if no fixed period
+    }
+
+    if (years && months >= years * 12) break;
+  }
+
+  // Calculate inflation-adjusted final value
+  const inflationAdjustedFinalValue = years && inflationRate > 0
+    ? balance / Math.pow(1 + inflationRate / 100, years)
+    : balance;
+
+  // Calculate sustainable withdrawal if period is given
+  let sustainableWithdrawal = 0;
+  if (years) {
+    const monthsInPeriod = years * 12;
+    if (monthlyRate > 0) {
+      // PMT formula for loan payment (rearranged for withdrawal)
+      sustainableWithdrawal = investmentAmount * monthlyRate * Math.pow(1 + monthlyRate, monthsInPeriod) /
+                             (Math.pow(1 + monthlyRate, monthsInPeriod) - 1);
+    } else {
+      sustainableWithdrawal = investmentAmount / monthsInPeriod;
+    }
   }
 
   return {
     invested: Math.round(investmentAmount),
     totalWithdrawn: Math.round(totalWithdrawn),
-    finalBalance: Math.round(Math.max(0, balance))
+    totalInterest: Math.round(totalInterest),
+    finalBalance: Math.round(balance),
+    inflationAdjustedFinalValue: Math.round(inflationAdjustedFinalValue),
+    depletionMonth,
+    sustainableWithdrawal: Math.round(sustainableWithdrawal),
+    amortizationData: amortizationData.slice(0, 24), // First 24 months by default
+    fullAmortizationData: amortizationData
   };
 };
 
@@ -143,6 +203,7 @@ export const calculateGoalPlanning = (
 
   // Calculate required monthly contribution to reach inflation-adjusted goal
   let requiredMonthlyContribution = monthlyContribution;
+  let excessContribution = 0;
 
   if (!goalMet) {
     // Use the SIP formula to calculate required monthly investment
@@ -157,6 +218,56 @@ export const calculateGoalPlanning = (
     if (remainingGoal > 0 && futureValueFactor > 0) {
       requiredMonthlyContribution = remainingGoal / futureValueFactor;
     }
+  } else {
+    // User is contributing more than needed - calculate how much they can reduce
+    const excessCorpus = totalAchieved - inflationAdjustedGoal;
+
+    // Calculate the excess contribution by working backwards
+    // This is an approximation since step-up makes it complex
+    const averageMonthlyRate = expectedReturn / (12 * 100);
+    if (averageMonthlyRate > 0) {
+      // Approximate excess contribution (this is a simplified calculation)
+      excessContribution = excessCorpus / (Math.pow(1 + averageMonthlyRate, targetYears) - 1) / averageMonthlyRate / 12;
+    }
+
+    // More precise calculation for excess contribution
+    let testContribution = monthlyContribution;
+    let minContribution = 0;
+    let maxContribution = monthlyContribution;
+
+    // Binary search to find the minimum contribution needed
+    for (let i = 0; i < 20; i++) { // Max 20 iterations for precision
+      const midContribution = (minContribution + maxContribution) / 2;
+
+      // Calculate future contributions with step-up for test amount
+      let testFutureContributions = 0;
+      let currentTestContrib = midContribution;
+
+      for (let year = 1; year <= targetYears; year++) {
+        const yearlyContribution = currentTestContrib * 12;
+        const yearsRemaining = targetYears - year;
+        const futureValueOfYearContribution = yearlyContribution *
+          Math.pow(1 + expectedReturn / 100, yearsRemaining);
+
+        testFutureContributions += futureValueOfYearContribution;
+
+        // Apply step-up for next year only (no inflation on contributions)
+        if (stepUpPercentage > 0 && year < targetYears) {
+          currentTestContrib *= (1 + stepUpPercentage / 100);
+        }
+      }
+
+      const testTotalAchieved = futureSavings + testFutureContributions;
+
+      if (testTotalAchieved >= inflationAdjustedGoal) {
+        maxContribution = midContribution;
+        excessContribution = monthlyContribution - midContribution;
+      } else {
+        minContribution = midContribution;
+      }
+    }
+
+    requiredMonthlyContribution = maxContribution;
   }
 
   return {
@@ -165,6 +276,7 @@ export const calculateGoalPlanning = (
     totalAchieved: Math.round(totalAchieved),
     shortfall: Math.round(shortfall),
     requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+    excessContribution: Math.round(Math.max(excessContribution, 0)),
     goalMet,
     inflationAdjustedGoal: Math.round(inflationAdjustedGoal)
   };

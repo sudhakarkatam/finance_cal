@@ -96,14 +96,61 @@ const EducationPlanner = () => {
     const shortfall = Math.max(0, totalRequiredCorpus - totalCorpusAtEducation);
     const isAchievable = totalCorpusAtEducation >= totalRequiredCorpus;
 
-    // Calculate required monthly contribution if there's a shortfall
+    // Calculate required monthly contribution
     let requiredMonthlyContribution = monthlyContribution;
+    let excessContribution = 0;
+
     if (shortfall > 0) {
+      // User needs to contribute more
       const targetCorpus = totalRequiredCorpus - futureSavings;
       if (monthlyRate > 0 && targetCorpus > 0) {
         requiredMonthlyContribution = targetCorpus * monthlyRate /
           (Math.pow(1 + monthlyRate, months) - 1);
       }
+    } else if (isAchievable && monthlyContribution > 0) {
+      // User is contributing more than needed - calculate how much they can reduce
+      const excessCorpus = totalCorpusAtEducation - totalRequiredCorpus;
+
+      // Calculate the excess contribution by working backwards
+      // This is an approximation since step-up makes it complex
+      const averageMonthlyRate = expectedReturn / (12 * 100);
+      if (averageMonthlyRate > 0) {
+        // Approximate excess contribution (this is a simplified calculation)
+        excessContribution = excessCorpus / (Math.pow(1 + averageMonthlyRate, yearsToEducation) - 1) / averageMonthlyRate / 12;
+      }
+
+      // More precise calculation for excess contribution
+      let testContribution = monthlyContribution;
+      let minContribution = 0;
+      let maxContribution = monthlyContribution;
+
+      // Binary search to find the minimum contribution needed
+      for (let i = 0; i < 20; i++) { // Max 20 iterations for precision
+        const midContribution = (minContribution + maxContribution) / 2;
+        let testFutureContributions = 0;
+        let currentTestContrib = midContribution;
+
+        for (let month = 1; month <= months; month++) {
+          const monthsRemaining = months - month;
+          const monthFutureValue = currentTestContrib * Math.pow(1 + monthlyRate, monthsRemaining);
+          testFutureContributions += monthFutureValue;
+
+          if (stepUpEnabled && month % 12 === 0 && month < months) {
+            currentTestContrib *= (1 + stepUpPercentage / 100);
+          }
+        }
+
+        const testTotalCorpus = futureSavings + testFutureContributions;
+
+        if (testTotalCorpus >= totalRequiredCorpus) {
+          maxContribution = midContribution;
+          excessContribution = monthlyContribution - midContribution;
+        } else {
+          minContribution = midContribution;
+        }
+      }
+
+      requiredMonthlyContribution = maxContribution;
     }
 
     return {
@@ -112,6 +159,7 @@ const EducationPlanner = () => {
       totalReturns: Math.round(totalCorpusAtEducation - futureContributions - futureSavings + currentSavings),
       shortfall: Math.round(shortfall),
       requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+      excessContribution: Math.round(Math.max(excessContribution, 0)),
       isAchievable,
       yearsToEducation,
       futureEducationCost: Math.round(futureEducationCost),
@@ -428,18 +476,41 @@ const EducationPlanner = () => {
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
-            <span className="text-base font-semibold text-foreground">Required monthly contribution</span>
+            <span className="text-base font-semibold text-foreground">
+              {result.isAchievable && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Required monthly contribution'}
+            </span>
             <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
           </div>
+          {result.isAchievable && result.excessContribution > 0 && (
+            <div className="bg-green-50 p-3 rounded-md border border-green-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">You can reduce your contribution by</span>
+                <span className="font-semibold text-green-800">{formatCurrency(result.excessContribution)}/month</span>
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                Your current contribution of {formatCurrency(monthlyContribution)} is {formatCurrency(monthlyContribution - result.requiredMonthlyContribution)} more than needed
+              </p>
+            </div>
+          )}
         </div>
 
         {result.isAchievable ? (
-          <Alert>
-            <AlertDescription className="text-green-800">
-              🎓 Excellent! With your current monthly contribution of {formatCurrency(monthlyContribution)},
-              you will be able to fund your child's {currentEducationConfig.name.toLowerCase()} comfortably.
-            </AlertDescription>
-          </Alert>
+          result.excessContribution > 0 ? (
+            <Alert>
+              <AlertDescription className="text-green-800">
+                🎓 Excellent! Your current monthly contribution of {formatCurrency(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatCurrency(result.excessContribution)} to {formatCurrency(result.requiredMonthlyContribution)} per month
+                while still funding your child's {currentEducationConfig.name.toLowerCase()} comfortably.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <AlertDescription className="text-green-800">
+                🎓 Perfect! With your current monthly contribution of {formatCurrency(monthlyContribution)},
+                you will be able to fund your child's {currentEducationConfig.name.toLowerCase()} exactly as planned.
+              </AlertDescription>
+            </Alert>
+          )
         ) : (
           <Alert>
             <AlertDescription className="text-orange-800">
