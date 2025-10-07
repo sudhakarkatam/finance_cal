@@ -265,13 +265,14 @@ const HomeLoanCalculator = () => {
                 prefix="₹"
               />
               <CalculatorInput
-                label="Interest rate (p.a)"
+                label="Interest Rate (p.a)"
                 value={interestRate}
                 onChange={setInterestRate}
-                min={6}
+                min={0}
                 max={15}
                 step={0.1}
                 suffix="%"
+                placeholder="8.5"
               />
               <CalculatorInput
                 label="Remaining tenure (years)"

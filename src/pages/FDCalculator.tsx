@@ -88,13 +88,14 @@ const FDCalculator = () => {
         />
 
         <CalculatorInput
-          label="Interest rate (p.a)"
+          label="Interest Rate (p.a)"
           value={interestRate}
           onChange={setInterestRate}
-          min={3}
+          min={0}
           max={12}
           step={0.1}
           suffix="%"
+          placeholder="7.0"
         />
 
         <CalculatorInput

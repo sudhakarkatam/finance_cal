@@ -91,7 +91,7 @@ const LoanComparison = () => {
             />
 
             <CalculatorInput
-              label="Interest"
+              label="Interest Rate (p.a)"
               value={rate1}
               onChange={setRate1}
               min={0}
@@ -129,7 +129,7 @@ const LoanComparison = () => {
             />
 
             <CalculatorInput
-              label="Interest"
+              label="Interest Rate (p.a)"
               value={rate2}
               onChange={setRate2}
               min={0}

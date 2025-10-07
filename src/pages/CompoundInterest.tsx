@@ -77,13 +77,14 @@ const CompoundInterest = () => {
         />
 
         <CalculatorInput
-          label="Rate of interest (p.a)"
+          label="Rate of Interest (p.a)"
           value={rate}
           onChange={setRate}
-          min={1}
+          min={0}
           max={30}
           step={0.1}
           suffix="%"
+          placeholder="8.0"
         />
 
         <DateRangeInput

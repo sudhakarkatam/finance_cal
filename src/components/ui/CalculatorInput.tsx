@@ -41,8 +41,8 @@ const CalculatorInput = ({
       return;
     }
 
-    // Allow partial numbers while typing
-    if (/^\d*$/.test(inputValue)) {
+    // Allow partial numbers while typing (including decimals for interest rates)
+    if (/^\d*\.?\d*$/.test(inputValue)) {
       setDisplayValue(inputValue);
 
       // Only update parent state if we have a valid number

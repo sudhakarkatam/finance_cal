@@ -73,13 +73,14 @@ const RDCalculator = () => {
         />
 
         <CalculatorInput
-          label="Interest rate (p.a)"
+          label="Interest Rate (p.a)"
           value={interestRate}
           onChange={setInterestRate}
-          min={3}
+          min={0}
           max={10}
           step={0.1}
           suffix="%"
+          placeholder="6.5"
         />
 
         <CalculatorInput
