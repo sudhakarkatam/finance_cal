@@ -1,0 +1,474 @@
+import { useState, useMemo } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Save, RotateCcw, Calculator, Users, PiggyBank, TrendingUp } from 'lucide-react';
+import CalculatorInput from '@/components/ui/CalculatorInput';
+import SaveDialog from '@/components/SaveDialog';
+import { formatCurrency } from '@/lib/calculations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import ResultChart from '@/components/ui/ResultChart';
+
+const RetirementPlanner = () => {
+  // Basic inputs
+  const [currentAge, setCurrentAge] = useState(30);
+  const [retirementAge, setRetirementAge] = useState(60);
+  const [currentSavings, setCurrentSavings] = useState(500000);
+  const [monthlyContribution, setMonthlyContribution] = useState(25000);
+  const [expectedReturn, setExpectedReturn] = useState(10);
+
+  // Advanced features
+  const [inflationEnabled, setInflationEnabled] = useState(true);
+  const [inflationRate, setInflationRate] = useState(6);
+  const [pensionEnabled, setPensionEnabled] = useState(false);
+  const [monthlyPension, setMonthlyPension] = useState(50000);
+  const [lifeExpectancy, setLifeExpectancy] = useState(80);
+  const [lifestyleExpenses, setLifestyleExpenses] = useState(100000);
+
+  // UI state
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
+  const [isCalculated, setIsCalculated] = useState(false);
+
+  const calculateRetirement = () => {
+    const yearsToRetirement = retirementAge - currentAge;
+    const yearsInRetirement = lifeExpectancy - retirementAge;
+
+    if (yearsToRetirement <= 0) {
+      return {
+        corpusAtRetirement: currentSavings,
+        totalContributions: 0,
+        totalReturns: 0,
+        shortfall: 0,
+        requiredMonthlyContribution: 0,
+        isAchievable: true
+      };
+    }
+
+    // Future value of current savings
+    const futureSavings = currentSavings * Math.pow(1 + expectedReturn / 100, yearsToRetirement);
+
+    // Future value of monthly contributions
+    const months = yearsToRetirement * 12;
+    const monthlyRate = expectedReturn / (12 * 100);
+
+    let futureContributions = 0;
+    if (monthlyRate === 0) {
+      futureContributions = monthlyContribution * months;
+    } else {
+      futureContributions = monthlyContribution *
+        (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
+    }
+
+    const corpusAtRetirement = futureSavings + futureContributions;
+
+    // Calculate required corpus for retirement years
+    let requiredCorpus = 0;
+    if (pensionEnabled) {
+      // If pension is available, calculate additional corpus needed
+      const monthlyPensionNeeded = lifestyleExpenses - monthlyPension;
+      if (monthlyPensionNeeded > 0) {
+        const retirementMonths = yearsInRetirement * 12;
+        const pensionRate = inflationEnabled ? (expectedReturn - inflationRate) / 100 : expectedReturn / 100;
+        const pensionMonthlyRate = pensionRate / 12;
+
+        if (pensionMonthlyRate === 0) {
+          requiredCorpus = monthlyPensionNeeded * retirementMonths;
+        } else {
+          requiredCorpus = monthlyPensionNeeded *
+            (1 - Math.pow(1 + pensionMonthlyRate, -retirementMonths)) / pensionMonthlyRate;
+        }
+      }
+    } else {
+      // No pension, need full corpus for expenses
+      const retirementMonths = yearsInRetirement * 12;
+      const expenseRate = inflationEnabled ? (expectedReturn - inflationRate) / 100 : expectedReturn / 100;
+      const expenseMonthlyRate = expenseRate / 12;
+
+      if (expenseMonthlyRate === 0) {
+        requiredCorpus = lifestyleExpenses * retirementMonths;
+      } else {
+        requiredCorpus = lifestyleExpenses *
+          (1 - Math.pow(1 + expenseMonthlyRate, -retirementMonths)) / expenseMonthlyRate;
+      }
+    }
+
+    const shortfall = Math.max(0, requiredCorpus - corpusAtRetirement);
+    const isAchievable = corpusAtRetirement >= requiredCorpus;
+
+    // Calculate required monthly contribution if there's a shortfall
+    let requiredMonthlyContribution = monthlyContribution;
+    if (shortfall > 0) {
+      const targetCorpus = requiredCorpus - futureSavings;
+      if (monthlyRate > 0 && targetCorpus > 0) {
+        requiredMonthlyContribution = targetCorpus * monthlyRate /
+          (Math.pow(1 + monthlyRate, months) - 1);
+      }
+    }
+
+    return {
+      corpusAtRetirement: Math.round(corpusAtRetirement),
+      totalContributions: Math.round(futureContributions),
+      totalReturns: Math.round(corpusAtRetirement - futureContributions - futureSavings + currentSavings),
+      shortfall: Math.round(shortfall),
+      requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+      requiredCorpus: Math.round(requiredCorpus),
+      isAchievable,
+      yearsToRetirement,
+      yearsInRetirement
+    };
+  };
+
+  const result = useMemo(() => {
+    return calculateRetirement();
+  }, [currentAge, retirementAge, currentSavings, monthlyContribution, expectedReturn,
+      inflationEnabled, inflationRate, pensionEnabled, monthlyPension, lifeExpectancy, lifestyleExpenses]);
+
+  const handleCalculate = () => {
+    setIsCalculated(true);
+  };
+
+  const handleReset = () => {
+    setCurrentAge(30);
+    setRetirementAge(60);
+    setCurrentSavings(500000);
+    setMonthlyContribution(25000);
+    setExpectedReturn(10);
+    setInflationEnabled(true);
+    setInflationRate(6);
+    setPensionEnabled(false);
+    setMonthlyPension(50000);
+    setLifeExpectancy(80);
+    setLifestyleExpenses(100000);
+    setIsCalculated(false);
+  };
+
+  // Generate year-wise projection
+  const generateYearlyProjection = () => {
+    const projection = [];
+    const yearsToRetirement = retirementAge - currentAge;
+
+    for (let year = 1; year <= yearsToRetirement; year++) {
+      const age = currentAge + year;
+      const yearsRemaining = yearsToRetirement - year;
+
+      // Future value calculations
+      const futureSavingsValue = currentSavings * Math.pow(1 + expectedReturn / 100, yearsRemaining);
+      const futureContributionsValue = monthlyContribution * 12 * yearsRemaining;
+
+      const portfolioValue = futureSavingsValue + futureContributionsValue;
+
+      projection.push({
+        year,
+        age,
+        portfolioValue: Math.round(portfolioValue),
+        contributionsThisYear: monthlyContribution * 12
+      });
+    }
+
+    return projection;
+  };
+
+  const yearlyProjection = generateYearlyProjection();
+
+  return (
+    <div className="p-4 space-y-4 max-w-4xl mx-auto">
+      <Card className="p-6 space-y-6 shadow-lg">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Users className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Retirement Planner</h2>
+              <p className="text-xs text-muted-foreground">Plan your retirement corpus and savings</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </Button>
+        </div>
+
+        {/* Basic Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CalculatorInput
+            label="Current age"
+            value={currentAge}
+            onChange={setCurrentAge}
+            min={18}
+            max={70}
+            step={1}
+            suffix="Years"
+          />
+
+          <CalculatorInput
+            label="Retirement age"
+            value={retirementAge}
+            onChange={setRetirementAge}
+            min={currentAge + 5}
+            max={80}
+            step={1}
+            suffix="Years"
+          />
+
+          <CalculatorInput
+            label="Current savings"
+            value={currentSavings}
+            onChange={setCurrentSavings}
+            min={0}
+            max={100000000}
+            step={100000}
+            prefix="₹"
+            placeholder="500000"
+          />
+
+          <CalculatorInput
+            label="Monthly contribution"
+            value={monthlyContribution}
+            onChange={setMonthlyContribution}
+            min={0}
+            max={500000}
+            step={1000}
+            prefix="₹"
+          />
+        </div>
+
+        <CalculatorInput
+          label="Expected return (p.a)"
+          value={expectedReturn}
+          onChange={setExpectedReturn}
+          min={1}
+          max={20}
+          step={0.1}
+          suffix="%"
+        />
+
+        {/* Retirement Phase Settings */}
+        <div className="bg-card p-4 rounded-lg border">
+          <h3 className="font-semibold mb-3">Retirement Phase Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CalculatorInput
+              label="Life expectancy"
+              value={lifeExpectancy}
+              onChange={setLifeExpectancy}
+              min={retirementAge + 10}
+              max={100}
+              step={1}
+              suffix="Years"
+            />
+
+            <CalculatorInput
+              label="Monthly lifestyle expenses"
+              value={lifestyleExpenses}
+              onChange={setLifestyleExpenses}
+              min={10000}
+              max={1000000}
+              step={10000}
+              prefix="₹"
+            />
+          </div>
+
+          {/* Pension Section */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <Label htmlFor="pension" className="text-sm font-medium">
+                Monthly Pension
+              </Label>
+              <Switch
+                id="pension"
+                checked={pensionEnabled}
+                onCheckedChange={setPensionEnabled}
+              />
+            </div>
+            {pensionEnabled && (
+              <CalculatorInput
+                label="Expected monthly pension"
+                value={monthlyPension}
+                onChange={setMonthlyPension}
+                min={0}
+                max={lifestyleExpenses}
+                step={5000}
+                prefix="₹"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Inflation Adjustment */}
+        <div className="bg-card p-4 rounded-lg border">
+          <div className="flex items-center justify-between mb-3">
+            <Label htmlFor="inflation" className="text-sm font-medium">
+              Inflation Adjustment
+            </Label>
+            <Switch
+              id="inflation"
+              checked={inflationEnabled}
+              onCheckedChange={setInflationEnabled}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Account for inflation in retirement planning calculations
+          </p>
+          {inflationEnabled && (
+            <CalculatorInput
+              label="Expected inflation rate (p.a)"
+              value={inflationRate}
+              onChange={setInflationRate}
+              min={1}
+              max={15}
+              step={0.1}
+              suffix="%"
+            />
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 gap-2"
+            size="lg"
+            onClick={handleCalculate}
+          >
+            <Calculator className="w-4 h-4" />
+            Calculate Retirement Plan
+          </Button>
+
+          {isCalculated && (
+            <Dialog open={showDetailedView} onOpenChange={setShowDetailedView}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  View Projections
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Year-wise Retirement Savings Projection</DialogTitle>
+                </DialogHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Age</TableHead>
+                      <TableHead>Annual Contribution</TableHead>
+                      <TableHead>Portfolio Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {yearlyProjection.map((row) => (
+                      <TableRow key={row.year}>
+                        <TableCell>{row.year}</TableCell>
+                        <TableCell>{row.age}</TableCell>
+                        <TableCell>{formatCurrency(row.contributionsThisYear)}</TableCell>
+                        <TableCell>{formatCurrency(row.portfolioValue)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4 shadow-lg">
+        <h3 className="text-lg font-semibold text-foreground">Retirement Analysis</h3>
+
+        <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
+          <p className="text-xs text-primary-foreground/80 mb-1">Projected Corpus at Retirement</p>
+          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.corpusAtRetirement)}</p>
+        </div>
+
+        <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm text-muted-foreground">Total contributions</span>
+            <span className="font-semibold text-foreground">{formatCurrency(result.totalContributions)}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-t border-border">
+            <span className="text-sm text-muted-foreground">Total returns</span>
+            <span className="font-semibold text-foreground">{formatCurrency(result.totalReturns)}</span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-t border-border">
+            <span className="text-sm text-muted-foreground">Required corpus</span>
+            <span className="font-semibold text-foreground">{formatCurrency(result.requiredCorpus)}</span>
+          </div>
+          {result.shortfall > 0 && (
+            <div className="flex justify-between items-center py-2 border-t border-border">
+              <span className="text-sm text-muted-foreground">Shortfall</span>
+              <span className="font-semibold text-red-600">{formatCurrency(result.shortfall)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
+            <span className="text-base font-semibold text-foreground">Required monthly contribution</span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
+          </div>
+        </div>
+
+        {result.isAchievable ? (
+          <Alert>
+            <AlertDescription className="text-green-800">
+              🎉 Excellent! With your current monthly contribution of {formatCurrency(monthlyContribution)},
+              you will achieve your retirement goal comfortably.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert>
+            <AlertDescription className="text-orange-800">
+              To achieve your retirement goal, you need to contribute {formatCurrency(result.requiredMonthlyContribution)} per month.
+              Consider increasing your monthly contribution or extending your working years.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Button
+          className="w-full gap-2"
+          size="lg"
+          onClick={() => setSaveDialogOpen(true)}
+        >
+          <Save className="w-4 h-4" />
+          Save to History
+        </Button>
+      </Card>
+
+      <SaveDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        calculationType="retirement"
+        inputs={{
+          currentAge,
+          retirementAge,
+          currentSavings,
+          monthlyContribution,
+          expectedReturn,
+          inflationEnabled: inflationEnabled ? 1 : 0,
+          inflationRate,
+          pensionEnabled: pensionEnabled ? 1 : 0,
+          monthlyPension,
+          lifeExpectancy,
+          lifestyleExpenses
+        }}
+        results={{
+          corpusAtRetirement: result.corpusAtRetirement,
+          totalContributions: result.totalContributions,
+          totalReturns: result.totalReturns,
+          shortfall: result.shortfall,
+          requiredMonthlyContribution: result.requiredMonthlyContribution,
+          requiredCorpus: result.requiredCorpus,
+          isAchievable: result.isAchievable ? 1 : 0,
+          yearsToRetirement: result.yearsToRetirement,
+          yearsInRetirement: result.yearsInRetirement
+        } as Record<string, number>}
+      />
+    </div>
+  );
+};
+
+export default RetirementPlanner;

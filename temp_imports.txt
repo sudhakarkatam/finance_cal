@@ -1,0 +1,4 @@
+import ComingSoon from "./pages/ComingSoon";  
+import RetirementPlanner from "./pages/RetirementPlanner";  
+import GoalPlanning from "./pages/GoalPlanning";  
+import EducationPlanner from "./pages/EducationPlanner"; 

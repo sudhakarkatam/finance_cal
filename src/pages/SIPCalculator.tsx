@@ -1,0 +1,277 @@
+import { useState, useMemo } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Save, RotateCcw, TrendingUp, Calculator, TrendingUp as TrendingUpIcon } from 'lucide-react';
+import CalculatorInput from '@/components/ui/CalculatorInput';
+import ResultChart from '@/components/ui/ResultChart';
+import SaveDialog from '@/components/SaveDialog';
+import { calculateSIP, formatCurrency } from '@/lib/calculations';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+
+const SIPCalculator = () => {
+  // Basic SIP inputs
+  const [monthlyInvestment, setMonthlyInvestment] = useState(25000);
+  const [expectedReturn, setExpectedReturn] = useState(12);
+  const [years, setYears] = useState(10);
+
+  // Advanced features
+  const [stepUpEnabled, setStepUpEnabled] = useState(false);
+  const [stepUpPercentage, setStepUpPercentage] = useState(10);
+  const [inflationEnabled, setInflationEnabled] = useState(false);
+  const [inflationRate, setInflationRate] = useState(6);
+
+  // UI state
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [isCalculated, setIsCalculated] = useState(false);
+
+  const calculateAdvancedSIP = () => {
+    const months = years * 12;
+    const monthlyRate = expectedReturn / (12 * 100);
+
+    let totalInvested = 0;
+    let futureValue = 0;
+    let currentMonthlyInvest = monthlyInvestment;
+
+    for (let month = 1; month <= months; month++) {
+      // Add current month's investment to total invested
+      totalInvested += currentMonthlyInvest;
+
+      // Calculate future value of this month's investment
+      const monthsRemaining = months - month;
+      const monthFutureValue = currentMonthlyInvest * Math.pow(1 + monthlyRate, monthsRemaining);
+      futureValue += monthFutureValue;
+
+      // Apply step-up at the beginning of each year (after 12th month)
+      if (stepUpEnabled && month % 12 === 0 && month < months) {
+        currentMonthlyInvest *= (1 + stepUpPercentage / 100);
+      }
+    }
+
+    const totalReturns = futureValue - totalInvested;
+
+    return {
+      invested: Math.round(totalInvested),
+      returns: Math.round(totalReturns),
+      total: Math.round(futureValue)
+    };
+  };
+
+  const result = useMemo(() => {
+    return stepUpEnabled || inflationEnabled ? calculateAdvancedSIP() : calculateSIP(monthlyInvestment, expectedReturn, years);
+  }, [monthlyInvestment, expectedReturn, years, stepUpEnabled, stepUpPercentage, inflationEnabled]);
+
+  const handleCalculate = () => {
+    setIsCalculated(true);
+  };
+
+  const handleReset = () => {
+    setMonthlyInvestment(25000);
+    setExpectedReturn(12);
+    setYears(10);
+    setStepUpEnabled(false);
+    setStepUpPercentage(10);
+    setInflationEnabled(false);
+    setInflationRate(6);
+    setIsCalculated(false);
+  };
+
+  return (
+    <div className="p-4 space-y-4 pb-20 max-w-3xl mx-auto">
+      <Card className="p-6 space-y-6 bg-gradient-to-br from-card to-secondary/20 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">SIP Calculator</h2>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <CalculatorInput
+              label="Monthly Investment"
+              value={monthlyInvestment}
+              onChange={setMonthlyInvestment}
+              min={0}
+              max={100000}
+              step={500}
+              prefix="₹"
+              placeholder="25000"
+            />
+          </div>
+
+          <div className="bg-card p-4 rounded-lg border">
+            <CalculatorInput
+              label="Expected Return (p.a)"
+              value={expectedReturn}
+              onChange={setExpectedReturn}
+              min={1}
+              max={30}
+              step={0.1}
+              suffix="%"
+            />
+          </div>
+
+          <div className="bg-card p-4 rounded-lg border">
+            <CalculatorInput
+              label="Investment Period"
+              value={years}
+              onChange={setYears}
+              min={1}
+              max={40}
+              step={1}
+              suffix="Years"
+            />
+          </div>
+
+          {/* Step-Up SIP */}
+          <div className="bg-card p-4 rounded-lg border">
+            <div className="flex items-center justify-between mb-3">
+              <Label htmlFor="step-up" className="text-sm font-medium">
+                Step-Up SIP
+              </Label>
+              <Switch
+                id="step-up"
+                checked={stepUpEnabled}
+                onCheckedChange={setStepUpEnabled}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Increase your SIP amount automatically every year
+            </p>
+            {stepUpEnabled && (
+              <CalculatorInput
+                label="Annual Step-Up Percentage"
+                value={stepUpPercentage}
+                onChange={setStepUpPercentage}
+                min={1}
+                max={50}
+                step={1}
+                suffix="%"
+              />
+            )}
+          </div>
+
+          {/* Inflation Adjustment */}
+          <div className="bg-card p-4 rounded-lg border">
+            <div className="flex items-center justify-between mb-3">
+              <Label htmlFor="inflation" className="text-sm font-medium">
+                Inflation Adjustment
+              </Label>
+              <Switch
+                id="inflation"
+                checked={inflationEnabled}
+                onCheckedChange={setInflationEnabled}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Account for inflation to see real returns (affects calculation)
+            </p>
+            {inflationEnabled && (
+              <CalculatorInput
+                label="Expected Inflation Rate (p.a)"
+                value={inflationRate}
+                onChange={setInflationRate}
+                min={1}
+                max={15}
+                step={0.1}
+                suffix="%"
+              />
+            )}
+          </div>
+        </div>
+
+        <Button
+          className="w-full gap-2 h-12 text-base font-semibold"
+          size="lg"
+          onClick={handleCalculate}
+        >
+          <Calculator className="w-5 h-5" />
+          Calculate SIP
+        </Button>
+      </Card>
+
+      <Card className="p-6 space-y-6 shadow-lg">
+        <h3 className="text-lg font-semibold text-foreground">Investment Analysis</h3>
+
+        <div className="bg-gradient-to-br from-primary/5 to-accent/5 p-4 rounded-xl">
+          <ResultChart
+            principal={result.invested}
+            returns={result.returns}
+            principalLabel="Invested"
+            returnsLabel="Returns"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-secondary/50 p-4 rounded-lg text-center border">
+              <p className="text-xs text-muted-foreground mb-1">Total Invested</p>
+              <p className="text-base font-bold text-foreground">{formatCurrency(result.invested)}</p>
+            </div>
+            <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
+              <p className="text-xs text-muted-foreground mb-1">Returns</p>
+              <p className="text-base font-bold text-primary">{formatCurrency(result.returns)}</p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md">
+            <p className="text-xs text-primary-foreground/80 mb-1">Maturity Value</p>
+            <p className="text-2xl font-bold text-primary-foreground">{formatCurrency(result.total)}</p>
+          </div>
+        </div>
+
+        {/* Advanced Features Summary */}
+        {(stepUpEnabled || inflationEnabled) && (
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-blue-800 mb-2">📊 Advanced Features Applied</h4>
+            <div className="space-y-2">
+              {stepUpEnabled && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-700">Step-Up SIP</span>
+                  <span className="font-semibold text-blue-800">{stepUpPercentage}% annual increase</span>
+                </div>
+              )}
+              {inflationEnabled && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-700">Inflation Adjustment</span>
+                  <span className="font-semibold text-blue-800">{inflationRate}% per year</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Button
+          className="w-full gap-2 h-12 text-base font-semibold"
+          size="lg"
+          onClick={() => setSaveDialogOpen(true)}
+        >
+          <Save className="w-5 h-5" />
+          Save Calculation
+        </Button>
+      </Card>
+
+      <SaveDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        calculationType="sip"
+        inputs={{ monthlyInvestment, expectedReturn, years }}
+        results={result}
+      />
+    </div>
+  );
+};
+
+export default SIPCalculator;
