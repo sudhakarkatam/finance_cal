@@ -141,8 +141,8 @@ const CompoundInterest = () => {
           </div>
         </div>
 
-        <Button 
-          className="w-full gap-2" 
+        <Button
+          className="w-full gap-2"
           size="lg"
           onClick={() => setSaveDialogOpen(true)}
         >

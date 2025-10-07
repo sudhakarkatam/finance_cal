@@ -11,11 +11,14 @@ const LumpsumCalculator = () => {
   const [investment, setInvestment] = useState(100000);
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState(10);
+  const [months, setMonths] = useState(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+
+  const totalYears = years + (months / 12);
 
   const calculateLumpsum = () => {
     const rate = expectedReturn / 100;
-    const futureValue = investment * Math.pow(1 + rate, years);
+    const futureValue = investment * Math.pow(1 + rate, totalYears);
     const returns = futureValue - investment;
 
     return {
@@ -31,6 +34,7 @@ const LumpsumCalculator = () => {
     setInvestment(100000);
     setExpectedReturn(12);
     setYears(10);
+    setMonths(0);
   };
 
   return (
@@ -77,15 +81,32 @@ const LumpsumCalculator = () => {
           suffix="%"
         />
 
-        <CalculatorInput
-          label="Time period"
-          value={years}
-          onChange={setYears}
-          min={1}
-          max={40}
-          step={1}
-          suffix="Years"
-        />
+        <div className="bg-card p-4 rounded-lg border">
+          <div className="mb-3">
+            <label className="text-sm font-medium text-foreground">Investment Period</label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <CalculatorInput
+              label="Years"
+              value={years}
+              onChange={setYears}
+              min={0}
+              max={40}
+              step={1}
+            />
+            <CalculatorInput
+              label="Months"
+              value={months}
+              onChange={setMonths}
+              min={0}
+              max={11}
+              step={1}
+            />
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Total period: <span className="font-semibold text-foreground">{totalYears.toFixed(1)} years</span>
+          </div>
+        </div>
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
@@ -127,7 +148,7 @@ const LumpsumCalculator = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="lumpsum"
-        inputs={{ investment, expectedReturn, years }}
+        inputs={{ investment, expectedReturn, years, months }}
         results={result}
       />
     </div>

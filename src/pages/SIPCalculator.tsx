@@ -14,6 +14,7 @@ const SIPCalculator = () => {
   const [monthlyInvestment, setMonthlyInvestment] = useState(25000);
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState(10);
+  const [months, setMonths] = useState(0);
 
   // Advanced features
   const [stepUpEnabled, setStepUpEnabled] = useState(false);
@@ -26,7 +27,7 @@ const SIPCalculator = () => {
   const [isCalculated, setIsCalculated] = useState(false);
 
   const calculateAdvancedSIP = () => {
-    const months = years * 12;
+    const months = totalYears * 12;
     const monthlyRate = expectedReturn / (12 * 100);
 
     let totalInvested = 0;
@@ -57,9 +58,26 @@ const SIPCalculator = () => {
     };
   };
 
+  const totalYears = years + (months / 12);
+
+  const normalResult = useMemo(() => {
+    return stepUpEnabled ? calculateAdvancedSIP() : calculateSIP(monthlyInvestment, expectedReturn, totalYears);
+  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
+
   const result = useMemo(() => {
-    return stepUpEnabled || inflationEnabled ? calculateAdvancedSIP() : calculateSIP(monthlyInvestment, expectedReturn, years);
-  }, [monthlyInvestment, expectedReturn, years, stepUpEnabled, stepUpPercentage, inflationEnabled]);
+    if (!inflationEnabled) return normalResult;
+
+    // Calculate inflation-adjusted result
+    const inflationAdjustedResult = calculateAdvancedSIP();
+
+    // Add inflation-adjusted values to the result
+    return {
+      ...inflationAdjustedResult,
+      normalTotal: normalResult.total,
+      inflationAdjustedTotal: inflationAdjustedResult.total,
+      inflationRate: inflationRate
+    };
+  }, [normalResult, inflationEnabled, inflationRate]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -69,6 +87,7 @@ const SIPCalculator = () => {
     setMonthlyInvestment(25000);
     setExpectedReturn(12);
     setYears(10);
+    setMonths(0);
     setStepUpEnabled(false);
     setStepUpPercentage(10);
     setInflationEnabled(false);
@@ -124,15 +143,30 @@ const SIPCalculator = () => {
           </div>
 
           <div className="bg-card p-4 rounded-lg border">
-            <CalculatorInput
-              label="Investment Period"
-              value={years}
-              onChange={setYears}
-              min={1}
-              max={40}
-              step={1}
-              suffix="Years"
-            />
+            <div className="mb-3">
+              <label className="text-sm font-medium text-foreground">Investment Period</label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <CalculatorInput
+                label="Years"
+                value={years}
+                onChange={setYears}
+                min={0}
+                max={40}
+                step={1}
+              />
+              <CalculatorInput
+                label="Months"
+                value={months}
+                onChange={setMonths}
+                min={0}
+                max={11}
+                step={1}
+              />
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Total period: <span className="font-semibold text-foreground">{totalYears.toFixed(1)} years</span>
+            </div>
           </div>
 
           {/* Step-Up SIP */}
@@ -210,7 +244,7 @@ const SIPCalculator = () => {
             principal={result.invested}
             returns={result.returns}
             principalLabel="Invested"
-            returnsLabel="Returns"
+            returnsLabel={inflationEnabled ? "Inflation-Adjusted Returns" : "Returns"}
           />
         </div>
 
@@ -226,9 +260,20 @@ const SIPCalculator = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md">
-            <p className="text-xs text-primary-foreground/80 mb-1">Maturity Value</p>
-            <p className="text-2xl font-bold text-primary-foreground">{formatCurrency(result.total)}</p>
+          <div className="space-y-3">
+            <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md">
+              <p className="text-xs text-primary-foreground/80 mb-1">
+                {inflationEnabled ? 'Inflation-Adjusted Maturity Value' : 'Maturity Value'}
+              </p>
+              <p className="text-2xl font-bold text-primary-foreground">{formatCurrency(result.total)}</p>
+            </div>
+
+            {inflationEnabled && 'normalTotal' in result && (
+              <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-xl text-center shadow-md">
+                <p className="text-xs text-green-100 mb-1">Normal Maturity Value (without inflation)</p>
+                <p className="text-xl font-bold text-green-50">{formatCurrency(result.normalTotal)}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -267,8 +312,13 @@ const SIPCalculator = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="sip"
-        inputs={{ monthlyInvestment, expectedReturn, years }}
-        results={result}
+        inputs={{ monthlyInvestment, expectedReturn, years, months, stepUpEnabled: stepUpEnabled ? 1 : 0, stepUpPercentage, inflationEnabled: inflationEnabled ? 1 : 0, inflationRate }}
+        results={{
+          ...result,
+          normalTotal: normalResult.total,
+          inflationAdjustedTotal: result.total,
+          inflationRate: inflationEnabled ? inflationRate : 0
+        }}
       />
     </div>
   );

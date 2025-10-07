@@ -54,20 +54,46 @@ const History = () => {
     return names[type] || type;
   };
 
+  const formatResultValue = (key: string, value: number) => {
+    // Format currency values
+    if (key.toLowerCase().includes('amount') || key.toLowerCase().includes('principal') || key.toLowerCase().includes('total') || key.toLowerCase().includes('invested') || key.toLowerCase().includes('returns') || key.toLowerCase().includes('interest') || key.toLowerCase().includes('maturity') || key.toLowerCase().includes('value') || key.toLowerCase().includes('future') || key.toLowerCase().includes('shortfall') || key.toLowerCase().includes('required') || key.toLowerCase().includes('achieved') || key.toLowerCase().includes('savings') || key.toLowerCase().includes('contributions')) {
+      return formatCurrency(value);
+    }
+    // Format percentage values
+    if (key.toLowerCase().includes('rate') || key.toLowerCase().includes('return') || key.toLowerCase().includes('inflation') || key.toLowerCase().includes('percentage') || key.toLowerCase().includes('progress')) {
+      return `${value}%`;
+    }
+    // Format time values
+    if (key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') || key.toLowerCase().includes('tenure')) {
+      return `${value} years`;
+    }
+    // Format EMI values
+    if (key.toLowerCase().includes('emi') || key.toLowerCase().includes('installment')) {
+      return formatCurrency(value);
+    }
+    // Format boolean values
+    if (key.toLowerCase().includes('met') || key.toLowerCase().includes('enabled')) {
+      return value === 1 ? 'Yes' : 'No';
+    }
+    // Default formatting
+    return value.toLocaleString();
+  };
+
   if (history.length === 0) {
     return (
-      <div className="p-4 min-h-screen flex items-center justify-center">
-        <Card className="p-12 max-w-md">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 mx-auto rounded-full bg-secondary flex items-center justify-center">
+      <div className="p-4 min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20">
+        <Card className="p-12 max-w-lg shadow-2xl border-0 bg-gradient-to-br from-card to-secondary/10">
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg">
               <Calendar className="w-10 h-10 text-primary" />
             </div>
-            <div>
+            <div className="space-y-3">
               <h3 className="text-xl font-bold text-foreground">No History Yet</h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Your saved calculations will appear here
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Your saved calculations will appear here once you start using the calculators
               </p>
             </div>
+            <div className="w-16 h-1 mx-auto bg-gradient-to-r from-primary to-primary/50 rounded-full"></div>
           </div>
         </Card>
       </div>
@@ -75,58 +101,114 @@ const History = () => {
   }
 
   return (
-    <div className="p-4 space-y-4 pb-20">
+    <div className="p-3 space-y-4 pb-20 bg-gradient-to-br from-background to-secondary/10 min-h-screen">
       <div className="flex items-center justify-between px-2">
-        <h2 className="text-xl font-bold text-foreground">History</h2>
-        <span className="text-sm text-muted-foreground">{history.length} calculation{history.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+            <Calendar className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Calculation History</h2>
+            <p className="text-xs text-muted-foreground">
+              {history.length} saved calculation{history.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
       </div>
-      
-      {history.map((item) => (
-        <Card key={item.id} className="overflow-hidden border-l-4 border-l-primary">
-          <div className="p-4">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="px-2 py-0.5 bg-primary/10 rounded text-xs font-medium text-primary">
-                    {getCalculatorName(item.type)}
+
+      <div className="space-y-3">
+        {history.map((item, index) => (
+          <Card key={item.id} className="group relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-card to-secondary/5 hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
+            {/* Decorative gradient border */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <div className="relative p-4">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="px-3 py-1.5 bg-gradient-to-r from-primary to-primary/80 rounded-full text-xs font-semibold text-primary-foreground shadow-md">
+                      {getCalculatorName(item.type)}
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-1 bg-secondary/50 rounded-full">
+                      <Calendar className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {format(new Date(item.date), 'MMM dd, yyyy • hh:mm a')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {item.note && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/20 rounded-xl">
+                      <p className="text-sm text-foreground italic leading-relaxed">"{item.note}"</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {/* Input Parameters */}
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Input Parameters</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(item.inputs).map(([key, value]) => (
+                          <div key={key} className="bg-secondary/20 p-2 rounded-md">
+                            <div className="text-xs text-muted-foreground font-medium mb-0.5">
+                              {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                            </div>
+                            <div className="text-xs font-bold text-foreground">
+                              {key.toLowerCase().includes('rate') ? `${value}%` :
+                               key.toLowerCase().includes('months') ? `${value} months` :
+                               key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') ? `${value} years` :
+                               key.toLowerCase().includes('enabled') ? (value === 1 ? 'Yes' : 'No') :
+                               formatCurrency(Number(value))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Calculation Results */}
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calculation Results</h4>
+                      <div className="space-y-2">
+                        {Array.from({ length: Math.ceil(Object.keys(item.results).length / 3) }, (_, rowIndex) => (
+                          <div key={rowIndex} className="grid grid-cols-3 gap-2">
+                            {Object.entries(item.results)
+                              .slice(rowIndex * 3, (rowIndex + 1) * 3)
+                              .map(([key, value]) => (
+                                <div key={key} className="bg-gradient-to-r from-primary/5 to-primary/10 p-2 rounded-md border border-primary/20">
+                                  <div className="text-xs text-muted-foreground font-medium mb-0.5">
+                                    {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                                  </div>
+                                  <div className="text-sm font-bold text-primary">
+                                    {key.toLowerCase().includes('normal') ? (
+                                      <span title="Normal value (without inflation)">{formatResultValue(key, value)}</span>
+                                    ) : key.toLowerCase().includes('inflation') ? (
+                                      <span title="Inflation-adjusted value" className="text-orange-600">{formatResultValue(key, value)}</span>
+                                    ) : (
+                                      formatResultValue(key, value)
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteId(item.id)}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 -mr-2"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {item.note && (
-              <div className="mb-3 p-3 bg-accent/5 border border-accent/20 rounded-lg">
-                <p className="text-sm text-foreground italic">"{item.note}"</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteId(item.id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-300 ml-4 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
-            )}
-
-            <div className="grid gap-2 bg-secondary/50 p-3 rounded-lg">
-              {Object.entries(item.results).map(([key, value]) => (
-                <div key={key} className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground font-medium capitalize">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
-                  </span>
-                  <span className="text-sm font-bold text-foreground">
-                    {formatCurrency(value)}
-                  </span>
-                </div>
-              ))}
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ))}
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
