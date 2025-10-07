@@ -259,8 +259,8 @@ const HomeLoanCalculator = () => {
     let balance = result.principal;
     const monthlyRate = interestRate / (12 * 100);
 
-    // For existing loans, use the correct starting balance
-    if (isExistingLoan && monthsCompleted > 0) {
+    // Calculate remaining balance based on months completed for both new and existing loans
+    if (monthsCompleted > 0) {
       balance = calculateRemainingBalance(result, monthsCompleted);
     }
 
@@ -285,6 +285,15 @@ const HomeLoanCalculator = () => {
   };
 
   const amortizationSchedule = generateAmortizationSchedule();
+
+  // Calculate and display the actual remaining balance for user reference
+  const actualRemainingBalance = useMemo(() => {
+    if (!prepaymentEnabled || monthsCompleted <= 0) {
+      return result.principal;
+    }
+    const baseResult = calculateHomeLoan();
+    return calculateRemainingBalance(baseResult, monthsCompleted);
+  }, [result.principal, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -469,25 +478,33 @@ const HomeLoanCalculator = () => {
 
           {prepaymentEnabled && (
             <div className="space-y-4">
-              {isExistingLoan && (
-                <CalculatorInput
-                  label="Months completed"
-                  value={monthsCompleted}
-                  onChange={setMonthsCompleted}
-                  min={0}
-                  max={isExistingLoan ? (remainingTenureYears * 12 + remainingTenureMonths) : totalTenureMonths}
-                  step={1}
-                  suffix="EMIs paid"
-                  placeholder="0"
-                />
-              )}
+              <CalculatorInput
+                label="Months completed"
+                value={monthsCompleted}
+                onChange={setMonthsCompleted}
+                min={0}
+                max={totalTenureMonths}
+                step={1}
+                suffix="EMIs paid"
+                placeholder="0"
+              />
+
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-700 mb-1">Calculated Remaining Balance:</p>
+                <p className="text-sm font-semibold text-blue-800">
+                  {monthsCompleted > 0 ? formatCurrency(actualRemainingBalance) : formatCurrency(result.principal)}
+                </p>
+                <p className="text-xs text-blue-600">
+                  {monthsCompleted > 0 ? `After ${monthsCompleted} EMI payments` : 'Original loan amount'}
+                </p>
+              </div>
 
               <CalculatorInput
                 label="Prepayment amount"
                 value={prepaymentAmount}
                 onChange={setPrepaymentAmount}
                 min={0}
-                max={result.principal}
+                max={calculateRemainingBalance(result, monthsCompleted)}
                 step={10000}
                 prefix="₹"
                 placeholder="100000"
