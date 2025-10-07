@@ -16,6 +16,7 @@ const SWPCalculator = () => {
   const [inflationRate, setInflationRate] = useState(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [showFullTable, setShowFullTable] = useState(false);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   const result = calculateSWP(investmentAmount, withdrawalPerMonth, expectedReturn, years, inflationRate);
 
@@ -171,34 +172,40 @@ const SWPCalculator = () => {
                 View Schedule
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Amortization Schedule ({showFullTable ? 'Full' : 'First 24 months'})</DialogTitle>
+            <DialogContent className="max-w-[95vw] w-full max-h-[85vh] overflow-hidden flex flex-col">
+              <DialogHeader className="flex-shrink-0">
+                <DialogTitle>Complete SWP Schedule ({result.fullAmortizationData.length} months)</DialogTitle>
               </DialogHeader>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Starting Balance</TableHead>
-                    <TableHead>Interest Earned</TableHead>
-                    <TableHead>Withdrawal</TableHead>
-                    <TableHead>Ending Balance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(showFullTable ? result.fullAmortizationData : result.amortizationData).map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell>{row.month}</TableCell>
-                      <TableCell>{formatCurrency(row.startingBalance)}</TableCell>
-                      <TableCell className="text-green-600">+{formatCurrency(row.interestEarned)}</TableCell>
-                      <TableCell className="text-red-600">-{formatCurrency(row.withdrawal)}</TableCell>
-                      <TableCell className={row.endingBalance < 0 ? 'text-destructive' : ''}>
-                        {formatCurrency(row.endingBalance)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="flex-1 overflow-auto mt-4">
+                <div className="min-w-[700px]">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[60px]">Month</TableHead>
+                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">Starting Balance</TableHead>
+                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">Interest Earned</TableHead>
+                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">Withdrawal</TableHead>
+                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">Ending Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(showAllRows ? result.fullAmortizationData : result.fullAmortizationData.slice(0, 24)).map((row) => (
+                          <TableRow key={row.month} className="hover:bg-muted/30">
+                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-medium">{row.month}</TableCell>
+                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">{formatCurrency(row.startingBalance)}</TableCell>
+                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">+{formatCurrency(row.interestEarned)}</TableCell>
+                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-red-600">-{formatCurrency(row.withdrawal)}</TableCell>
+                            <TableCell className={`text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold ${row.endingBalance < 0 ? 'text-destructive' : ''}`}>
+                              {formatCurrency(row.endingBalance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

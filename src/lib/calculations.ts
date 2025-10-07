@@ -138,7 +138,7 @@ export const calculateSWP = (
     inflationAdjustedFinalValue: Math.round(inflationAdjustedFinalValue),
     depletionMonth,
     sustainableWithdrawal: Math.round(sustainableWithdrawal),
-    amortizationData: amortizationData.slice(0, 24), // First 24 months by default
+    amortizationData: amortizationData, // Full amortization data
     fullAmortizationData: amortizationData
   };
 };

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Home, Calculator, TrendingDown, Clock } from 'lucide-react';
+import { Save, RotateCcw, Home, Calculator, TrendingDown, Clock, Eye, EyeOff } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
 import { formatCurrency } from '@/lib/calculations';
@@ -38,6 +38,7 @@ const HomeLoanCalculator = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   // Calculate total tenure in months
   const totalTenureMonths = useMemo(() => {
@@ -253,7 +254,7 @@ const HomeLoanCalculator = () => {
     setIsCalculated(false);
   };
 
-  // Generate amortization schedule (first 12 months for preview)
+  // Generate full amortization schedule
   const generateAmortizationSchedule = () => {
     const schedule = [];
     let balance = result.principal;
@@ -267,7 +268,7 @@ const HomeLoanCalculator = () => {
     const emiToUse = result.emi;
     const tenureToUse = result.tenure;
 
-    for (let month = 1; month <= Math.min(12, tenureToUse); month++) {
+    for (let month = 1; month <= tenureToUse; month++) {
       const interestPayment = balance * monthlyRate;
       const principalPayment = emiToUse - interestPayment;
       balance -= principalPayment;
@@ -608,32 +609,64 @@ const HomeLoanCalculator = () => {
                   View Schedule
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Amortization Schedule (First 12 months)</DialogTitle>
+              <DialogContent className="max-w-[95vw] w-full max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader className="flex-shrink-0">
+                  <DialogTitle>Complete Amortization Schedule ({result.tenure} months)</DialogTitle>
                 </DialogHeader>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>EMI</TableHead>
-                      <TableHead>Principal</TableHead>
-                      <TableHead>Interest</TableHead>
-                      <TableHead>Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {amortizationSchedule.map((row) => (
-                      <TableRow key={row.month}>
-                        <TableCell>{row.month}</TableCell>
-                        <TableCell>{formatCurrency(row.emi)}</TableCell>
-                        <TableCell>{formatCurrency(row.principalPayment)}</TableCell>
-                        <TableCell>{formatCurrency(row.interestPayment)}</TableCell>
-                        <TableCell>{formatCurrency(row.balance)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="flex-1 overflow-auto mt-4">
+                  <div className="min-w-[600px]">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[60px]">Month</TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">EMI</TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">Principal</TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">Interest</TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">Balance</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(showAllRows ? amortizationSchedule : amortizationSchedule.slice(0, 24)).map((row) => (
+                            <TableRow key={row.month} className="hover:bg-muted/30">
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-medium">{row.month}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">{formatCurrency(row.emi)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">+{formatCurrency(row.principalPayment)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-orange-600">+{formatCurrency(row.interestPayment)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold">{formatCurrency(row.balance)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {!showAllRows && amortizationSchedule.length > 24 && (
+                      <div className="mt-4 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAllRows(true)}
+                          className="gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Show All {result.tenure} Months
+                        </Button>
+                      </div>
+                    )}
+                    {showAllRows && (
+                      <div className="mt-4 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAllRows(false)}
+                          className="gap-2"
+                        >
+                          <EyeOff className="w-4 h-4" />
+                          Show First 24 Months
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
           )}
