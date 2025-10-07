@@ -36,11 +36,6 @@ A comprehensive mobile-first financial calculator application built with React, 
 - **UI Components:** Shadcn/ui
 - **Charts:** Recharts
 - **Storage:** LocalStorage API
+  
 
-
-
-MIT
-
-## Credits
-
-Built with ❤️ using Lovable
+ilt with ❤️ using Lovable
