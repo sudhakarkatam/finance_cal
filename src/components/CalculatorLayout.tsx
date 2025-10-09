@@ -21,9 +21,6 @@ const CalculatorLayout = ({ children }: CalculatorLayoutProps) => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="bg-primary text-primary-foreground px-4 py-4 shadow-md">
-        <h1 className="text-xl font-bold">Financial Calculators</h1>
-      </header>
 
       <main className="flex-1 overflow-y-auto pb-20">
         {children}

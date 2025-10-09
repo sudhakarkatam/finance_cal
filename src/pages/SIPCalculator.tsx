@@ -5,13 +5,13 @@ import { Save, RotateCcw, TrendingUp, Calculator, TrendingUp as TrendingUpIcon }
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateSIP, formatCurrency } from '@/lib/calculations';
+import { calculateSIP, calculateStepUpSIP, calculateInflationAdjustedSIP, formatCurrency } from '@/lib/calculations';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 const SIPCalculator = () => {
   // Basic SIP inputs
-  const [monthlyInvestment, setMonthlyInvestment] = useState(25000);
+  const [monthlyInvestment, setMonthlyInvestment] = useState(100000);
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState(10);
   const [months, setMonths] = useState(0);
@@ -27,35 +27,12 @@ const SIPCalculator = () => {
   const [isCalculated, setIsCalculated] = useState(false);
 
   const calculateAdvancedSIP = () => {
-    const months = totalYears * 12;
-    const monthlyRate = expectedReturn / (12 * 100);
-
-    let totalInvested = 0;
-    let futureValue = 0;
-    let currentMonthlyInvest = monthlyInvestment;
-
-    for (let month = 1; month <= months; month++) {
-      // Add current month's investment to total invested
-      totalInvested += currentMonthlyInvest;
-
-      // Calculate future value of this month's investment
-      const monthsRemaining = months - month;
-      const monthFutureValue = currentMonthlyInvest * Math.pow(1 + monthlyRate, monthsRemaining);
-      futureValue += monthFutureValue;
-
-      // Apply step-up at the beginning of each year (after 12th month)
-      if (stepUpEnabled && month % 12 === 0 && month < months) {
-        currentMonthlyInvest *= (1 + stepUpPercentage / 100);
-      }
+    if (stepUpEnabled && stepUpPercentage > 0) {
+      return calculateStepUpSIP(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
     }
 
-    const totalReturns = futureValue - totalInvested;
-
-    return {
-      invested: Math.round(totalInvested),
-      returns: Math.round(totalReturns),
-      total: Math.round(futureValue)
-    };
+    // Fallback to regular SIP calculation
+    return calculateSIP(monthlyInvestment, expectedReturn, totalYears);
   };
 
   const totalYears = years + (months / 12);
@@ -64,27 +41,37 @@ const SIPCalculator = () => {
     return stepUpEnabled ? calculateAdvancedSIP() : calculateSIP(monthlyInvestment, expectedReturn, totalYears);
   }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
 
+  const stepUpResult = useMemo(() => {
+    return calculateStepUpSIP(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
+  }, [monthlyInvestment, expectedReturn, totalYears, stepUpPercentage]);
+
   const result = useMemo(() => {
     if (!inflationEnabled) return normalResult;
 
-    // Calculate inflation-adjusted result
-    const inflationAdjustedResult = calculateAdvancedSIP();
+    // Calculate inflation-adjusted result using inflation-adjusted return rate
+    const inflationAdjustedResult = calculateInflationAdjustedSIP(
+      monthlyInvestment,
+      expectedReturn,
+      totalYears,
+      inflationRate,
+      stepUpEnabled ? stepUpPercentage : 0
+    );
 
-    // Add inflation-adjusted values to the result
+    // Return result with both normal and inflation-adjusted values
     return {
       ...inflationAdjustedResult,
       normalTotal: normalResult.total,
       inflationAdjustedTotal: inflationAdjustedResult.total,
       inflationRate: inflationRate
     };
-  }, [normalResult, inflationEnabled, inflationRate]);
+  }, [normalResult, inflationEnabled, inflationRate, monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
   };
 
   const handleReset = () => {
-    setMonthlyInvestment(25000);
+    setMonthlyInvestment(100000);
     setExpectedReturn(12);
     setYears(10);
     setMonths(0);
@@ -103,7 +90,6 @@ const SIPCalculator = () => {
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">SIP Calculator</h2>
           </div>
           <Button
             variant="outline"
@@ -126,7 +112,7 @@ const SIPCalculator = () => {
               max={100000}
               step={500}
               prefix="₹"
-              placeholder="25000"
+              placeholder="100000"
             />
           </div>
 

@@ -11,18 +11,18 @@ import { formatCurrency } from '@/lib/calculations';
 const FDCalculator = () => {
   const [depositAmount, setDepositAmount] = useState(100000);
   const [interestRate, setInterestRate] = useState(7);
-  const [tenure, setTenure] = useState(12); // in months
+  const [tenure, setTenure] = useState(1); // in years
   const [frequency, setFrequency] = useState('4'); // Quarterly
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   const calculateFD = () => {
-    const principal = depositAmount;
-    const rate = interestRate / 100;
-    const time = tenure / 12; // Convert months to years
-    const n = Number(frequency); // Compounding frequency
+    const principal = depositAmount; // P
+    const rate = interestRate / 100; // R (convert percentage to decimal)
+    const years = tenure; // N (tenure in years)
+    const compoundingFreq = Number(frequency); // F (compounding frequency per year)
 
-    // Compound interest formula: A = P(1 + r/n)^(nt)
-    const maturityAmount = principal * Math.pow(1 + rate / n, n * time);
+    // FD Formula: A = P * (1 + R/F) ^ (F * N)
+    const maturityAmount = principal * Math.pow(1 + rate / compoundingFreq, compoundingFreq * years);
     const interest = maturityAmount - principal;
 
     // TDS calculation (if interest > 40,000 for individuals)
@@ -42,7 +42,7 @@ const FDCalculator = () => {
   const handleReset = () => {
     setDepositAmount(100000);
     setInterestRate(7);
-    setTenure(12);
+    setTenure(1);
     setFrequency('4');
   };
 
@@ -102,10 +102,10 @@ const FDCalculator = () => {
           label="Tenure"
           value={tenure}
           onChange={setTenure}
-          min={6}
-          max={120}
-          step={3}
-          suffix="Months"
+          min={1}
+          max={30}
+          step={1}
+          suffix="Years"
         />
 
         <div className="space-y-2">

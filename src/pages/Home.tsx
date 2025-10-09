@@ -91,9 +91,8 @@ const Home = () => {
   return (
     <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 pb-24 max-w-6xl mx-auto">
       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 sm:p-6 rounded-xl shadow-lg">
-        <h1 className="text-xl sm:text-2xl font-bold mb-2">Financial Calculators</h1>
-        <p className="text-primary-foreground/90 text-xs sm:text-sm">
-          All-in-one tool for smart financial planning and investment analysis
+        <p className="text-primary-foreground/90 text-xs sm:text-sm font-bold">
+          Financial Calculators
         </p>
       </div>
 

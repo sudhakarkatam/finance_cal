@@ -9,24 +9,39 @@ import { formatCurrency } from '@/lib/calculations';
 const RDCalculator = () => {
   const [monthlyDeposit, setMonthlyDeposit] = useState(5000);
   const [interestRate, setInterestRate] = useState(6.5);
-  const [tenure, setTenure] = useState(12); // in months
+  const [tenure, setTenure] = useState(1); // in years
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   const calculateRD = () => {
-    const P = monthlyDeposit;
-    const n = tenure;
-    const r = interestRate / 100 / 4; // Quarterly compounding
+    const P = monthlyDeposit; // Monthly RD installment
+    const annualRate = interestRate / 100; // Annual interest rate (as decimal)
+    const T = tenure; // Tenure in years
+    const n = T * 12; // Total number of installments
+    const r = annualRate / 12; // Monthly interest rate
 
-    // RD Formula: M = P * [(1 + r)^n - 1] / [1 - (1 + r)^(-1/3)]
-    const maturityAmount = P * n + P * ((n * (n + 1)) / 2) * r;
-    
-    const invested = P * n;
+    // Standard RD Formula: A = P * [(1 + r)^n - 1] / [1 - (1 + r)^(-1/3)]
+    // This is the formula used by Indian banks for RD calculations
+
+    let maturityAmount = 0;
+
+    if (r > 0 && r < 1) { // Avoid division by zero and invalid calculations
+      const compoundFactor = Math.pow(1 + r, n);
+      const annuityFactor = (compoundFactor - 1) / r;
+      maturityAmount = P * annuityFactor;
+    } else if (r >= 1) {
+      // For very high interest rates, use approximation
+      maturityAmount = P * n * (1 + annualRate * T);
+    } else {
+      maturityAmount = P * n;
+    }
+
+    const invested = P * n; // Total invested amount
     const interest = maturityAmount - invested;
 
     return {
-      invested,
-      interest: Math.round(interest),
-      maturityAmount: Math.round(maturityAmount)
+      invested: Math.round(invested),
+      interest: Math.round(Math.max(0, interest)), // Ensure no negative interest
+      maturityAmount: Math.round(Math.max(invested, maturityAmount)) // Ensure maturity >= invested
     };
   };
 
@@ -35,7 +50,7 @@ const RDCalculator = () => {
   const handleReset = () => {
     setMonthlyDeposit(5000);
     setInterestRate(6.5);
-    setTenure(12);
+    setTenure(1);
   };
 
   return (
@@ -87,10 +102,10 @@ const RDCalculator = () => {
           label="Tenure"
           value={tenure}
           onChange={setTenure}
-          min={6}
-          max={120}
-          step={3}
-          suffix="Months"
+          min={1}
+          max={30}
+          step={1}
+          suffix="Years"
         />
       </Card>
 

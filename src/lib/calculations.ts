@@ -50,12 +50,76 @@ export const calculateSIP = (
   };
 };
 
+export const calculateStepUpSIP = (
+  monthlyInvestment: number,
+  expectedReturn: number,
+  years: number,
+  stepUpPercentage: number = 0
+) => {
+  const monthlyRate = expectedReturn / (12 * 100);
+  let totalInvested = 0;
+  let futureValue = 0;
+
+  // Calculate investment and future value for each year
+  for (let year = 0; year < years; year++) {
+    const currentYearMonthlyInvest = monthlyInvestment * Math.pow(1 + stepUpPercentage / 100, year);
+    const yearInvestment = currentYearMonthlyInvest * 12;
+    totalInvested += yearInvestment;
+
+    if (monthlyRate > 0) {
+      // Calculate future value of this year's investments
+      // The money invested in year X will grow for (years - year) years
+      const yearsOfGrowth = years - year;
+      const futureValueOfYearInvestment = yearInvestment *
+        Math.pow(1 + expectedReturn / 100, yearsOfGrowth);
+
+      futureValue += futureValueOfYearInvestment;
+    } else {
+      futureValue += yearInvestment;
+    }
+  }
+
+  const returns = futureValue - totalInvested;
+
+  return {
+    invested: Math.round(totalInvested),
+    returns: Math.round(returns),
+    total: Math.round(futureValue)
+  };
+};
+
 export const calculateMutualFund = (
   monthlyInvestment: number,
   expectedReturn: number,
   years: number
 ) => {
   return calculateSIP(monthlyInvestment, expectedReturn, years);
+};
+
+export const calculateStepUpMutualFund = (
+  monthlyInvestment: number,
+  expectedReturn: number,
+  years: number,
+  stepUpPercentage: number = 0
+) => {
+  return calculateStepUpSIP(monthlyInvestment, expectedReturn, years, stepUpPercentage);
+};
+
+export const calculateInflationAdjustedSIP = (
+  monthlyInvestment: number,
+  expectedReturn: number,
+  years: number,
+  inflationRate: number,
+  stepUpPercentage: number = 0
+) => {
+  // Calculate with inflation-adjusted return rate
+  const inflationAdjustedReturn = Math.max(0, expectedReturn - inflationRate);
+
+  if (stepUpPercentage > 0) {
+    return calculateStepUpSIP(monthlyInvestment, inflationAdjustedReturn, years, stepUpPercentage);
+  } else {
+    return calculateSIP(monthlyInvestment, inflationAdjustedReturn, years);
+  }
 };
 
 export const calculateSWP = (
@@ -231,7 +295,7 @@ export const calculateGoalPlanning = (
     }
 
     // More precise calculation for excess contribution
-    let testContribution = monthlyContribution;
+    const testContribution = monthlyContribution;
     let minContribution = 0;
     let maxContribution = monthlyContribution;
 
