@@ -5,7 +5,7 @@
 
 If you’d like to try it or share feedback, feel free to reach out 👇  
 📧 **sudhakarkatam777@gmail.com**
-If you want apk check in releases or contact me there is mail above.
+- If you want apk check in releases or contact me there is mail above.
 
 Your support and suggestions motivate me to keep building and improving! 🚀  
 
@@ -82,21 +82,22 @@ Coming soon 🚧
 ## 📸 Screenshots  
 
 <p align="center">
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2015.40.29.jpeg" width="30%" />
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.17.jpeg" width="30%" />
+   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.28.jpeg" width="30%" />
+   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.29.jpeg" width="30%" />
+   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.27.jpeg" width="30%" />
+  
+</p>
+
+<p align="center">
   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.18.jpeg" width="30%" />
-</p>
-
-<p align="center">
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.24.jpeg" width="30%" />
   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.26.jpeg" width="30%" />
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.27.jpeg" width="30%" />
+    <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.24.jpeg" width="30%" />
 </p>
 
 <p align="center">
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.28.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.17.jpeg" width="30%" />
   <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.28%20(1).jpeg" width="30%" />
-  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.29.jpeg" width="30%" />
+ 
 </p>
 
 
