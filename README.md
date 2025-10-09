@@ -81,17 +81,23 @@ Coming soon 🚧
 
 ## 📸 Screenshots  
 
-| Preview | Description |
-|:--:|:--|
-| ![Screenshot 1](images/WhatsApp%20Image%202025-10-09%20at%2015.40.29.jpeg) | Home Screen – Multiple Calculators |
-| ![Screenshot 2](images/WhatsApp%20Image%202025-10-09%20at%2022.21.17.jpeg) | SIP Calculator Interface |
-| ![Screenshot 3](images/WhatsApp%20Image%202025-10-09%20at%2022.21.18.jpeg) | Compound Interest Calculation |
-| ![Screenshot 4](images/WhatsApp%20Image%202025-10-09%20at%2022.21.24.jpeg) | Interactive Chart Example |
-| ![Screenshot 5](images/WhatsApp%20Image%202025-10-09%20at%2022.21.26.jpeg) | Calculation Breakdown View |
-| ![Screenshot 6](images/WhatsApp%20Image%202025-10-09%20at%2022.21.27.jpeg) | Mutual Fund Return Calculator |
-| ![Screenshot 7](images/WhatsApp%20Image%202025-10-09%20at%2022.21.28.jpeg) | SWP Results Overview |
-| ![Screenshot 8](images/WhatsApp%20Image%202025-10-09%20at%2022.21.28%20(1).jpeg) | Mobile Result Visualization |
-| ![Screenshot 9](images/WhatsApp%20Image%202025-10-09%20at%2022.21.29.jpeg) | Saved Calculations Page |
+<p align="center">
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2015.40.29.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.17.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.18.jpeg" width="30%" />
+</p>
+
+<p align="center">
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.24.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.26.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.27.jpeg" width="30%" />
+</p>
+
+<p align="center">
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.28.jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.28%20(1).jpeg" width="30%" />
+  <img src="images/WhatsApp%20Image%202025-10-09%20at%2022.21.29.jpeg" width="30%" />
+</p>
 
 
 
