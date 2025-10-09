@@ -17,6 +17,7 @@ import LumpsumCalculator from "./pages/LumpsumCalculator";
 import PPFCalculator from "./pages/PPFCalculator";
 import FDCalculator from "./pages/FDCalculator";
 import RDCalculator from "./pages/RDCalculator";
+import GratuityCalculator from "./pages/GratuityCalculator";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 import GoalPlanning from "./pages/GoalPlanning";
@@ -32,8 +33,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<CalculatorLayout><Home /></CalculatorLayout>} />
-          <Route path="/home" element={<CalculatorLayout><Home /></CalculatorLayout>} />
+          <Route path="/" element={<CalculatorLayout showHeader={true}><Home /></CalculatorLayout>} />
+          <Route path="/home" element={<CalculatorLayout showHeader={true}><Home /></CalculatorLayout>} />
           <Route path="/simple" element={<CalculatorLayout><SimpleInterest /></CalculatorLayout>} />
           <Route path="/compound" element={<CalculatorLayout><CompoundInterest /></CalculatorLayout>} />
           <Route path="/sip" element={<CalculatorLayout><SIPCalculator /></CalculatorLayout>} />
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/ppf" element={<CalculatorLayout><PPFCalculator /></CalculatorLayout>} />
           <Route path="/fd" element={<CalculatorLayout><FDCalculator /></CalculatorLayout>} />
           <Route path="/rd" element={<CalculatorLayout><RDCalculator /></CalculatorLayout>} />
+          <Route path="/gratuity" element={<CalculatorLayout><GratuityCalculator /></CalculatorLayout>} />
           <Route path="/history" element={<CalculatorLayout><History /></CalculatorLayout>} />
           <Route path="/goal-planning" element={<CalculatorLayout><GoalPlanning /></CalculatorLayout>} />
           <Route path="/retirement-planner" element={<CalculatorLayout><RetirementPlanner /></CalculatorLayout>} />

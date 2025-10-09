@@ -90,11 +90,6 @@ const Home = () => {
 
   return (
     <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 pb-24 max-w-6xl mx-auto">
-      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 sm:p-6 rounded-xl shadow-lg">
-        <p className="text-primary-foreground/90 text-xs sm:text-sm font-bold">
-          Financial Calculators
-        </p>
-      </div>
 
       {renderSection('Basic Calculators', basicCalculators)}
       {renderSection('Loan & EMI Calculators', loanCalculators)}
@@ -139,6 +134,54 @@ const Home = () => {
                 </div>
                 <div className="flex-1 flex flex-col justify-center">
                   <h3 className="font-semibold text-sm text-foreground leading-tight">{calc.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-tight">{calc.description}</p>
+                  {!calc.available && (
+                    <span className="text-xs text-primary font-medium mt-1 block">Coming Soon</span>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderAdditionalSection(title: string, calculators: CalculatorCard[]) {
+    const getColorClasses = (color?: string) => {
+      switch (color) {
+        case 'green': return 'bg-green-100 text-green-600';
+        case 'blue': return 'bg-blue-100 text-blue-600';
+        case 'orange': return 'bg-orange-100 text-orange-600';
+        case 'yellow': return 'bg-yellow-100 text-yellow-600';
+        case 'purple': return 'bg-purple-100 text-purple-600';
+        case 'red': return 'bg-red-100 text-red-600';
+        default: return 'bg-primary/10 text-primary';
+      }
+    };
+
+    return (
+      <div className="space-y-3 mb-6">
+        <h2 className="text-lg font-bold text-foreground px-1">{title}</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {calculators.map((calc) => {
+            const Icon = calc.icon;
+            const colorClasses = getColorClasses(calc.color);
+            return (
+              <Card
+                key={calc.title}
+                onClick={() => handleCardClick(calc)}
+                className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[120px] ${
+                  calc.available
+                    ? 'cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95'
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+              >
+                <div className={`p-2 rounded-full ${calc.available ? colorClasses : 'bg-muted'}`}>
+                  <Icon className={`w-6 h-6 ${calc.available ? colorClasses.split(' ')[1] : 'text-muted-foreground'}`} />
+                </div>
+                <div className="flex-1 flex flex-col justify-center">
+                  <h3 className="font-semibold text-xs text-foreground leading-tight">{calc.title}</h3>
                   <p className="text-xs text-muted-foreground mt-1 leading-tight">{calc.description}</p>
                   {!calc.available && (
                     <span className="text-xs text-primary font-medium mt-1 block">Coming Soon</span>
