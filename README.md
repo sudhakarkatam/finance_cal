@@ -1,4 +1,8 @@
+This app is not yet on playstore and appstore but I will deploy to them for now I am trying to implement more features if you want to try it reach out me via mail so that it will say that people are liking it and it motivates me to develop more
+** you can find screenshots below please check it **
+** if you can give feedback and any suggestions you are welcome **
 
+sudhakarkatam777@gmail.com
 
 # Financial Calculators PWA
 https://drive.google.com/file/d/1Sh0nnYBi_FL-0iqHLQw1rpmDQzvYeael/view?usp=drive_link
