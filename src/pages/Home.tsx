@@ -37,7 +37,8 @@ import {
   PiggyBank as PiggyBankIcon,
   Coins as CoinsIcon,
   Target as TargetIcon,
-  GraduationCap as GraduationCapIcon
+  GraduationCap as GraduationCapIcon,
+  Shield
 } from 'lucide-react';
 
 interface CalculatorCard {
@@ -75,11 +76,13 @@ const Home = () => {
     { title: 'Retirement Planner', icon: Users, path: '/retirement-planner', description: 'Plan your retirement corpus', available: true, color: 'purple' },
     { title: 'Goal Planning', icon: TargetIcon, path: '/goal-planning', description: 'Achieve financial goals', available: true, color: 'orange' },
     { title: 'Education Planner', icon: GraduationCapIcon, path: '/education-planner', description: 'Child education fund', available: true, color: 'blue' },
+    { title: 'Emergency Fund', icon: Shield, path: '/emergency-fund', description: 'Build financial safety net', available: true, color: 'green' },
   ];
 
   const basicCalculators: CalculatorCard[] = [
     { title: 'Simple Interest', icon: CircleDot, path: '/simple', description: 'Basic interest calculation', available: true, color: 'green' },
     { title: 'Compound Interest', icon: BarChart3, path: '/compound', description: 'Compounding returns', available: true, color: 'purple' },
+    { title: 'Currency Calculator', icon: Calculator, path: '/currency', description: 'Convert between currencies', available: true, color: 'blue' },
   ];
 
   const handleCardClick = (card: CalculatorCard) => {

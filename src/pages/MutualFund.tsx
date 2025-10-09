@@ -113,8 +113,8 @@ const MutualFund = () => {
           label="Expected return rate (p.a)"
           value={expectedReturn}
           onChange={setExpectedReturn}
-          min={1}
-          max={30}
+          min={0}
+          max={100}
           step={0.1}
           suffix="%"
         />

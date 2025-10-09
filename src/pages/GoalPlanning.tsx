@@ -130,7 +130,7 @@ const GoalPlanning = () => {
     return projection;
   };
 
-  const yearlyProjection = generateYearlyProjection();
+  const yearlyProjection = useMemo(() => generateYearlyProjection(), [monthlyContribution, targetYears, currentSavings, expectedReturn, stepUpEnabled, stepUpPercentage]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -181,9 +181,9 @@ const GoalPlanning = () => {
             label="Goal Amount"
             value={goalAmount}
             onChange={setGoalAmount}
-            min={100000}
-            max={100000000}
-            step={100000}
+            min={1000}
+            max={30000000}
+            step={1000}
             prefix="₹"
             placeholder="5000000"
           />
@@ -214,7 +214,7 @@ const GoalPlanning = () => {
             label="Expected Return (p.a)"
             value={expectedReturn}
             onChange={setExpectedReturn}
-            min={1}
+            min={0}
             max={20}
             step={0.1}
             suffix="%"
@@ -380,7 +380,7 @@ const GoalPlanning = () => {
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">
-              {result.goalMet && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Required monthly contribution'}
+              {result.goalMet && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Min monthly contribution'}
             </span>
             <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
           </div>

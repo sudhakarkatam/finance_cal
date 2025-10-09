@@ -13,60 +13,66 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isHomePage = location.pathname === '/' || location.pathname === '/home';
 
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/gratuity', icon: HandCoins, label: 'Gratuity Cal' },
+    { path: '/cagr', icon: TrendingUp, label: 'CAGR Calculator' },
   ];
 
   return (
     <div className="flex h-screen bg-background pt-2 sm:pt-4">
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r border-border shadow-lg transform transition-transform duration-300 ease-in-out",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Menu</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  setSidebarOpen(false);
-                }}
-                className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors",
-                  (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+      {/* Sidebar - only show on home page */}
+      {isHomePage && (
+        <>
+          <div className={cn(
+            "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r border-border shadow-lg transform transition-transform duration-300 ease-in-out",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">Menu</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(false)}
               >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <nav className="p-4 space-y-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      setSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors",
+                      (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
+          {/* Overlay for mobile */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </>
       )}
 
       {/* Main content */}
@@ -87,7 +93,7 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
         )}
 
         {/* Hamburger menu for calculator pages - positioned absolutely */}
-        {!showHeader && (
+        {!showHeader && isHomePage && (
           <div className="absolute top-4 left-4 z-20">
             <Button
               variant="ghost"

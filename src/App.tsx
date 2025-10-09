@@ -7,6 +7,7 @@ import CalculatorLayout from "./components/CalculatorLayout";
 import Home from "./pages/Home";
 import SimpleInterest from "./pages/SimpleInterest";
 import CompoundInterest from "./pages/CompoundInterest";
+import CurrencyCalculator from "./pages/CurrencyCalculator";
 import SIPCalculator from "./pages/SIPCalculator";
 import MutualFund from "./pages/MutualFund";
 import SWPCalculator from "./pages/SWPCalculator";
@@ -18,11 +19,13 @@ import PPFCalculator from "./pages/PPFCalculator";
 import FDCalculator from "./pages/FDCalculator";
 import RDCalculator from "./pages/RDCalculator";
 import GratuityCalculator from "./pages/GratuityCalculator";
+import CAGRCalculator from "./pages/CAGRCalculator";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 import GoalPlanning from "./pages/GoalPlanning";
 import RetirementPlanner from "./pages/RetirementPlanner";
 import EducationPlanner from "./pages/EducationPlanner";
+import EmergencyFundCalculator from "./pages/EmergencyFundCalculator";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +40,7 @@ const App = () => (
           <Route path="/home" element={<CalculatorLayout showHeader={true}><Home /></CalculatorLayout>} />
           <Route path="/simple" element={<CalculatorLayout><SimpleInterest /></CalculatorLayout>} />
           <Route path="/compound" element={<CalculatorLayout><CompoundInterest /></CalculatorLayout>} />
+          <Route path="/currency" element={<CalculatorLayout><CurrencyCalculator /></CalculatorLayout>} />
           <Route path="/sip" element={<CalculatorLayout><SIPCalculator /></CalculatorLayout>} />
           <Route path="/mutual-fund" element={<CalculatorLayout><MutualFund /></CalculatorLayout>} />
           <Route path="/swp" element={<CalculatorLayout><SWPCalculator /></CalculatorLayout>} />
@@ -48,10 +52,12 @@ const App = () => (
           <Route path="/fd" element={<CalculatorLayout><FDCalculator /></CalculatorLayout>} />
           <Route path="/rd" element={<CalculatorLayout><RDCalculator /></CalculatorLayout>} />
           <Route path="/gratuity" element={<CalculatorLayout><GratuityCalculator /></CalculatorLayout>} />
+          <Route path="/cagr" element={<CalculatorLayout><CAGRCalculator /></CalculatorLayout>} />
           <Route path="/history" element={<CalculatorLayout><History /></CalculatorLayout>} />
           <Route path="/goal-planning" element={<CalculatorLayout><GoalPlanning /></CalculatorLayout>} />
           <Route path="/retirement-planner" element={<CalculatorLayout><RetirementPlanner /></CalculatorLayout>} />
           <Route path="/education-planner" element={<CalculatorLayout><EducationPlanner /></CalculatorLayout>} />
+          <Route path="/emergency-fund" element={<CalculatorLayout><EmergencyFundCalculator /></CalculatorLayout>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
