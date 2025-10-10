@@ -26,6 +26,8 @@ import GoalPlanning from "./pages/GoalPlanning";
 import RetirementPlanner from "./pages/RetirementPlanner";
 import EducationPlanner from "./pages/EducationPlanner";
 import EmergencyFundCalculator from "./pages/EmergencyFundCalculator";
+import HRACalculator from "./pages/HRACalculator";
+import SSYCalculator from "./pages/SSYCalculator";
 
 const queryClient = new QueryClient();
 
@@ -58,7 +60,9 @@ const App = () => (
           <Route path="/retirement-planner" element={<CalculatorLayout><RetirementPlanner /></CalculatorLayout>} />
           <Route path="/education-planner" element={<CalculatorLayout><EducationPlanner /></CalculatorLayout>} />
           <Route path="/emergency-fund" element={<CalculatorLayout><EmergencyFundCalculator /></CalculatorLayout>} />
-          
+          <Route path="/hra" element={<CalculatorLayout><HRACalculator /></CalculatorLayout>} />
+          <Route path="/ssy" element={<CalculatorLayout><SSYCalculator /></CalculatorLayout>} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

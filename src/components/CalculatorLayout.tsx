@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Home, Calculator, TrendingUp, PieChart, Wallet, History, Receipt, HandCoins, Menu, X } from 'lucide-react';
+import { Home, Calculator, TrendingUp, PieChart, Wallet, History, Receipt, HandCoins, Menu, X, Home as HomeIcon, PiggyBank } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
     { path: '/', icon: Home, label: 'Home' },
     { path: '/gratuity', icon: HandCoins, label: 'Gratuity Cal' },
     { path: '/cagr', icon: TrendingUp, label: 'CAGR Calculator' },
+    { path: '/hra', icon: HomeIcon, label: 'HRA Calculator' },
+    { path: '/ssy', icon: PiggyBank, label: 'SSY Calculator' },
   ];
 
   return (
@@ -79,7 +81,7 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
       <div className="flex flex-col flex-1">
         {/* Header with hamburger menu - only show on Home page */}
         {showHeader && (
-          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-2 sm:mt-4 sm:mx-4 shadow-md flex items-center gap-3 relative z-10 rounded-lg">
+          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-6 sm:mt-8 sm:mx-4 shadow-md flex items-center gap-3 relative z-10 rounded-lg">
             <Button
               variant="ghost"
               size="sm"
@@ -94,7 +96,7 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
 
         {/* Hamburger menu for calculator pages - positioned absolutely */}
         {!showHeader && isHomePage && (
-          <div className="absolute top-4 left-4 z-20">
+          <div className="absolute top-6 left-4 z-20">
             <Button
               variant="ghost"
               size="sm"

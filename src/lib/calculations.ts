@@ -56,27 +56,29 @@ export const calculateStepUpSIP = (
   years: number,
   stepUpPercentage: number = 0
 ) => {
+  const totalMonths = years * 12;
   const monthlyRate = expectedReturn / (12 * 100);
+
   let totalInvested = 0;
   let futureValue = 0;
 
-  // Calculate investment and future value for each year
-  for (let year = 0; year < years; year++) {
-    const currentYearMonthlyInvest = monthlyInvestment * Math.pow(1 + stepUpPercentage / 100, year);
-    const yearInvestment = currentYearMonthlyInvest * 12;
-    totalInvested += yearInvestment;
+  // Calculate month by month using the proper formula
+  // FV = ∑ [P × (1 + ((1+R)^1/12 - 1))^(N – m)]
+  for (let month = 0; month < totalMonths; month++) {
+    // Calculate current monthly investment based on step-up
+    // Step-up is applied at the beginning of each year
+    const currentYear = Math.floor(month / 12);
+    const currentMonthlyInvestment = monthlyInvestment * Math.pow(1 + stepUpPercentage / 100, currentYear);
 
-    if (monthlyRate > 0) {
-      // Calculate future value of this year's investments
-      // The money invested in year X will grow for (years - year) years
-      const yearsOfGrowth = years - year;
-      const futureValueOfYearInvestment = yearInvestment *
-        Math.pow(1 + expectedReturn / 100, yearsOfGrowth);
+    totalInvested += currentMonthlyInvestment;
 
-      futureValue += futureValueOfYearInvestment;
-    } else {
-      futureValue += yearInvestment;
-    }
+    // Calculate future value for this month's investment
+    // Using the formula: FV = P × (1 + r)^(N - m)
+    // Where N is total months, m is current month (0-based)
+    const monthsRemaining = totalMonths - month;
+    const futureValueOfThisMonth = currentMonthlyInvestment * Math.pow(1 + monthlyRate, monthsRemaining);
+
+    futureValue += futureValueOfThisMonth;
   }
 
   const returns = futureValue - totalInvested;
@@ -85,6 +87,30 @@ export const calculateStepUpSIP = (
     invested: Math.round(totalInvested),
     returns: Math.round(returns),
     total: Math.round(futureValue)
+  };
+};
+
+export const calculateStepUpSIPWithComparison = (
+  monthlyInvestment: number,
+  expectedReturn: number,
+  years: number,
+  stepUpPercentage: number = 0
+) => {
+  // Calculate with step-up
+  const stepUpResult = calculateStepUpSIP(monthlyInvestment, expectedReturn, years, stepUpPercentage);
+
+  // Calculate without step-up for comparison
+  const noStepUpResult = calculateSIP(monthlyInvestment, expectedReturn, years);
+
+  // Calculate percentage difference
+  const totalDifference = stepUpResult.total - noStepUpResult.total;
+  const percentageDifference = noStepUpResult.total > 0 ? (totalDifference / noStepUpResult.total) * 100 : 0;
+
+  return {
+    withStepUp: stepUpResult,
+    withoutStepUp: noStepUpResult,
+    difference: Math.round(totalDifference),
+    percentageDifference: Math.round(percentageDifference * 100) / 100 // Round to 2 decimal places
   };
 };
 
@@ -127,7 +153,8 @@ export const calculateSWP = (
   withdrawalPerMonth: number,
   expectedReturn: number,
   years?: number,
-  inflationRate: number = 0
+  inflationRate: number = 0,
+  withdrawalStartsThisMonth: boolean = false
 ) => {
   const monthlyRate = expectedReturn / (12 * 100);
   const monthlyInflationRate = inflationRate / (12 * 100);
@@ -151,8 +178,20 @@ export const calculateSWP = (
   for (let i = 0; i < maxMonths; i++) {
     months = i + 1;
     const startingBalance = balance;
-    const interestEarned = balance * monthlyRate;
-    const endingBalance = balance * (1 + monthlyRate) - withdrawalPerMonth;
+
+    let interestEarned: number;
+    let endingBalance: number;
+
+    if (withdrawalStartsThisMonth) {
+      // Withdrawal first, then interest on remaining balance
+      const balanceAfterWithdrawal = balance - withdrawalPerMonth;
+      interestEarned = balanceAfterWithdrawal * monthlyRate;
+      endingBalance = balanceAfterWithdrawal * (1 + monthlyRate);
+    } else {
+      // Interest first, then withdrawal (original logic)
+      interestEarned = balance * monthlyRate;
+      endingBalance = balance * (1 + monthlyRate) - withdrawalPerMonth;
+    }
 
     // Track data for amortization table
     amortizationData.push({
@@ -219,6 +258,103 @@ export const formatNumber = (num: number): string => {
   return new Intl.NumberFormat('en-IN').format(Math.round(num));
 };
 
+export const calculateHRA = (
+  basicSalary: number,
+  dearnessAllowance: number,
+  hraReceived: number,
+  monthlyRent: number,
+  isMetroCity: boolean
+) => {
+  // Calculate annual values
+  const annualBasicSalary = basicSalary * 12;
+  const annualDearnessAllowance = dearnessAllowance * 12;
+  const annualHRAReceived = hraReceived * 12;
+  const annualRent = monthlyRent * 12;
+
+  // Salary for HRA calculation (basic + DA)
+  const salaryForHRA = annualBasicSalary + annualDearnessAllowance;
+
+  // 1. Actual HRA received from employer
+  const actualHRA = annualHRAReceived;
+
+  // 2. Actual rent paid minus 10% of basic salary
+  const rentMinus10PercentBasic = annualRent - (annualBasicSalary * 0.1);
+
+  // 3. 50% of salary for metro city, 40% for non-metro city
+  const percentageOfSalary = isMetroCity ? 0.5 : 0.4;
+  const metroNonMetroLimit = salaryForHRA * percentageOfSalary;
+
+  // HRA exemption is the lowest of the three amounts
+  const hraExemption = Math.min(actualHRA, rentMinus10PercentBasic, metroNonMetroLimit);
+
+  // Taxable HRA
+  const taxableHRA = Math.max(0, annualHRAReceived - hraExemption);
+
+  return {
+    annualBasicSalary: Math.round(annualBasicSalary),
+    annualDearnessAllowance: Math.round(annualDearnessAllowance),
+    annualHRAReceived: Math.round(annualHRAReceived),
+    annualRent: Math.round(annualRent),
+    salaryForHRA: Math.round(salaryForHRA),
+    actualHRA: Math.round(actualHRA),
+    rentMinus10PercentBasic: Math.round(rentMinus10PercentBasic),
+    metroNonMetroLimit: Math.round(metroNonMetroLimit),
+    hraExemption: Math.round(hraExemption),
+    taxableHRA: Math.round(taxableHRA)
+  };
+};
+
+export const calculateSSY = (
+  annualInvestment: number,
+  girlAge: number,
+  investmentStartYear: number,
+  currentInterestRate: number = 8.2,
+  inflationRate: number = 0
+) => {
+  const investmentYears = 15;
+  const totalMaturityYears = 21;
+  const interestRate = currentInterestRate / 100;
+
+  let totalInvested = 0;
+  let futureValue = 0;
+
+  // Calculate for each investment year
+  for (let year = 1; year <= investmentYears; year++) {
+    totalInvested += annualInvestment;
+
+    // Each year's investment grows for (totalMaturityYears - year + 1) years
+    // Year 1: grows for 21 years (deposited at start of year 1, matures end of year 21)
+    // Year 2: grows for 20 years (deposited at start of year 2, matures end of year 21)
+    // Year 15: grows for 7 years (deposited at start of year 15, matures end of year 21)
+    const growthYears = totalMaturityYears - year + 1;
+
+    // Using the compound interest formula: A = P × (1 + r)^t
+    const futureValueOfYearInvestment = annualInvestment * Math.pow(1 + interestRate, growthYears);
+
+    futureValue += futureValueOfYearInvestment;
+  }
+
+  const totalInterest = futureValue - totalInvested;
+  const maturityYear = investmentStartYear + totalMaturityYears;
+
+  // Calculate inflation-adjusted value
+  const inflationAdjustedValue = inflationRate > 0
+    ? futureValue / Math.pow(1 + inflationRate / 100, totalMaturityYears)
+    : futureValue;
+
+  return {
+    totalInvested: Math.round(totalInvested),
+    totalInterest: Math.round(totalInterest),
+    maturityValue: Math.round(futureValue),
+    inflationAdjustedValue: Math.round(inflationAdjustedValue),
+    maturityYear,
+    investmentYears,
+    totalMaturityYears,
+    interestRate: currentInterestRate,
+    inflationRate
+  };
+};
+
 export const calculateGoalPlanning = (
   goalAmount: number,
   targetYears: number,
@@ -247,13 +383,14 @@ export const calculateGoalPlanning = (
     const yearlyContribution = currentMonthlyContrib * 12;
 
     // Future value of this year's contributions
-    const yearsRemaining = targetYears - year;
+    const yearsRemaining = targetYears - year + 1;
     const futureValueOfYearContribution = yearlyContribution *
       Math.pow(1 + expectedReturn / 100, yearsRemaining);
 
     futureContributions += futureValueOfYearContribution;
 
     // Apply step-up for next year only (no inflation on contributions)
+    // Step-up is applied at the END of each completed year
     if (stepUpPercentage > 0 && year < targetYears) {
       currentMonthlyContrib *= (1 + stepUpPercentage / 100);
     }
@@ -309,13 +446,14 @@ export const calculateGoalPlanning = (
 
       for (let year = 1; year <= targetYears; year++) {
         const yearlyContribution = currentTestContrib * 12;
-        const yearsRemaining = targetYears - year;
+        const yearsRemaining = targetYears - year + 1;
         const futureValueOfYearContribution = yearlyContribution *
           Math.pow(1 + expectedReturn / 100, yearsRemaining);
 
         testFutureContributions += futureValueOfYearContribution;
 
         // Apply step-up for next year only (no inflation on contributions)
+        // Step-up is applied at the END of each completed year
         if (stepUpPercentage > 0 && year < targetYears) {
           currentTestContrib *= (1 + stepUpPercentage / 100);
         }

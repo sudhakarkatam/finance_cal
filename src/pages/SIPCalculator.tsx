@@ -5,7 +5,7 @@ import { Save, RotateCcw, TrendingUp, Calculator, TrendingUp as TrendingUpIcon }
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateSIP, calculateStepUpSIP, calculateInflationAdjustedSIP, formatCurrency } from '@/lib/calculations';
+import { calculateSIP, calculateStepUpSIP, calculateInflationAdjustedSIP, calculateStepUpSIPWithComparison, formatCurrency } from '@/lib/calculations';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -44,6 +44,13 @@ const SIPCalculator = () => {
   const stepUpResult = useMemo(() => {
     return calculateStepUpSIP(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
   }, [monthlyInvestment, expectedReturn, totalYears, stepUpPercentage]);
+
+  const comparisonResult = useMemo(() => {
+    if (stepUpEnabled && stepUpPercentage > 0) {
+      return calculateStepUpSIPWithComparison(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
+    }
+    return null;
+  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
 
   const result = useMemo(() => {
     if (!inflationEnabled) return normalResult;
@@ -109,7 +116,7 @@ const SIPCalculator = () => {
               value={monthlyInvestment}
               onChange={setMonthlyInvestment}
               min={0}
-              max={100000}
+              max={10000000}
               step={500}
               prefix="₹"
               placeholder="100000"
@@ -261,6 +268,28 @@ const SIPCalculator = () => {
               </div>
             )}
           </div>
+
+          {/* Step-Up vs No Step-Up Comparison */}
+          {stepUpEnabled && comparisonResult && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-3 text-center">📈 Step-Up SIP Benefit Analysis</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
+                  <p className="text-xs text-blue-600 mb-1">Without Step-Up</p>
+                  <p className="text-lg font-bold text-blue-800">{formatCurrency(comparisonResult.withoutStepUp.total)}</p>
+                </div>
+                <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
+                  <p className="text-xs text-green-600 mb-1">With Step-Up</p>
+                  <p className="text-lg font-bold text-green-800">{formatCurrency(comparisonResult.withStepUp.total)}</p>
+                </div>
+                <div className="bg-gradient-to-r from-green-100 to-emerald-100 p-3 rounded-lg text-center border border-green-200">
+                  <p className="text-xs text-green-700 mb-1">Benefit</p>
+                  <p className="text-lg font-bold text-green-800">+{comparisonResult.percentageDifference}%</p>
+                  <p className="text-sm font-semibold text-green-700">{formatCurrency(comparisonResult.difference)}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Advanced Features Summary */}

@@ -7,6 +7,8 @@ import SaveDialog from '@/components/SaveDialog';
 import { calculateSWP, formatCurrency } from '@/lib/calculations';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const SWPCalculator = () => {
   const [investmentAmount, setInvestmentAmount] = useState(1000000);
@@ -14,11 +16,12 @@ const SWPCalculator = () => {
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState<number | undefined>(10);
   const [inflationRate, setInflationRate] = useState(0);
+  const [withdrawalStartsThisMonth, setWithdrawalStartsThisMonth] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [showFullTable, setShowFullTable] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
 
-  const result = calculateSWP(investmentAmount, withdrawalPerMonth, expectedReturn, years, inflationRate);
+  const result = calculateSWP(investmentAmount, withdrawalPerMonth, expectedReturn, years, inflationRate, withdrawalStartsThisMonth);
 
   const handleReset = () => {
     setInvestmentAmount(1000000);
@@ -26,6 +29,7 @@ const SWPCalculator = () => {
     setExpectedReturn(12);
     setYears(10);
     setInflationRate(0);
+    setWithdrawalStartsThisMonth(false);
   };
 
   return (
@@ -52,7 +56,7 @@ const SWPCalculator = () => {
           value={investmentAmount}
           onChange={setInvestmentAmount}
           min={100000}
-          max={10000000}
+          max={1000000000}
           step={10000}
           prefix="₹"
         />
@@ -62,7 +66,7 @@ const SWPCalculator = () => {
           value={withdrawalPerMonth}
           onChange={setWithdrawalPerMonth}
           min={1000}
-          max={100000}
+          max={1000000}
           step={1000}
           prefix="₹"
         />
@@ -98,6 +102,22 @@ const SWPCalculator = () => {
           suffix="% p.a."
           placeholder="0"
         />
+
+        <div className="bg-card p-4 rounded-lg border">
+          <div className="flex items-center justify-between mb-3">
+            <Label htmlFor="withdrawal-starts" className="text-sm font-medium">
+              Withdrawal starts this month
+            </Label>
+            <Switch
+              id="withdrawal-starts"
+              checked={withdrawalStartsThisMonth}
+              onCheckedChange={setWithdrawalStartsThisMonth}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            If enabled, withdrawal happens first, then interest is calculated on remaining balance
+          </p>
+        </div>
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
@@ -107,6 +127,10 @@ const SWPCalculator = () => {
           <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-muted-foreground">Initial Investment</span>
+              <span className="font-semibold text-foreground">{formatCurrency(result.invested)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-t border-border">
+              <span className="text-sm text-muted-foreground">Total Investment</span>
               <span className="font-semibold text-foreground">{formatCurrency(result.invested)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border">
@@ -215,7 +239,7 @@ const SWPCalculator = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="swp"
-        inputs={{ investmentAmount, withdrawalPerMonth, expectedReturn, years, inflationRate }}
+        inputs={{ investmentAmount, withdrawalPerMonth, expectedReturn, years, inflationRate, withdrawalStartsThisMonth: withdrawalStartsThisMonth ? 1 : 0 }}
         results={{
           invested: result.invested,
           totalWithdrawn: result.totalWithdrawn,

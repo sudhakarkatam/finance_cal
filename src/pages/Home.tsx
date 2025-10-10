@@ -92,7 +92,7 @@ const Home = () => {
   };
 
   return (
-    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 pb-24 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 pb-24 max-w-6xl mx-auto pt-8 sm:pt-12">
 
       {renderSection('Basic Calculators', basicCalculators)}
       {renderSection('Loan & EMI Calculators', loanCalculators)}

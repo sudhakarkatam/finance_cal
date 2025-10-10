@@ -1,6 +1,6 @@
 export interface CalculationHistory {
   id: string;
-  type: 'simple' | 'compound' | 'sip' | 'mutualfund' | 'swp' | 'emi' | 'loancompare' | 'homeloan' | 'lumpsum' | 'ppf' | 'fd' | 'rd' | 'goalplanning' | 'retirement' | 'education';
+  type: 'simple' | 'compound' | 'sip' | 'mutualfund' | 'swp' | 'emi' | 'loancompare' | 'homeloan' | 'lumpsum' | 'ppf' | 'fd' | 'rd' | 'goalplanning' | 'retirement' | 'education' | 'hra' | 'ssy';
   date: string;
   inputs: Record<string, number | string>;
   results: Record<string, number>;
