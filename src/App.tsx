@@ -28,6 +28,7 @@ import EducationPlanner from "./pages/EducationPlanner";
 import EmergencyFundCalculator from "./pages/EmergencyFundCalculator";
 import HRACalculator from "./pages/HRACalculator";
 import SSYCalculator from "./pages/SSYCalculator";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/emergency-fund" element={<CalculatorLayout><EmergencyFundCalculator /></CalculatorLayout>} />
           <Route path="/hra" element={<CalculatorLayout><HRACalculator /></CalculatorLayout>} />
           <Route path="/ssy" element={<CalculatorLayout><SSYCalculator /></CalculatorLayout>} />
+          <Route path="/settings" element={<CalculatorLayout><Settings /></CalculatorLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

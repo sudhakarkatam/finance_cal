@@ -1,7 +1,7 @@
 {
   "name": "Financial Calculators",
   "short_name": "FinCalc",
-  "description": "Calculate Simple Interest, Compound Interest, SIP, Mutual Fund returns, and SWP",
+  "description": "All-in-One Finance Calculator - Calculate Simple Interest, Compound Interest, SIP, Mutual Fund returns, EMI, and more",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F0F4F8",

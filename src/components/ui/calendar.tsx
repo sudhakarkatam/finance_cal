@@ -4,14 +4,22 @@ import { DayPicker } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  onYearClick?: (year: number) => void;
+  displayYear?: number;
+};
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, onYearClick, displayYear, ...props }: CalendarProps) {
+  // Set the month to show the selected year if provided
+  const month = displayYear ? new Date(displayYear, new Date().getMonth(), 1) : undefined;
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      month={month}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -44,6 +52,20 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        Caption: ({ displayMonth, ...captionProps }) => {
+          const year = displayMonth.getFullYear();
+          return (
+            <div className="flex justify-center items-center gap-2">
+              <Button
+                variant="ghost"
+                className="text-sm font-medium hover:bg-accent cursor-pointer"
+                onClick={() => onYearClick?.(year)}
+              >
+                {displayMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </Button>
+            </div>
+          );
+        },
       }}
       {...props}
     />

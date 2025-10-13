@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Home, Calculator, TrendingUp, PieChart, Wallet, History, Receipt, HandCoins, Menu, X, Home as HomeIcon, PiggyBank } from 'lucide-react';
+import { Home, Calculator, TrendingUp, PieChart, Wallet, History, Receipt, HandCoins, Menu, X, Home as HomeIcon, PiggyBank, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
     { path: '/cagr', icon: TrendingUp, label: 'CAGR Calculator' },
     { path: '/hra', icon: HomeIcon, label: 'HRA Calculator' },
     { path: '/ssy', icon: PiggyBank, label: 'SSY Calculator' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
@@ -42,29 +43,32 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            <nav className="p-4 space-y-2">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setSidebarOpen(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors",
-                      (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="flex flex-col h-full">
+              <nav className="p-4 space-y-2 flex-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => {
+                        navigate(item.path);
+                        setSidebarOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors",
+                        (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+            </div>
           </div>
 
           {/* Overlay for mobile */}
