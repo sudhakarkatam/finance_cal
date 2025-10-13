@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.appcal',
+  appId: 'com.easecraft.financialcalculator',
   appName: 'Financial Calculator',
   webDir: 'dist',
   server: {
