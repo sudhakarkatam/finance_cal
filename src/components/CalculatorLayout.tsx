@@ -1,38 +1,70 @@
-import { ReactNode, useState } from 'react';
-import { Home, Calculator, TrendingUp, PieChart, Wallet, History, Receipt, HandCoins, Menu, X, Home as HomeIcon, PiggyBank, Settings } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { ReactNode, useState } from "react";
+import {
+  Home,
+  Calculator,
+  TrendingUp,
+  PieChart,
+  History,
+  Receipt,
+  HandCoins,
+  Menu,
+  X,
+  Home as HomeIcon,
+  PiggyBank,
+  Settings,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useSafeArea } from "@/hooks/use-safe-area";
 
 interface CalculatorLayoutProps {
   children: ReactNode;
   showHeader?: boolean;
 }
 
-const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProps) => {
+const CalculatorLayout = ({
+  children,
+  showHeader = false,
+}: CalculatorLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isHomePage = location.pathname === '/' || location.pathname === '/home';
+  const safeAreaInsets = useSafeArea();
+  const isHomePage = location.pathname === "/" || location.pathname === "/home";
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/gratuity', icon: HandCoins, label: 'Gratuity Cal' },
-    { path: '/cagr', icon: TrendingUp, label: 'CAGR Calculator' },
-    { path: '/hra', icon: HomeIcon, label: 'HRA Calculator' },
-    { path: '/ssy', icon: PiggyBank, label: 'SSY Calculator' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: "/", icon: Home, label: "Home" },
+    { path: "/gratuity", icon: HandCoins, label: "Gratuity Cal" },
+    { path: "/cagr", icon: TrendingUp, label: "CAGR Calculator" },
+    { path: "/hra", icon: HomeIcon, label: "HRA Calculator" },
+    { path: "/ssy", icon: PiggyBank, label: "SSY Calculator" },
+    { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
+  // Calculate the total height of bottom navigation including safe area
+  const bottomNavHeight = 64; // Base height in pixels (py-3 + icon + label ≈ 64px)
+  const totalBottomHeight = bottomNavHeight + safeAreaInsets.bottom;
+
   return (
-    <div className="flex h-screen bg-background pt-2 sm:pt-4">
+    <div
+      className="flex h-screen bg-background overflow-hidden"
+      style={{
+        paddingTop: `${safeAreaInsets.top}px`,
+      }}
+    >
       {/* Sidebar - only show on home page */}
       {isHomePage && (
         <>
-          <div className={cn(
-            "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r border-border shadow-lg transform transition-transform duration-300 ease-in-out",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          )}>
+          <div
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 w-80 bg-card border-r border-border shadow-lg transform transition-transform duration-300 ease-in-out",
+              sidebarOpen ? "translate-x-0" : "-translate-x-full",
+            )}
+            style={{
+              paddingTop: `${safeAreaInsets.top}px`,
+            }}
+          >
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">Menu</h2>
               <Button
@@ -43,8 +75,8 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            <div className="flex flex-col h-full">
-              <nav className="p-4 space-y-2 flex-1">
+            <div className="flex flex-col h-full pb-20">
+              <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -56,9 +88,12 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
                       }}
                       className={cn(
                         "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left transition-colors",
-                        (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
+                        location.pathname === item.path ||
+                          (item.path === "/" &&
+                            (location.pathname === "/" ||
+                              location.pathname === "/home"))
                           ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
                       <Icon className="w-5 h-5" />
@@ -67,7 +102,6 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
                   );
                 })}
               </nav>
-
             </div>
           </div>
 
@@ -81,11 +115,11 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
         </>
       )}
 
-      {/* Main content */}
-      <div className="flex flex-col flex-1">
+      {/* Main content wrapper */}
+      <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header with hamburger menu - only show on Home page */}
         {showHeader && (
-          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-6 sm:mt-8 sm:mx-4 shadow-md flex items-center gap-3 relative z-10 rounded-lg">
+          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-2 sm:mx-4 sm:mt-3 shadow-md flex items-center gap-3 relative z-10 rounded-lg flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -98,46 +132,50 @@ const CalculatorLayout = ({ children, showHeader = false }: CalculatorLayoutProp
           </header>
         )}
 
-        {/* Hamburger menu for calculator pages - positioned absolutely */}
-        {!showHeader && isHomePage && (
-          <div className="absolute top-6 left-4 z-20">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="text-primary hover:bg-primary/10"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-          </div>
-        )}
-
-        <main className={`flex-1 overflow-y-auto ${showHeader ? 'pb-20' : 'pb-16'}`}>
+        {/* Main content area with proper scrolling and padding */}
+        <main
+          className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-4"
+          style={{
+            paddingBottom: `${totalBottomHeight + 16}px`, // Extra 16px for breathing room
+          }}
+        >
           {children}
         </main>
 
-        {/* Bottom navigation for mobile */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg">
-          <div className="flex justify-around items-center py-2">
+        {/* Bottom navigation for mobile with proper safe area handling */}
+        <nav
+          className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-30"
+          style={{
+            paddingBottom: `${safeAreaInsets.bottom}px`,
+            paddingLeft: `${safeAreaInsets.left}px`,
+            paddingRight: `${safeAreaInsets.right}px`,
+          }}
+        >
+          <div className="flex justify-around items-center py-3 px-2">
             {[
-              { path: '/', icon: Home, label: 'Home' },
-              { path: '/simple', icon: Calculator, label: 'Simple' },
-              { path: '/sip', icon: PieChart, label: 'SIP' },
-              { path: '/emi', icon: Receipt, label: 'EMI' },
-              { path: '/history', icon: History, label: 'History' },
+              { path: "/", icon: Home, label: "Home" },
+              { path: "/simple", icon: Calculator, label: "Simple" },
+              { path: "/sip", icon: PieChart, label: "SIP" },
+              { path: "/emi", icon: Receipt, label: "EMI" },
+              { path: "/history", icon: History, label: "History" },
             ].map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-colors",
-                  (location.pathname === item.path || (item.path === '/' && (location.pathname === '/' || location.pathname === '/home')))
+                  "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[60px] touch-manipulation",
+                  location.pathname === item.path ||
+                    (item.path === "/" &&
+                      (location.pathname === "/" ||
+                        location.pathname === "/home"))
                     ? "text-primary"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
-                <item.icon className="w-4 h-4" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs font-medium whitespace-nowrap">
+                  {item.label}
+                </span>
               </button>
             ))}
           </div>

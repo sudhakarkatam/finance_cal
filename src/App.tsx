@@ -39,31 +39,206 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<CalculatorLayout showHeader={true}><Home /></CalculatorLayout>} />
-          <Route path="/home" element={<CalculatorLayout showHeader={true}><Home /></CalculatorLayout>} />
-          <Route path="/simple" element={<CalculatorLayout><SimpleInterest /></CalculatorLayout>} />
-          <Route path="/compound" element={<CalculatorLayout><CompoundInterest /></CalculatorLayout>} />
-          <Route path="/currency" element={<CalculatorLayout><CurrencyCalculator /></CalculatorLayout>} />
-          <Route path="/sip" element={<CalculatorLayout><SIPCalculator /></CalculatorLayout>} />
-          <Route path="/mutual-fund" element={<CalculatorLayout><MutualFund /></CalculatorLayout>} />
-          <Route path="/swp" element={<CalculatorLayout><SWPCalculator /></CalculatorLayout>} />
-          <Route path="/emi" element={<CalculatorLayout><EMICalculator /></CalculatorLayout>} />
-          <Route path="/loan-compare" element={<CalculatorLayout><LoanComparison /></CalculatorLayout>} />
-          <Route path="/home-loan" element={<CalculatorLayout><HomeLoanCalculator /></CalculatorLayout>} />
-          <Route path="/lumpsum" element={<CalculatorLayout><LumpsumCalculator /></CalculatorLayout>} />
-          <Route path="/ppf" element={<CalculatorLayout><PPFCalculator /></CalculatorLayout>} />
-          <Route path="/fd" element={<CalculatorLayout><FDCalculator /></CalculatorLayout>} />
-          <Route path="/rd" element={<CalculatorLayout><RDCalculator /></CalculatorLayout>} />
-          <Route path="/gratuity" element={<CalculatorLayout><GratuityCalculator /></CalculatorLayout>} />
-          <Route path="/cagr" element={<CalculatorLayout><CAGRCalculator /></CalculatorLayout>} />
-          <Route path="/history" element={<CalculatorLayout><History /></CalculatorLayout>} />
-          <Route path="/goal-planning" element={<CalculatorLayout><GoalPlanning /></CalculatorLayout>} />
-          <Route path="/retirement-planner" element={<CalculatorLayout><RetirementPlanner /></CalculatorLayout>} />
-          <Route path="/education-planner" element={<CalculatorLayout><EducationPlanner /></CalculatorLayout>} />
-          <Route path="/emergency-fund" element={<CalculatorLayout><EmergencyFundCalculator /></CalculatorLayout>} />
-          <Route path="/hra" element={<CalculatorLayout><HRACalculator /></CalculatorLayout>} />
-          <Route path="/ssy" element={<CalculatorLayout><SSYCalculator /></CalculatorLayout>} />
-          <Route path="/settings" element={<CalculatorLayout><Settings /></CalculatorLayout>} />
+          <Route
+            path="/"
+            element={
+              <CalculatorLayout showHeader={true}>
+                <Home />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              <CalculatorLayout showHeader={true}>
+                <Home />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/simple"
+            element={
+              <CalculatorLayout>
+                <SimpleInterest />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/compound"
+            element={
+              <CalculatorLayout>
+                <CompoundInterest />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/currency"
+            element={
+              <CalculatorLayout>
+                <CurrencyCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/sip"
+            element={
+              <CalculatorLayout>
+                <SIPCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/mutual-fund"
+            element={
+              <CalculatorLayout>
+                <MutualFund />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/swp"
+            element={
+              <CalculatorLayout>
+                <SWPCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/emi"
+            element={
+              <CalculatorLayout>
+                <EMICalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/loan-compare"
+            element={
+              <CalculatorLayout>
+                <LoanComparison />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/home-loan"
+            element={
+              <CalculatorLayout>
+                <HomeLoanCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/lumpsum"
+            element={
+              <CalculatorLayout>
+                <LumpsumCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/ppf"
+            element={
+              <CalculatorLayout>
+                <PPFCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/fd"
+            element={
+              <CalculatorLayout>
+                <FDCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/rd"
+            element={
+              <CalculatorLayout>
+                <RDCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/gratuity"
+            element={
+              <CalculatorLayout>
+                <GratuityCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/cagr"
+            element={
+              <CalculatorLayout>
+                <CAGRCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <CalculatorLayout>
+                <History />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/goal-planning"
+            element={
+              <CalculatorLayout>
+                <GoalPlanning />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/retirement-planner"
+            element={
+              <CalculatorLayout>
+                <RetirementPlanner />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/education-planner"
+            element={
+              <CalculatorLayout>
+                <EducationPlanner />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/emergency-fund"
+            element={
+              <CalculatorLayout>
+                <EmergencyFundCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/hra"
+            element={
+              <CalculatorLayout>
+                <HRACalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/ssy"
+            element={
+              <CalculatorLayout>
+                <SSYCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <CalculatorLayout>
+                <Settings />
+              </CalculatorLayout>
+            }
+          />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

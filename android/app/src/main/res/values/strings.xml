@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">finance_cal</string>
-    <string name="title_activity_main">finance_cal</string>
-    <string name="package_name">com.example.appcal</string>
-    <string name="custom_url_scheme">com.example.appcal</string>
+    <string name="app_name">Financial Calculator</string>
+    <string name="title_activity_main">Financial Calculator</string>
+    <string name="package_name">com.easecraft.financialcalculator</string>
+    <string name="custom_url_scheme">com.easecraft.financialcalculator</string>
 </resources>

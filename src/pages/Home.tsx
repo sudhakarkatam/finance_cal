@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 import {
   Calculator,
   Home as HomeIcon,
@@ -38,8 +38,8 @@ import {
   Coins as CoinsIcon,
   Target as TargetIcon,
   GraduationCap as GraduationCapIcon,
-  Shield
-} from 'lucide-react';
+  Shield,
+} from "lucide-react";
 
 interface CalculatorCard {
   title: string;
@@ -54,35 +54,154 @@ const Home = () => {
   const navigate = useNavigate();
 
   const loanCalculators: CalculatorCard[] = [
-    { title: 'EMI Calculator', icon: CreditCardIcon, path: '/emi', description: 'Monthly loan installments', available: true, color: 'orange' },
-    { title: 'Loan Comparison', icon: ScaleIcon, path: '/loan-compare', description: 'Compare two loans', available: true, color: 'blue' },
-    { title: 'Home Loan', icon: HomeIcon2, path: '/home-loan', description: 'Home loan with tax benefits', available: true, color: 'yellow' },
+    {
+      title: "EMI Calculator",
+      icon: CreditCardIcon,
+      path: "/emi",
+      description: "Monthly loan installments",
+      available: true,
+      color: "orange",
+    },
+    {
+      title: "Loan Comparison",
+      icon: ScaleIcon,
+      path: "/loan-compare",
+      description: "Compare two loans",
+      available: true,
+      color: "blue",
+    },
+    {
+      title: "Home Loan",
+      icon: HomeIcon2,
+      path: "/home-loan",
+      description: "Home loan with tax benefits",
+      available: true,
+      color: "yellow",
+    },
   ];
 
   const investmentCalculators: CalculatorCard[] = [
-    { title: 'SIP Calculator', icon: PieChart, path: '/sip', description: 'Systematic investment', available: true, color: 'purple' },
-    { title: 'Mutual Fund', icon: Wallet, path: '/mutual-fund', description: 'Fund returns', available: true, color: 'green' },
-    { title: 'SWP Calculator', icon: TrendingDown, path: '/swp', description: 'Withdrawal planning', available: true, color: 'blue' },
-    { title: 'Lumpsum', icon: CoinsIcon, path: '/lumpsum', description: 'One-time investment', available: true, color: 'purple' },
+    {
+      title: "SIP Calculator",
+      icon: PieChart,
+      path: "/sip",
+      description: "Systematic investment",
+      available: true,
+      color: "purple",
+    },
+    {
+      title: "Mutual Fund",
+      icon: Wallet,
+      path: "/mutual-fund",
+      description: "Fund returns",
+      available: true,
+      color: "green",
+    },
+    {
+      title: "SWP Calculator",
+      icon: TrendingDown,
+      path: "/swp",
+      description: "Withdrawal planning",
+      available: true,
+      color: "blue",
+    },
+    {
+      title: "Lumpsum",
+      icon: CoinsIcon,
+      path: "/lumpsum",
+      description: "One-time investment",
+      available: true,
+      color: "purple",
+    },
   ];
 
   const depositCalculators: CalculatorCard[] = [
-    { title: 'FD Calculator', icon: PiggyBankIcon, path: '/fd', description: 'Fixed deposits', available: true, color: 'green' },
-    { title: 'RD Calculator', icon: Repeat, path: '/rd', description: 'Recurring deposits', available: true, color: 'blue' },
-    { title: 'PPF Calculator', icon: Landmark, path: '/ppf', description: 'Public provident fund', available: true, color: 'orange' },
+    {
+      title: "FD Calculator",
+      icon: PiggyBankIcon,
+      path: "/fd",
+      description: "Fixed deposits",
+      available: true,
+      color: "green",
+    },
+    {
+      title: "RD Calculator",
+      icon: Repeat,
+      path: "/rd",
+      description: "Recurring deposits",
+      available: true,
+      color: "blue",
+    },
+    {
+      title: "PPF Calculator",
+      icon: Landmark,
+      path: "/ppf",
+      description: "Public provident fund",
+      available: true,
+      color: "orange",
+    },
   ];
 
   const planningCalculators: CalculatorCard[] = [
-    { title: 'Retirement Planner', icon: Users, path: '/retirement-planner', description: 'Plan your retirement corpus', available: true, color: 'purple' },
-    { title: 'Goal Planning', icon: TargetIcon, path: '/goal-planning', description: 'Achieve financial goals', available: true, color: 'orange' },
-    { title: 'Education Planner', icon: GraduationCapIcon, path: '/education-planner', description: 'Child education fund', available: true, color: 'blue' },
-    { title: 'Emergency Fund', icon: Shield, path: '/emergency-fund', description: 'Build financial safety net', available: true, color: 'green' },
+    {
+      title: "Retirement Planner",
+      icon: Users,
+      path: "/retirement-planner",
+      description: "Plan your retirement corpus",
+      available: true,
+      color: "purple",
+    },
+    {
+      title: "Goal Planning",
+      icon: TargetIcon,
+      path: "/goal-planning",
+      description: "Achieve financial goals",
+      available: true,
+      color: "orange",
+    },
+    {
+      title: "Education Planner",
+      icon: GraduationCapIcon,
+      path: "/education-planner",
+      description: "Child education fund",
+      available: true,
+      color: "blue",
+    },
+    {
+      title: "Emergency Fund",
+      icon: Shield,
+      path: "/emergency-fund",
+      description: "Build financial safety net",
+      available: true,
+      color: "green",
+    },
   ];
 
   const basicCalculators: CalculatorCard[] = [
-    { title: 'Simple Interest', icon: CircleDot, path: '/simple', description: 'Basic interest calculation', available: true, color: 'green' },
-    { title: 'Compound Interest', icon: BarChart3, path: '/compound', description: 'Compounding returns', available: true, color: 'purple' },
-    { title: 'Currency Calculator', icon: Calculator, path: '/currency', description: 'Convert between currencies', available: true, color: 'blue' },
+    {
+      title: "Simple Interest",
+      icon: CircleDot,
+      path: "/simple",
+      description: "Basic interest calculation",
+      available: true,
+      color: "green",
+    },
+    {
+      title: "Compound Interest",
+      icon: BarChart3,
+      path: "/compound",
+      description: "Compounding returns",
+      available: true,
+      color: "purple",
+    },
+    {
+      title: "Currency Calculator",
+      icon: Calculator,
+      path: "/currency",
+      description: "Convert between currencies",
+      available: true,
+      color: "blue",
+    },
   ];
 
   const handleCardClick = (card: CalculatorCard) => {
@@ -92,26 +211,32 @@ const Home = () => {
   };
 
   return (
-    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 pb-24 max-w-6xl mx-auto pt-8 sm:pt-12">
-
-      {renderSection('Basic Calculators', basicCalculators)}
-      {renderSection('Loan & EMI Calculators', loanCalculators)}
-      {renderSection('Investment Calculators', investmentCalculators)}
-      {renderSection('Deposit Calculators', depositCalculators)}
-      {renderSection('Planning Tools', planningCalculators)}
+    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6 max-w-6xl mx-auto">
+      {renderSection("Basic Calculators", basicCalculators)}
+      {renderSection("Loan & EMI Calculators", loanCalculators)}
+      {renderSection("Investment Calculators", investmentCalculators)}
+      {renderSection("Deposit Calculators", depositCalculators)}
+      {renderSection("Planning Tools", planningCalculators)}
     </div>
   );
 
   function renderSection(title: string, calculators: CalculatorCard[]) {
     const getColorClasses = (color?: string) => {
       switch (color) {
-        case 'green': return 'bg-green-100 text-green-600';
-        case 'blue': return 'bg-blue-100 text-blue-600';
-        case 'orange': return 'bg-orange-100 text-orange-600';
-        case 'yellow': return 'bg-yellow-100 text-yellow-600';
-        case 'purple': return 'bg-purple-100 text-purple-600';
-        case 'red': return 'bg-red-100 text-red-600';
-        default: return 'bg-primary/10 text-primary';
+        case "green":
+          return "bg-green-100 text-green-600";
+        case "blue":
+          return "bg-blue-100 text-blue-600";
+        case "orange":
+          return "bg-orange-100 text-orange-600";
+        case "yellow":
+          return "bg-yellow-100 text-yellow-600";
+        case "purple":
+          return "bg-purple-100 text-purple-600";
+        case "red":
+          return "bg-red-100 text-red-600";
+        default:
+          return "bg-primary/10 text-primary";
       }
     };
 
@@ -128,18 +253,28 @@ const Home = () => {
                 onClick={() => handleCardClick(calc)}
                 className={`p-4 flex flex-col items-center justify-center gap-3 text-center transition-all min-h-[140px] ${
                   calc.available
-                    ? 'cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95'
-                    : 'opacity-50 cursor-not-allowed'
+                    ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
+                    : "opacity-50 cursor-not-allowed"
                 }`}
               >
-                <div className={`p-3 rounded-full ${calc.available ? colorClasses : 'bg-muted'}`}>
-                  <Icon className={`w-8 h-8 ${calc.available ? colorClasses.split(' ')[1] : 'text-muted-foreground'}`} />
+                <div
+                  className={`p-3 rounded-full ${calc.available ? colorClasses : "bg-muted"}`}
+                >
+                  <Icon
+                    className={`w-8 h-8 ${calc.available ? colorClasses.split(" ")[1] : "text-muted-foreground"}`}
+                  />
                 </div>
                 <div className="flex-1 flex flex-col justify-center">
-                  <h3 className="font-semibold text-sm text-foreground leading-tight">{calc.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-tight">{calc.description}</p>
+                  <h3 className="font-semibold text-sm text-foreground leading-tight">
+                    {calc.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-tight">
+                    {calc.description}
+                  </p>
                   {!calc.available && (
-                    <span className="text-xs text-primary font-medium mt-1 block">Coming Soon</span>
+                    <span className="text-xs text-primary font-medium mt-1 block">
+                      Coming Soon
+                    </span>
                   )}
                 </div>
               </Card>
@@ -150,16 +285,26 @@ const Home = () => {
     );
   }
 
-  function renderAdditionalSection(title: string, calculators: CalculatorCard[]) {
+  function renderAdditionalSection(
+    title: string,
+    calculators: CalculatorCard[],
+  ) {
     const getColorClasses = (color?: string) => {
       switch (color) {
-        case 'green': return 'bg-green-100 text-green-600';
-        case 'blue': return 'bg-blue-100 text-blue-600';
-        case 'orange': return 'bg-orange-100 text-orange-600';
-        case 'yellow': return 'bg-yellow-100 text-yellow-600';
-        case 'purple': return 'bg-purple-100 text-purple-600';
-        case 'red': return 'bg-red-100 text-red-600';
-        default: return 'bg-primary/10 text-primary';
+        case "green":
+          return "bg-green-100 text-green-600";
+        case "blue":
+          return "bg-blue-100 text-blue-600";
+        case "orange":
+          return "bg-orange-100 text-orange-600";
+        case "yellow":
+          return "bg-yellow-100 text-yellow-600";
+        case "purple":
+          return "bg-purple-100 text-purple-600";
+        case "red":
+          return "bg-red-100 text-red-600";
+        default:
+          return "bg-primary/10 text-primary";
       }
     };
 
@@ -176,18 +321,28 @@ const Home = () => {
                 onClick={() => handleCardClick(calc)}
                 className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[120px] ${
                   calc.available
-                    ? 'cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95'
-                    : 'opacity-50 cursor-not-allowed'
+                    ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
+                    : "opacity-50 cursor-not-allowed"
                 }`}
               >
-                <div className={`p-2 rounded-full ${calc.available ? colorClasses : 'bg-muted'}`}>
-                  <Icon className={`w-6 h-6 ${calc.available ? colorClasses.split(' ')[1] : 'text-muted-foreground'}`} />
+                <div
+                  className={`p-2 rounded-full ${calc.available ? colorClasses : "bg-muted"}`}
+                >
+                  <Icon
+                    className={`w-6 h-6 ${calc.available ? colorClasses.split(" ")[1] : "text-muted-foreground"}`}
+                  />
                 </div>
                 <div className="flex-1 flex flex-col justify-center">
-                  <h3 className="font-semibold text-xs text-foreground leading-tight">{calc.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-tight">{calc.description}</p>
+                  <h3 className="font-semibold text-xs text-foreground leading-tight">
+                    {calc.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-tight">
+                    {calc.description}
+                  </p>
                   {!calc.available && (
-                    <span className="text-xs text-primary font-medium mt-1 block">Coming Soon</span>
+                    <span className="text-xs text-primary font-medium mt-1 block">
+                      Coming Soon
+                    </span>
                   )}
                 </div>
               </Card>
