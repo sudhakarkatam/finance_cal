@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Receipt, Calculator, TrendingDown, Clock, Eye, EyeOff } from 'lucide-react';
+import { Save, RotateCcw, Receipt, Calculator, TrendingDown, Clock, Eye, EyeOff, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
 import { formatCurrency } from '@/lib/calculations';
@@ -33,6 +33,7 @@ const EMICalculator = () => {
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // Calculate total tenure in months
   const totalTenureMonths = useMemo(() => {
@@ -291,6 +292,135 @@ const EMICalculator = () => {
               <h2 className="text-lg font-semibold text-foreground">EMI Calculator</h2>
               <p className="text-xs text-muted-foreground">Advanced calculator with prepayment options</p>
             </div>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setInfoDialogOpen(true)}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>About EMI & Calculation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">What is EMI?</h3>
+                    <p className="text-muted-foreground">
+                      Equated Monthly Installment (EMI) is a fixed amount paid by a borrower to a lender on a specific date each month. EMI includes both principal repayment and interest payment, calculated using a standard formula that ensures the loan is paid off over the specified tenure.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">EMI Formula</h3>
+                    <p className="text-muted-foreground mb-2 font-mono text-xs bg-muted p-2 rounded">
+                      EMI = [P × R × (1+R)^N] / [(1+R)^N - 1]
+                    </p>
+                    <p className="text-muted-foreground">
+                      Where: P = Principal loan amount, R = Monthly interest rate, N = Loan tenure in months
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Prepayment Options</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li><strong>Reduce EMI:</strong> Keep tenure same, reduce monthly payment</li>
+                      <li><strong>Reduce Tenure:</strong> Keep EMI same, pay off loan faster (saves interest)</li>
+                      <li>Prepayment charges may apply (usually 2-4% of prepaid amount)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>EMI calculation assumes fixed interest rate throughout loan tenure</li>
+                      <li>Floating rate loans may have variable EMIs</li>
+                      <li>Early prepayments can significantly reduce total interest paid</li>
+                      <li>Processing fees are usually 0.5-2% of loan amount</li>
+                      <li>Loan interest is eligible for tax deduction under Section 24(b) for home loans</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Personal Loan EMI</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Loan = ₹10,00,000, Interest = 12% p.a., Tenure = 5 years<br />
+                          <strong>EMI Calculation:</strong> ₹22,244/month<br />
+                          <strong>Total Payment:</strong> ₹22,244 × 60 = ₹13,34,640<br />
+                          <strong>Interest Paid:</strong> ₹3,34,640<br />
+                          <strong>Breakdown:</strong> First EMI: ₹12,244 principal + ₹10,000 interest<br />
+                          <strong>Over Time:</strong> Principal increases, interest decreases each month
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: Prepayment Reduce Tenure</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> ₹20L loan, 8% rate, 20 years, prepay ₹2L after 2 years<br />
+                          <strong>Before Prepayment:</strong> EMI ₹16,728, remaining 18 years<br />
+                          <strong>After Prepayment:</strong> EMI ₹16,728, tenure reduces to 14.5 years<br />
+                          <strong>Interest Saved:</strong> ₹5,50,000 (from 18 years to 14.5 years)<br />
+                          <strong>Benefit:</strong> Become debt-free 3.5 years earlier + huge interest savings<br />
+                          <strong>Strategy:</strong> Better option if you can afford same EMI
+                        </p>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Prepayment Reduce EMI</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> ₹15L loan, 9% rate, 15 years, prepay ₹3L after 3 years<br />
+                          <strong>Before Prepayment:</strong> EMI ₹15,211, remaining 12 years<br />
+                          <strong>After Prepayment:</strong> EMI ₹11,847, tenure stays 12 years<br />
+                          <strong>EMI Reduction:</strong> ₹3,364/month (22% lower EMI)<br />
+                          <strong>Interest Saved:</strong> ₹2,04,000 (from lower principal)<br />
+                          <strong>Benefit:</strong> Lower monthly burden while keeping same tenure
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Interest Savings Calculation</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> ₹25L home loan, 8.5% rate, 20 years<br />
+                          <strong>Total Interest:</strong> ₹24,50,000 (without prepayment)<br />
+                          <strong>Prepay ₹5L at year 5:</strong> Interest reduces to ₹18,20,000<br />
+                          <strong>Savings:</strong> ₹6,30,000 interest saved<br />
+                          <strong>ROI on Prepayment:</strong> ₹5L saves ₹6.3L → 126% effective return<br />
+                          <strong>Insight:</strong> Prepayment gives better return than most investments<br />
+                          <strong>Tip:</strong> Prepay high-interest loans before investing elsewhere
+                        </p>
+                      </div>
+
+                      <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <p className="font-semibold text-red-900 dark:text-red-100 mb-1">Real-World Loan Optimization</p>
+                        <p className="text-sm">
+                          <strong>Vikram's Strategy:</strong> ₹30L loan at 9%, 20 years, prepaid ₹6L over 5 years<br />
+                          <strong>Original Plan:</strong> ₹2,69,982 EMI for 20 years, ₹34,79,568 total interest<br />
+                          <strong>With Prepayments:</strong> Reduced tenure to 12 years, ₹18,20,000 total interest<br />
+                          <strong>Interest Saved:</strong> ₹16,59,568 (48% reduction)<br />
+                          <strong>Time Saved:</strong> 8 years earlier (finished loan at year 12)<br />
+                          <strong>Success:</strong> Used bonus and savings for prepayments - became debt-free much faster
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>Prepay early in loan tenure when interest component is highest - maximum savings</li>
+                      <li>Reduce tenure option saves more interest than reduce EMI option</li>
+                      <li>Calculate prepayment ROI - often better than investing surplus money</li>
+                      <li>Keep 6 months EMI as emergency fund before aggressive prepayments</li>
+                      <li>Check prepayment charges (usually 0-2%) - factor into savings calculation</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <div className="flex gap-2">
             <Button

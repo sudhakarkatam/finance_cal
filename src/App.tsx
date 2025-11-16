@@ -28,6 +28,7 @@ import EducationPlanner from "./pages/EducationPlanner";
 import EmergencyFundCalculator from "./pages/EmergencyFundCalculator";
 import HRACalculator from "./pages/HRACalculator";
 import SSYCalculator from "./pages/SSYCalculator";
+import EPFCalculator from "./pages/EPFCalculator";
 import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
@@ -228,6 +229,14 @@ const App = () => (
             element={
               <CalculatorLayout>
                 <SSYCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/epf"
+            element={
+              <CalculatorLayout>
+                <EPFCalculator />
               </CalculatorLayout>
             }
           />

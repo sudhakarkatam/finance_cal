@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Calculator, Home, IndianRupee } from 'lucide-react';
+import { Save, RotateCcw, Calculator, Home, IndianRupee, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
 import { calculateHRA, formatCurrency } from '@/lib/calculations';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const HRACalculator = () => {
   const [basicSalary, setBasicSalary] = useState(50000);
@@ -15,6 +16,7 @@ const HRACalculator = () => {
   const [monthlyRent, setMonthlyRent] = useState(25000);
   const [cityType, setCityType] = useState('metro');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     return calculateHRA(basicSalary, dearnessAllowance, hraReceived, monthlyRent, cityType === 'metro');
@@ -37,6 +39,159 @@ const HRACalculator = () => {
               <Home className="w-6 h-6 text-primary" />
             </div>
             <h2 className="text-lg font-semibold text-foreground">HRA Calculator</h2>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setInfoDialogOpen(true)}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>About HRA & Calculation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">What is HRA?</h3>
+                    <p className="text-muted-foreground">
+                      House Rent Allowance (HRA) is a component of salary provided by employers to employees to cover their rental accommodation expenses. It is one of the most common tax-saving components for salaried individuals in India, governed by Section 10(13A) of the Income Tax Act, 1961.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">HRA Exemption Rules</h3>
+                    <p className="text-muted-foreground mb-2">
+                      HRA exemption is calculated as the <strong>minimum</strong> of the following three amounts:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li><strong>Actual HRA received</strong> from the employer</li>
+                      <li><strong>Actual rent paid minus 10% of basic salary</strong> (rent - 10% of basic salary + DA)</li>
+                      <li><strong>50% of salary</strong> (basic + DA) for metro cities <strong>OR 40% of salary</strong> for non-metro cities</li>
+                    </ol>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Metro vs Non-Metro Cities</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li><strong>Metro Cities:</strong> Delhi, Mumbai, Kolkata, Chennai - 50% of salary exemption limit</li>
+                      <li><strong>Non-Metro Cities:</strong> All other cities - 40% of salary exemption limit</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Requirements for HRA Exemption</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>You must actually be paying rent for a residential accommodation</li>
+                      <li>You cannot claim HRA if you live in your own house or in rent-free accommodation</li>
+                      <li>If rent exceeds ₹1,00,000 per year, you need to provide landlord's PAN card</li>
+                      <li>Rent receipts should be maintained for submission to your employer or during tax filing</li>
+                      <li>The rented property should be in the city where you are working (unless you can justify otherwise)</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Only the <strong>exempt portion</strong> of HRA is tax-free - the remaining amount is taxable</li>
+                      <li>If you don't receive HRA but pay rent, you cannot claim any tax benefit (HRA exemption is only for HRA received)</li>
+                      <li>If you pay rent to family members (parents, spouse, etc.), they must show it as rental income in their tax returns</li>
+                      <li>HRA benefits are available only to salaried individuals - self-employed cannot claim HRA exemption</li>
+                      <li>The exemption is calculated on an annual basis but can be claimed monthly through your employer</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
+                    <p className="text-muted-foreground">
+                      The HRA calculator helps you determine the exact tax exemption you can claim on your House Rent Allowance. It calculates all three exemption limits automatically and shows you the minimum amount that qualifies for tax exemption, along with potential tax savings across different tax slabs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Metro City Exemption</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Basic = ₹50,000, DA = ₹10,000, HRA = ₹20,000, Rent = ₹25,000 (Mumbai)<br />
+                          <strong>Calculation:</strong> Minimum of:
+                          <ul className="list-disc list-inside ml-4 mt-1">
+                            <li>Actual HRA: ₹20,000</li>
+                            <li>Rent - 10% Basic: ₹25,000 - ₹6,000 = ₹19,000</li>
+                            <li>50% of Salary: 50% × ₹60,000 = ₹30,000</li>
+                          </ul>
+                          <strong>Result:</strong> Exemption = ₹19,000/month (minimum of three), Taxable HRA = ₹1,000/month<br />
+                          <strong>Annual Savings:</strong> ₹19,000 × 12 = ₹2,28,000 tax-free, saving ₹68,400 (30% slab)
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: Non-Metro City</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Basic = ₹40,000, DA = ₹5,000, HRA = ₹15,000, Rent = ₹18,000 (Pune)<br />
+                          <strong>Calculation:</strong> Minimum of:
+                          <ul className="list-disc list-inside ml-4 mt-1">
+                            <li>Actual HRA: ₹15,000</li>
+                            <li>Rent - 10% Basic: ₹18,000 - ₹4,500 = ₹13,500</li>
+                            <li>40% of Salary: 40% × ₹45,000 = ₹18,000</li>
+                          </ul>
+                          <strong>Result:</strong> Exemption = ₹13,500/month, Taxable HRA = ₹1,500/month<br />
+                          <strong>Annual Savings:</strong> ₹1,62,000 tax-free, saving ₹48,600 (30% slab)
+                        </p>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Rent Higher Than HRA</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Basic = ₹60,000, HRA = ₹20,000, Rent = ₹35,000<br />
+                          <strong>Calculation:</strong> Rent - 10% Basic = ₹35,000 - ₹6,000 = ₹29,000<br />
+                          <strong>Limit:</strong> 50% of ₹60,000 = ₹30,000, Actual HRA = ₹20,000<br />
+                          <strong>Result:</strong> Exemption = ₹20,000 (actual HRA), remaining ₹15,000 rent not covered<br />
+                          <strong>Tip:</strong> If rent exceeds HRA significantly, negotiate higher HRA with employer
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Maximum Tax Savings</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Basic = ₹1,00,000, HRA = ₹50,000, Rent = ₹50,000 (Delhi)<br />
+                          <strong>Calculation:</strong> Exemption = ₹50,000/month (full HRA)<br />
+                          <strong>Annual Exemption:</strong> ₹6,00,000<br />
+                          <strong>Tax Savings:</strong> ₹1,80,000/year (30% slab), ₹1,20,000 (20% slab), ₹30,000 (10% slab)<br />
+                          <strong>Benefit:</strong> Maximum exemption possible when rent equals or exceeds HRA limit
+                        </p>
+                      </div>
+
+                      <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <p className="font-semibold text-red-900 dark:text-red-100 mb-1">Real-World Scenario</p>
+                        <p className="text-sm">
+                          <strong>Raj's Story:</strong> Works in Bangalore, earns ₹80,000/month, pays ₹30,000 rent<br />
+                          <strong>Mistake:</strong> Didn't claim HRA initially, paid tax on full ₹80,000<br />
+                          <strong>After Calculation:</strong> Eligible for ₹24,000/month HRA exemption<br />
+                          <strong>Loss:</strong> Paid extra ₹86,400 tax over 3 years (₹28,800/year at 30% slab)<br />
+                          <strong>Lesson:</strong> Always claim HRA exemption - it's one of the biggest tax savers for salaried employees
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>If rent exceeds ₹1 lakh/year, maintain rent receipts and landlord's PAN card</li>
+                      <li>Pay rent via bank transfer to maintain clear paper trail for IT Department</li>
+                      <li>Negotiate higher HRA component if you pay high rent - it's tax-free</li>
+                      <li>Can't claim HRA if you own the house or stay with parents without rent</li>
+                      <li>Submit Form 12BB to employer at start of financial year for smooth processing</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <Button
             variant="outline"

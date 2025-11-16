@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import {
   Home,
   Calculator,
@@ -11,6 +11,7 @@ import {
   X,
   Home as HomeIcon,
   PiggyBank,
+  Briefcase,
   Settings,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -33,12 +34,37 @@ const CalculatorLayout = ({
   const safeAreaInsets = useSafeArea();
   const isHomePage = location.pathname === "/" || location.pathname === "/home";
 
+  // Handle back button navigation
+  useEffect(() => {
+    // Push state when navigating to non-home pages to track history
+    if (!isHomePage) {
+      window.history.pushState({ fromCalculator: true }, "", location.pathname);
+    }
+  }, [location.pathname, isHomePage]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If we're on a calculator page and user presses back, go to home
+      if (!isHomePage) {
+        event.preventDefault();
+        navigate("/");
+      }
+      // If on home page, allow default behavior (may close app)
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isHomePage, navigate]);
+
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
     { path: "/gratuity", icon: HandCoins, label: "Gratuity Cal" },
     { path: "/cagr", icon: TrendingUp, label: "CAGR Calculator" },
     { path: "/hra", icon: HomeIcon, label: "HRA Calculator" },
     { path: "/ssy", icon: PiggyBank, label: "SSY Calculator" },
+    { path: "/epf", icon: Briefcase, label: "EPF Calculator" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 

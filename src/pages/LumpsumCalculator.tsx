@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Coins } from 'lucide-react';
+import { Save, RotateCcw, Coins, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
 import { formatCurrency } from '@/lib/calculations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const LumpsumCalculator = () => {
   const [investment, setInvestment] = useState(100000);
@@ -13,6 +14,7 @@ const LumpsumCalculator = () => {
   const [years, setYears] = useState(10);
   const [months, setMonths] = useState(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const totalYears = years + (months / 12);
 
@@ -49,6 +51,147 @@ const LumpsumCalculator = () => {
               <h2 className="text-lg font-semibold text-foreground">Lumpsum Calculator</h2>
               <p className="text-xs text-muted-foreground">One-time investment returns</p>
             </div>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setInfoDialogOpen(true)}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>About Lumpsum Investment & Calculation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">What is Lumpsum Investment?</h3>
+                    <p className="text-muted-foreground">
+                      Lumpsum investment is a one-time investment where you invest a large amount of money at once, rather than investing small amounts regularly (like SIP). This investment strategy is ideal when you have a substantial amount available and want to invest it immediately.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">When to Choose Lumpsum?</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>When you receive a large sum (bonus, inheritance, sale proceeds)</li>
+                      <li>When you want to invest immediately and benefit from market timing</li>
+                      <li>When you have a high-risk tolerance and can handle market volatility</li>
+                      <li>When you're confident about market conditions</li>
+                      <li>For short to medium-term investment goals (1-5 years)</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Lumpsum vs SIP</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li><strong>Lumpsum:</strong> One-time investment, potentially higher returns if timed well, but higher risk</li>
+                      <li><strong>SIP:</strong> Regular investments, rupee cost averaging, lower risk, disciplined investing</li>
+                      <li>Lumpsum requires market timing knowledge</li>
+                      <li>SIP reduces timing risk through regular investments</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Calculation Formula</h3>
+                    <p className="text-muted-foreground mb-2">
+                      Lumpsum uses compound interest formula:
+                    </p>
+                    <p className="text-muted-foreground font-mono text-xs bg-muted p-2 rounded mb-2">
+                      Future Value = Principal × (1 + Rate)^Time
+                    </p>
+                    <p className="text-muted-foreground">
+                      Where: Principal = Initial investment, Rate = Annual return rate, Time = Investment period in years
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Lumpsum investments are subject to market risks and volatility</li>
+                      <li>Returns depend on entry timing and market performance</li>
+                      <li>Power of compounding works best with longer investment horizons</li>
+                      <li>Consider your risk tolerance before choosing lumpsum investment</li>
+                      <li>Diversification is key - don't put all money in one asset class</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
+                    <p className="text-muted-foreground">
+                      The Lumpsum calculator helps you estimate the future value of your one-time investment. Enter your investment amount, expected annual return, and investment period to see projected returns. This helps you plan your investments and set realistic financial goals.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: One-Time Investment</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Invest ₹5,00,000 lump sum for 10 years at 12% annual return<br />
+                          <strong>Formula:</strong> Future Value = Principal × (1 + Rate)^Years<br />
+                          <strong>Calculation:</strong> ₹5,00,000 × (1.12)^10 = ₹15,52,924<br />
+                          <strong>Returns:</strong> ₹10,52,924 (211% gain)<br />
+                          <strong>Growth:</strong> Money triples in 10 years at 12% return<br />
+                          <strong>Use Case:</strong> Ideal for bonus, inheritance, or sale proceeds
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: Bonus Investment Scenario</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Received ₹10,00,000 bonus, invest for 15 years at 10% return<br />
+                          <strong>Option A - Keep in Savings:</strong> ₹10,00,000 → ₹12,00,000 (4% return)<br />
+                          <strong>Option B - Invest Lumpsum:</strong> ₹10,00,000 → ₹41,77,248 (10% return)<br />
+                          <strong>Difference:</strong> ₹29,77,248 more with investment<br />
+                          <strong>Benefit:</strong> Lumpsum investment multiplies bonus significantly<br />
+                          <strong>Tip:</strong> Invest windfalls immediately rather than keeping in savings
+                        </p>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Market Timing Impact</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> ₹3,00,000 to invest, considering timing<br />
+                          <strong>Market at Peak:</strong> Invest today → 10 years → ₹7,77,000<br />
+                          <strong>Wait for Dip:</strong> Delay 2 years, get 20% better entry → 8 years → ₹7,73,000<br />
+                          <strong>Reality:</strong> Waiting often hurts more than immediate investment<br />
+                          <strong>Lesson:</strong> Time in market beats timing the market<br />
+                          <strong>Strategy:</strong> Invest immediately if you have money ready
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Lumpsum vs SIP Comparison</p>
+                        <p className="text-sm">
+                          <strong>Lumpsum:</strong> ₹10,00,000 today, 10 years, 12% → ₹31,05,848<br />
+                          <strong>SIP:</strong> ₹8,333/month (₹10L over 10 years), 12% → ₹18,50,000<br />
+                          <strong>Difference:</strong> Lumpsum gives ₹12,55,848 more (67% higher)<br />
+                          <strong>Reason:</strong> Full amount starts compounding immediately<br />
+                          <strong>Trade-off:</strong> Lumpsum has higher risk but better returns if timed well<br />
+                          <strong>When to Use:</strong> Lumpsum if you have large amount; SIP if building gradually
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>Invest lump sum immediately when available - time in market beats timing</li>
+                      <li>Diversify large lump sum across different asset classes to reduce risk</li>
+                      <li>Consider staggered investment if uncertain about market conditions (25% each quarter)</li>
+                      <li>Lumpsum works best for long-term goals (5+ years) where volatility smooths out</li>
+                      <li>Don't wait for "perfect" entry point - historical data shows immediate investment wins</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <Button 
             variant="outline" 

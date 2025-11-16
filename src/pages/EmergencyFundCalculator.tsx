@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Shield, Calculator } from 'lucide-react';
+import { Save, RotateCcw, Shield, Calculator, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
 import { formatCurrency } from '@/lib/calculations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const EmergencyFundCalculator = () => {
   const [monthlyExpenses, setMonthlyExpenses] = useState(50000);
@@ -14,6 +15,7 @@ const EmergencyFundCalculator = () => {
   const [savingsPeriod, setSavingsPeriod] = useState(12); // Months to reach target
   const [expectedReturn, setExpectedReturn] = useState(4); // Savings account interest
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     const expenses = monthlyExpenses;
@@ -84,6 +86,121 @@ const EmergencyFundCalculator = () => {
               <h2 className="text-lg font-semibold text-foreground">Emergency Fund Calculator</h2>
               <p className="text-xs text-muted-foreground">Plan your financial safety net</p>
             </div>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setInfoDialogOpen(true)}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>About Emergency Fund & Calculation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">What is Emergency Fund?</h3>
+                    <p className="text-muted-foreground">
+                      Emergency fund is a financial safety net designed to cover unexpected expenses or financial emergencies such as job loss, medical emergencies, major repairs, or other unforeseen circumstances. It provides financial security and peace of mind.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">How Much Should You Save?</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li><strong>Minimum:</strong> 3-6 months of expenses for basic coverage</li>
+                      <li><strong>Recommended:</strong> 6-12 months of expenses for better security</li>
+                      <li><strong>Conservative:</strong> 12-24 months for maximum protection</li>
+                      <li>Adjust based on job stability, dependents, and financial obligations</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Where to Keep Emergency Fund?</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li><strong>Savings Account:</strong> Easy access, liquidity, low returns</li>
+                      <li><strong>Fixed Deposits:</strong> Higher returns, partial liquidity</li>
+                      <li><strong>Liquid Funds:</strong> Better returns, good liquidity</li>
+                      <li>Avoid investing in volatile assets (stocks, equity funds)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
+                    <p className="text-muted-foreground">
+                      The Emergency Fund calculator helps you determine how much you need to save for your emergency fund, how much you need to save monthly to reach your target, and tracks your progress toward building financial security.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Basic Emergency Fund</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Monthly expenses = ₹50,000, Target = 6 months<br />
+                          <strong>Calculation:</strong> ₹50,000 × 6 = ₹3,00,000<br />
+                          <strong>Result:</strong> You need ₹3,00,000 to cover 6 months of expenses<br />
+                          <strong>Monthly Savings:</strong> If saving over 12 months, you need to save ₹25,000/month
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: With Current Savings</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Monthly expenses = ₹50,000, Target = 6 months (₹3,00,000), Current savings = ₹1,00,000<br />
+                          <strong>Calculation:</strong> ₹3,00,000 - ₹1,00,000 = ₹2,00,000 needed<br />
+                          <strong>Result:</strong> You need ₹2,00,000 more to reach your emergency fund goal<br />
+                          <strong>Current Safety:</strong> Your current savings cover only 2 months of expenses
+                        </p>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Conservative Approach</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Monthly expenses = ₹80,000, Target = 12 months<br />
+                          <strong>Calculation:</strong> ₹80,000 × 12 = ₹9,60,000<br />
+                          <strong>Result:</strong> For maximum security, save ₹9,60,000 to cover a full year<br />
+                          <strong>Why 12 months?</strong> Provides extended protection for job loss or major emergencies
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Gradual Building</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Monthly expenses = ₹60,000, Need ₹3,60,000 (6 months), Saving period = 18 months<br />
+                          <strong>Calculation:</strong> ₹3,60,000 ÷ 18 = ₹20,000/month<br />
+                          <strong>Result:</strong> Save ₹20,000 per month for 18 months to build your emergency fund<br />
+                          <strong>Tip:</strong> Start with smaller amounts and increase gradually as your income grows
+                        </p>
+                      </div>
+
+                      <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <p className="font-semibold text-red-900 dark:text-red-100 mb-1">Real-World Scenario</p>
+                        <p className="text-sm">
+                          <strong>Ravi's Story:</strong> Ravi had ₹1,50,000 in savings when he lost his job. His monthly expenses were ₹40,000.<br />
+                          <strong>Problem:</strong> His savings covered only 3.75 months (₹1,50,000 ÷ ₹40,000)<br />
+                          <strong>Lesson:</strong> He should have saved ₹2,40,000 (6 months) = ₹40,000 × 6<br />
+                          <strong>Action:</strong> After finding a new job, Ravi now saves ₹15,000/month to build his emergency fund to ₹2,40,000
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">💡 Pro Tips</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>Start small: Even ₹5,000/month can build a ₹3,00,000 fund in 5 years</li>
+                      <li>Automate savings: Set up auto-debit to emergency fund account</li>
+                      <li>Separate account: Keep emergency fund separate from regular savings</li>
+                      <li>Review annually: Recalculate if your expenses or income changes</li>
+                      <li>Don't touch it: Only use for true emergencies, not for wants or luxuries</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <Button
             variant="outline"

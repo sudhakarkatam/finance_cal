@@ -8,6 +8,7 @@ import {
   ArrowRightLeft,
   Settings,
   TrendingUp,
+  Info,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
@@ -73,6 +74,7 @@ const CurrencyCalculator = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [ratesDialogOpen, setRatesDialogOpen] = useState(false);
   const [selectedCurrencyForRate, setSelectedCurrencyForRate] = useState("");
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // Save rates to localStorage
   const saveRatesToStorage = (rates: Record<string, Currency>) => {
@@ -176,6 +178,117 @@ const CurrencyCalculator = () => {
                 Live exchange rates for 13 major currencies
               </p>
             </div>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setInfoDialogOpen(true)}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>About Currency Converter & Calculation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">What is Currency Converter?</h3>
+                    <p className="text-muted-foreground">
+                      Currency converter is a tool that calculates the equivalent value of one currency in terms of another currency using current exchange rates. It helps you understand currency values for travel, international transactions, or investment purposes.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Supported Currencies</h3>
+                    <p className="text-muted-foreground mb-2">
+                      This calculator supports 13 major world currencies including INR, USD, EUR, GBP, JPY, KWD, CAD, AUD, SGD, NZD, CHF, CNY, and MXN.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>Exchange rates are approximate and may vary by bank/service provider</li>
+                      <li>Rates include base rates updated periodically</li>
+                      <li>You can customize rates for your specific needs</li>
+                      <li>Rates are saved in your browser for convenience</li>
+                      <li>For accurate rates, check with your bank or currency service provider</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
+                    <p className="text-muted-foreground">
+                      The Currency Converter helps you convert between different currencies, view and customize exchange rates, and save your preferred rates for future use. Select source and target currencies, enter amount, and get instant conversion results.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Travel Currency Conversion</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Planning Europe trip, need €5,000, current rate 1 EUR = ₹102.58<br />
+                          <strong>Calculation:</strong> €5,000 × ₹102.58 = ₹5,12,900<br />
+                          <strong>Budget Planning:</strong> Need approximately ₹5.13 lakhs for travel expenses<br />
+                          <strong>Tip:</strong> Check rates before travel, rates fluctuate daily<br />
+                          <strong>Strategy:</strong> Exchange in batches if rate is volatile - don't convert all at once
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: International Transfer</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Sending ₹10,00,000 to USA, rate 1 USD = ₹88.67<br />
+                          <strong>Calculation:</strong> ₹10,00,000 ÷ ₹88.67 = $11,278<br />
+                          <strong>Bank Charges:</strong> Typically ₹500-2000 + 1-2% markup on rate<br />
+                          <strong>Actual Receipt:</strong> Approximately $11,100-11,150 (after charges)<br />
+                          <strong>Planning:</strong> Factor in bank fees - rates shown are mid-market rates<br />
+                          <strong>Tip:</strong> Compare transfer services (Wise, Remitly) for better rates
+                        </p>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Investment Conversion</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> Investing $50,000 in US stocks, rate 1 USD = ₹88.67<br />
+                          <strong>INR Required:</strong> $50,000 × ₹88.67 = ₹44,33,500<br />
+                          <strong>Stock Gains:</strong> If stock appreciates 20%, value = $60,000<br />
+                          <strong>Convert Back:</strong> If rate becomes ₹90, $60,000 = ₹54,00,000<br />
+                          <strong>Total Gain:</strong> ₹9,66,500 (stock gain + currency gain)<br />
+                          <strong>Risk:</strong> Currency fluctuation affects returns - USD appreciation helps
+                        </p>
+                      </div>
+
+                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Multiple Currency Comparison</p>
+                        <p className="text-sm">
+                          <strong>Situation:</strong> ₹10,00,000 to convert, comparing destinations<br />
+                          <strong>USD:</strong> ₹10L ÷ ₹88.67 = $11,278<br />
+                          <strong>EUR:</strong> ₹10L ÷ ₹102.58 = €9,749<br />
+                          <strong>GBP:</strong> ₹10L ÷ ₹116.67 = £8,571<br />
+                          <strong>SGD:</strong> ₹10L ÷ ₹68.05 = S$14,695<br />
+                          <strong>Planning:</strong> Different currencies have different purchasing power<br />
+                          <strong>Strategy:</strong> Check local costs before converting - cheaper destination may need less
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>Exchange rates change daily - check latest rates before major conversions</li>
+                      <li>Banks add markup (1-3%) to rates - use currency converters for mid-market rates</li>
+                      <li>For large amounts, negotiate rates with banks or use specialized services</li>
+                      <li>Customize rates in calculator for specific bank/service provider rates</li>
+                      <li>Save your preferred rates in calculator for quick access during travel or transactions</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <Button
             variant="outline"
