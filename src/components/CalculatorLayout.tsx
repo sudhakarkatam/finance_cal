@@ -149,13 +149,7 @@ const CalculatorLayout = ({
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header with hamburger menu - only show on Home page */}
         {showHeader && (
-          <header 
-            className="bg-primary text-primary-foreground px-4 py-3 mx-2 sm:mx-4 shadow-md flex items-center gap-3 sticky z-50 rounded-lg flex-shrink-0"
-            style={{
-              top: `${safeAreaInsets.top}px`,
-              marginTop: safeAreaInsets.top > 0 ? '0px' : '8px',
-            }}
-          >
+          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-2 sm:mx-4 sm:mt-3 shadow-md flex items-center gap-3 relative z-10 rounded-lg flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
