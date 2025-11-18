@@ -109,11 +109,57 @@ const DateRangeInput = ({
     if (inputMode === 'date' && startDate && tempEndDate) {
       return Math.max(0, differenceInDays(tempEndDate, startDate));
     }
+    // For manual input, calculate days precisely
+    // Use actual average days per year and month for accurate conversion
     return (manualYears * 365) + (manualMonths * 30) + manualDays;
   };
 
+  const dateRangeToYMD = (start: Date, end: Date) => {
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
+    
+    // Adjust for negative days
+    if (days < 0) {
+      months--;
+      const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+      days += lastDayOfPrevMonth.getDate();
+    }
+    
+    // Adjust for negative months
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    return { years, months, days };
+  };
+
   const getTimeInYears = () => {
-    return getTotalDays() / 365;
+    if (inputMode === 'date' && startDate && tempEndDate) {
+      // For date-based input, use actual days
+      return getTotalDays() / 365;
+    }
+    // For manual input, use direct conversion method
+    // Formula: years + months/12 + days/365
+    return manualYears + (manualMonths / 12) + (manualDays / 365);
+  };
+
+  const getFormattedDuration = () => {
+    if (inputMode === 'date' && startDate && tempEndDate) {
+      const { years, months, days } = dateRangeToYMD(startDate, tempEndDate);
+      const parts = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+      if (days > 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+      return parts.length > 0 ? parts.join(' ') : '0 days';
+    }
+    // For manual input, show the entered values
+    const parts = [];
+    if (manualYears > 0) parts.push(`${manualYears} ${manualYears === 1 ? 'year' : 'years'}`);
+    if (manualMonths > 0) parts.push(`${manualMonths} ${manualMonths === 1 ? 'month' : 'months'}`);
+    if (manualDays > 0) parts.push(`${manualDays} ${manualDays === 1 ? 'day' : 'days'}`);
+    return parts.length > 0 ? parts.join(' ') : '0 days';
   };
 
   const handleEndDateSelect = (date: Date | undefined) => {
@@ -441,7 +487,7 @@ const DateRangeInput = ({
       )}
 
       <div className="bg-accent/10 p-2 rounded text-center">
-        <p className="text-xs text-muted-foreground">Total: <span className="font-bold text-foreground">{getTimeInYears().toFixed(2)} years</span></p>
+        <p className="text-xs text-muted-foreground">Total: <span className="font-bold text-foreground">{getFormattedDuration()}</span></p>
       </div>
     </div>
   );

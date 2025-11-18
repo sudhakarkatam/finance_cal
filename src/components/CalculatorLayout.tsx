@@ -13,6 +13,7 @@ import {
   PiggyBank,
   Briefcase,
   Settings,
+  Flag,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,9 @@ const CalculatorLayout = ({
     { path: "/hra", icon: HomeIcon, label: "HRA Calculator" },
     { path: "/ssy", icon: PiggyBank, label: "SSY Calculator" },
     { path: "/epf", icon: Briefcase, label: "EPF Calculator" },
+    // Hidden calculators - routes still accessible via direct URL
+    // { path: "/income-tax", icon: Receipt, label: "Income Tax" },
+    // { path: "/german-tax", icon: Flag, label: "Germany Tax" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
@@ -145,7 +149,13 @@ const CalculatorLayout = ({
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header with hamburger menu - only show on Home page */}
         {showHeader && (
-          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-2 sm:mx-4 sm:mt-3 shadow-md flex items-center gap-3 relative z-10 rounded-lg flex-shrink-0">
+          <header 
+            className="bg-primary text-primary-foreground px-4 py-3 mx-2 sm:mx-4 shadow-md flex items-center gap-3 sticky z-50 rounded-lg flex-shrink-0"
+            style={{
+              top: `${safeAreaInsets.top}px`,
+              marginTop: safeAreaInsets.top > 0 ? '0px' : '8px',
+            }}
+          >
             <Button
               variant="ghost"
               size="sm"

@@ -11,15 +11,36 @@ export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   displayYear?: number;
 };
 
-function Calendar({ className, classNames, showOutsideDays = true, onYearClick, displayYear, ...props }: CalendarProps) {
-  // Set the month to show the selected year if provided
-  const month = displayYear ? new Date(displayYear, new Date().getMonth(), 1) : undefined;
+function Calendar({ className, classNames, showOutsideDays = true, onYearClick, displayYear, month: controlledMonth, onMonthChange, ...props }: CalendarProps) {
+  // Set the month to show the selected year if provided, or use controlled month
+  const [internalMonth, setInternalMonth] = React.useState<Date>(
+    controlledMonth || (displayYear ? new Date(displayYear, new Date().getMonth(), 1) : new Date())
+  );
+
+  // Sync internal state with controlled prop
+  React.useEffect(() => {
+    if (controlledMonth) {
+      setInternalMonth(controlledMonth);
+    } else if (displayYear) {
+      setInternalMonth(new Date(displayYear, new Date().getMonth(), 1));
+    }
+  }, [controlledMonth, displayYear]);
+
+  const currentMonth = controlledMonth || internalMonth;
+  const handleMonthChange = (newMonth: Date) => {
+    if (onMonthChange) {
+      onMonthChange(newMonth);
+    } else {
+      setInternalMonth(newMonth);
+    }
+  };
 
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
-      month={month}
+      month={currentMonth}
+      onMonthChange={handleMonthChange}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -55,13 +76,39 @@ function Calendar({ className, classNames, showOutsideDays = true, onYearClick, 
         Caption: ({ displayMonth, ...captionProps }) => {
           const year = displayMonth.getFullYear();
           return (
-            <div className="flex justify-center items-center gap-2">
+            <div className="flex justify-between items-center px-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
+                onClick={() => {
+                  // Navigate to previous month
+                  const prevMonth = new Date(displayMonth);
+                  prevMonth.setMonth(prevMonth.getMonth() - 1);
+                  handleMonthChange(prevMonth);
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 className="text-sm font-medium hover:bg-accent cursor-pointer"
                 onClick={() => onYearClick?.(year)}
               >
                 {displayMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
+                onClick={() => {
+                  // Navigate to next month
+                  const nextMonth = new Date(displayMonth);
+                  nextMonth.setMonth(nextMonth.getMonth() + 1);
+                  handleMonthChange(nextMonth);
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           );

@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 interface SaveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  calculationType: 'simple' | 'compound' | 'sip' | 'mutualfund' | 'swp' | 'emi' | 'loancompare' | 'homeloan' | 'lumpsum' | 'ppf' | 'fd' | 'rd' | 'goalplanning' | 'retirement' | 'education' | 'hra' | 'ssy';
+  calculationType: 'simple' | 'compound' | 'sip' | 'mutualfund' | 'swp' | 'emi' | 'loancompare' | 'homeloan' | 'lumpsum' | 'ppf' | 'fd' | 'rd' | 'goalplanning' | 'retirement' | 'education' | 'hra' | 'ssy' | 'incometax' | 'germantax';
   inputs: Record<string, number | string>;
   results: Record<string, number>;
 }

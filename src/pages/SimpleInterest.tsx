@@ -26,7 +26,9 @@ const SimpleInterest = () => {
       const days = Math.max(0, differenceInDays(endDate, startDate));
       return days / 365;
     }
-    return manualYears + manualMonths / 12 + manualDays / 365;
+    // For manual input, use direct conversion method
+    // Formula: years + months/12 + days/365
+    return manualYears + (manualMonths / 12) + (manualDays / 365);
   };
 
   const result = calculateSimpleInterest(principal, rate, getTimeInYears());

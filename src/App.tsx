@@ -29,6 +29,8 @@ import EmergencyFundCalculator from "./pages/EmergencyFundCalculator";
 import HRACalculator from "./pages/HRACalculator";
 import SSYCalculator from "./pages/SSYCalculator";
 import EPFCalculator from "./pages/EPFCalculator";
+import IncomeTaxCalculator from "./pages/IncomeTaxCalculator";
+import GermanTaxCalculator from "./pages/GermanTaxCalculator";
 import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
@@ -237,6 +239,22 @@ const App = () => (
             element={
               <CalculatorLayout>
                 <EPFCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/income-tax"
+            element={
+              <CalculatorLayout>
+                <IncomeTaxCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/german-tax"
+            element={
+              <CalculatorLayout>
+                <GermanTaxCalculator />
               </CalculatorLayout>
             }
           />
