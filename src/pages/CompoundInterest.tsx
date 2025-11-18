@@ -55,100 +55,39 @@ const CompoundInterest = () => {
       const { years, months, days } = dateRangeToYMD(startDate, endDate);
       const compoundingFrequency = Number(frequency);
       
-      // Use the same calculation logic as manual input
+      // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention
+      // For yearly compounding: Hybrid method handles time internally (not needed here)
+      // For other frequencies: Use pure compound with 360/30 convention
+      
       if (compoundingFrequency === 12) {
-        // Monthly compounding: use financial year method (360 days/year, 30 days/month)
+        // Monthly compounding: use 360/30 convention (pure compound)
         const totalDays = (years * 360) + (months * 30) + days;
         return totalDays / 360;
       } else if (compoundingFrequency === 4) {
-        // Quarterly compounding: use adjusted calculation
-        // For date ranges, use slightly higher adjustment factor for better accuracy
+        // Quarterly compounding: use 360/30 convention (pure compound)
         const totalDays = (years * 360) + (months * 30) + days;
-        const adjustmentFactor = 0.9900; // Higher than manual (0.9767) for date ranges
-        const adjustedDays = totalDays * adjustmentFactor;
-        return adjustedDays / 365;
+        return totalDays / 360;
       } else if (compoundingFrequency === 1) {
-        // Yearly compounding: Use YMD conversion with context-based adjustments
-        // Adjust factors based on period characteristics to improve accuracy
-        let monthDaysFactor = 32.05;
-        let dayFactorWithMonth = 1.00533;
-        let dayFactorNoMonth = 1.06747;
-        
-        // Context-based adjustments for better accuracy
-        if (years >= 2 && months >= 7) {
-          // Long periods with many months - reduce slightly
-          monthDaysFactor = 31.65;
-          dayFactorWithMonth = 1.0045;
-        } else if (years === 1 && months > 0 && months < 6) {
-          // Single year with some months - increase slightly
-          monthDaysFactor = 32.40;
-          dayFactorWithMonth = 1.0065;
-        } else if (years === 1 && months === 0) {
-          // Single year, no months - slight adjustment
-          dayFactorNoMonth = 1.0680;
-        } else if (years >= 2 && months === 0) {
-          // Multi-year, no months - slight adjustment
-          dayFactorNoMonth = 1.0678;
-        }
-        
-        const monthDays = months * monthDaysFactor;
-        const dayFactor = months > 0 ? dayFactorWithMonth : dayFactorNoMonth;
-        const dayDays = days * dayFactor;
-        const totalDays = (years * 365) + monthDays + dayDays;
-        return totalDays / 365;
+        // Yearly compounding: Hybrid method handles this internally
+        // This function is only called for standard calculateCompoundInterest
+        // For "rupee per month", use calculateCompoundInterestFromMonthlyRupeesWithDays
+        // For "percent per annum", hybrid is not used - return time for standard formula
+        const totalDays = (years * 360) + (months * 30) + days;
+        return totalDays / 360;
       }
       
-      // Default: use direct conversion
-      return years + (months / 12) + (days / 365);
-    }
-    // For manual input, use different methods based on compounding frequency to match reference
-    const compoundingFrequency = Number(frequency);
-    
-    // For monthly compounding (freq=12), use financial year method (360 days/year, 30 days/month)
-    if (compoundingFrequency === 12) {
-      const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
+      // Default: use 360/30 convention
+      const totalDays = (years * 360) + (months * 30) + days;
       return totalDays / 360;
     }
+    // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention for ALL frequencies
+    // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
+    // Convert years, months, days to total days using 360/30 convention
+    const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
     
-    // For quarterly compounding (freq=4), use adjusted calculation
-    // Reference calculator uses adjusted days based on reverse engineering
-    // Formula: Use 360 days/year, then apply adjustment factor
-    if (compoundingFrequency === 4) {
-      // Convert to days using 360 days/year, 30 days/month
-      const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
-      // Adjustment factor: 0.9767 for manual input, higher for date ranges
-      const adjustedDays = totalDays * 0.9767;
-      return adjustedDays / 365;
-    }
-    
-    // For yearly compounding (freq=1), use adjusted calculation
-    // Reverse engineering shows reference needs ~12.3 more days
-    // Test 2: 6m needs 192.30d → 32.05 days/month
-    // Test 3: 182d needs 194.26d → 1.06747 factor
-    // Test 4: needs 572.38d total → fine-tuned factor for days with months present
-    if (compoundingFrequency === 1) {
-      // Months: 32.05 days/month (matches Test 2 exactly)
-      const monthDays = manualMonths * 32.05;
-      
-      // Days: Use 1.06747 for standalone days, but when months are present, 
-      // the effective factor is lower due to interaction
-      // Test 4 analysis: 15 days need 15.08 days → factor 1.00533
-      // Average/compromise factor that works well: 1.067
-      // Fine-tuned to match Test 4: use slightly lower when months present
-      let dayFactor = 1.06747; // Best for standalone days (Test 3)
-      if (manualMonths > 0) {
-        // When months are present, days contribute less proportionally
-        dayFactor = 1.00533; // Better for Test 4
-      }
-      
-      const dayDays = manualDays * dayFactor;
-      const totalDays = (manualYears * 365) + monthDays + dayDays;
-      return totalDays / 365;
-    }
-    
-    // For other frequencies, use direct conversion
-    // Formula: years + months/12 + days/365
-    return manualYears + (manualMonths / 12) + (manualDays / 365);
+    // For all frequencies, use the same 360/30 convention
+    // Time in years = totalDays / 360
+    return totalDays / 360;
   };
 
   // Calculate result based on interest rate type
@@ -156,6 +95,51 @@ const CompoundInterest = () => {
   const result = useMemo(() => {
     const compoundingFrequency = Number(frequency);
 
+    // For yearly compounding (frequency = 1), always use hybrid method to match Vaddi Calculator
+    // This applies to both "percent per annum" and "rupee per month" inputs
+    if (compoundingFrequency === 1 && (startDate && endDate || manualYears > 0 || manualMonths > 0 || manualDays > 0)) {
+      // Use hybrid method: compound for whole years, simple for fractional period
+      const getYMD = () => {
+        if (startDate && endDate) {
+          return dateRangeToYMD(startDate, endDate);
+        }
+        return { years: manualYears, months: manualMonths, days: manualDays };
+      };
+      
+      const { years, months, days } = getYMD();
+      const annualRate = interestRateType === 'rupee-per-month' ? rate * 12 : rate;
+      
+      if (years > 0) {
+        // Step 1: Compound interest for whole years
+        const amountAfterYears = principal * Math.pow(1 + annualRate / 100, years);
+        
+        // Step 2: Simple interest for fractional period using 360/30 convention
+        const fractionalDays = (months * 30) + days;
+        const fractionalTime = fractionalDays / 360;
+        const simpleInterest = amountAfterYears * (annualRate / 100) * fractionalTime;
+        const finalAmount = amountAfterYears + simpleInterest;
+        
+        return {
+          interest: Math.round(finalAmount - principal),
+          total: Math.round(finalAmount),
+          principal: Math.round(principal),
+        };
+      } else {
+        // For periods less than 1 year, use simple interest only with 360/30 convention
+        const fractionalDays = (months * 30) + days;
+        const fractionalTime = fractionalDays / 360;
+        const simpleInterest = principal * (annualRate / 100) * fractionalTime;
+        const finalAmount = principal + simpleInterest;
+        
+        return {
+          interest: Math.round(simpleInterest),
+          total: Math.round(finalAmount),
+          principal: Math.round(principal),
+        };
+      }
+    }
+
+    // For other frequencies or when using standard calculateCompoundInterest
     if (interestRateType === 'rupee-per-month') {
       // For date-based calculations with custom days, use specialized function
       if (startDate && endDate) {
@@ -177,10 +161,10 @@ const CompoundInterest = () => {
         compoundingFrequency
       );
     } else {
-      // Use standard function for percent per annum
+      // Use standard function for percent per annum (for non-yearly frequencies)
       return calculateCompoundInterest(principal, rate, timeInYears, compoundingFrequency);
     }
-  }, [principal, rate, interestRateType, frequency, timeInYears, startDate, endDate]);
+  }, [principal, rate, interestRateType, frequency, timeInYears, startDate, endDate, manualYears, manualMonths, manualDays]);
 
   // Calculate annual rate for display purposes (when rupee-per-month is selected)
   const annualRate = useMemo(() => {

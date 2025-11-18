@@ -22,13 +22,38 @@ const SimpleInterest = () => {
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const getTimeInYears = () => {
+    // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention
+    // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
     if (startDate && endDate) {
-      const days = Math.max(0, differenceInDays(endDate, startDate));
-      return days / 365;
+      // Convert date range to years/months/days, then use 360/30 convention
+      const { years, months, days } = dateRangeToYMD(startDate, endDate);
+      const totalDays = (years * 360) + (months * 30) + days;
+      return totalDays / 360;
     }
-    // For manual input, use direct conversion method
-    // Formula: years + months/12 + days/365
-    return manualYears + (manualMonths / 12) + (manualDays / 365);
+    // For manual input, use 360/30 convention
+    // Formula: (years * 360 + months * 30 + days) / 360
+    const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
+    return totalDays / 360;
+  };
+
+  // Helper function to convert date range to years, months, days
+  const dateRangeToYMD = (start: Date, end: Date) => {
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
+    
+    if (days < 0) {
+      months--;
+      const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+      days += lastDayOfPrevMonth.getDate();
+    }
+    
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    return { years, months, days };
   };
 
   const result = calculateSimpleInterest(principal, rate, getTimeInYears());

@@ -10,19 +10,19 @@ import {
   CAPITAL_GAINS_EXEMPTION,
   type AgeCategory,
   type TaxRegime,
-} from './taxConstants';
+} from "./taxConstants";
 
 export const calculateSimpleInterest = (
   principal: number,
   rate: number,
-  time: number
+  time: number,
 ) => {
   const interest = (principal * rate * time) / 100;
   const total = principal + interest;
   return {
     interest: Math.round(interest),
     total: Math.round(total),
-    principal: Math.round(principal)
+    principal: Math.round(principal),
   };
 };
 
@@ -30,14 +30,15 @@ export const calculateCompoundInterest = (
   principal: number,
   rate: number,
   time: number,
-  frequency: number = 1
+  frequency: number = 1,
 ) => {
-  const amount = principal * Math.pow(1 + rate / (100 * frequency), frequency * time);
+  const amount =
+    principal * Math.pow(1 + rate / (100 * frequency), frequency * time);
   const interest = amount - principal;
   return {
     interest: Math.round(interest),
     total: Math.round(amount),
-    principal: Math.round(principal)
+    principal: Math.round(principal),
   };
 };
 
@@ -53,30 +54,31 @@ export const calculateCompoundInterestFromMonthlyRupees = (
   principal: number,
   percentPerMonth: number,
   time: number,
-  frequency: number = 12 // Default to monthly compounding for monthly percentage input
+  frequency: number = 12, // Default to monthly compounding for monthly percentage input
 ) => {
   if (principal <= 0) {
     return {
       interest: 0,
       total: principal,
-      principal: Math.round(principal)
+      principal: Math.round(principal),
     };
   }
 
   // Convert monthly rate to annual rate
   // Annual rate = Monthly rate * 12 (e.g., 2% per month = 24% per annum)
   const annualRate = percentPerMonth * 12;
-  
+
   // Use standard compound interest formula with the annual rate
   // This ensures the calculation matches what the equivalent annual rate would give
   // Formula: A = P * (1 + annualRate/(100 * frequency))^(frequency * time)
-  const amount = principal * Math.pow(1 + annualRate / (100 * frequency), frequency * time);
+  const amount =
+    principal * Math.pow(1 + annualRate / (100 * frequency), frequency * time);
   const interest = amount - principal;
-  
+
   return {
     interest: Math.round(interest),
     total: Math.round(amount),
-    principal: Math.round(principal)
+    principal: Math.round(principal),
   };
 };
 
@@ -94,20 +96,20 @@ const dateRangeToYMD = (start: Date, end: Date) => {
   let years = end.getFullYear() - start.getFullYear();
   let months = end.getMonth() - start.getMonth();
   let days = end.getDate() - start.getDate();
-  
+
   // Adjust for negative days
   if (days < 0) {
     months--;
     const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
     days += lastDayOfPrevMonth.getDate();
   }
-  
+
   // Adjust for negative months
   if (months < 0) {
     years--;
     months += 12;
   }
-  
+
   return { years, months, days };
 };
 
@@ -117,20 +119,24 @@ export const calculateCompoundInterestFromMonthlyRupeesWithDays = (
   days: number,
   frequency: number = 12, // Default to monthly compounding
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ) => {
   if (principal <= 0 || days <= 0) {
     return {
       interest: 0,
       total: principal,
-      principal: Math.round(principal)
+      principal: Math.round(principal),
     };
   }
+
+  // Convert monthly rate to annual rate FIRST (needed for all calculations)
+  // Annual rate = Monthly rate * 12 (e.g., 2% per month = 24% per annum)
+  const annualRate = percentPerMonth * 12;
 
   // If we have actual dates, use actual days calculation for yearly compounding
   // For other frequencies, convert to YMD for consistency
   let timeInYears: number;
-  
+
   if (startDate && endDate) {
     // Convert date range to years/months/days, then use same logic as manual input
     // This ensures consistency between manual and date-based inputs
@@ -138,109 +144,128 @@ export const calculateCompoundInterestFromMonthlyRupeesWithDays = (
       let years = end.getFullYear() - start.getFullYear();
       let months = end.getMonth() - start.getMonth();
       let days = end.getDate() - start.getDate();
-      
+
       if (days < 0) {
         months--;
-        const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+        const lastDayOfPrevMonth = new Date(
+          end.getFullYear(),
+          end.getMonth(),
+          0,
+        );
         days += lastDayOfPrevMonth.getDate();
       }
-      
+
       if (months < 0) {
         years--;
         months += 12;
       }
-      
+
       return { years, months, days };
     };
-    
-    const { years, months, days: dayCount } = dateRangeToYMD(startDate, endDate);
+
+    const {
+      years,
+      months,
+      days: dayCount,
+    } = dateRangeToYMD(startDate, endDate);
+
+    // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention
+    // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
+    // For yearly compounding: Use Hybrid Method (Compound for years, Simple for fractional)
+    // For other frequencies: Use pure compound with 360/30 convention
     
     if (frequency === 1) {
-      // Yearly compounding: Use YMD conversion with context-based adjustments
-      // Adjust factors based on period characteristics to improve accuracy
-      let monthDaysFactor = 32.05;
-      let dayFactorWithMonth = 1.00533;
-      let dayFactorNoMonth = 1.06747;
+      // Yearly compounding: Hybrid Method (matches Vaddi Calculator output exactly)
+      // Compound interest for complete years, Simple interest for fractional period using 360/30
       
-      // Context-based adjustments for better accuracy
-      if (years >= 2 && months >= 7) {
-        // Long periods with many months - reduce slightly
-        monthDaysFactor = 31.65;
-        dayFactorWithMonth = 1.0045;
-      } else if (years === 1 && months > 0 && months < 6) {
-        // Single year with some months - increase slightly
-        monthDaysFactor = 32.40;
-        dayFactorWithMonth = 1.0065;
-      } else if (years === 1 && months === 0) {
-        // Single year, no months - slight adjustment
-        dayFactorNoMonth = 1.0680;
-      } else if (years >= 2 && months === 0) {
-        // Multi-year, no months - slight adjustment
-        dayFactorNoMonth = 1.0678;
+      if (years > 0) {
+        // Step 1: Calculate compound interest for whole years
+        const amountAfterYears =
+          principal * Math.pow(1 + annualRate / 100, years);
+
+        // Step 2: Calculate simple interest for fractional period using 360/30 convention
+        const fractionalDays = (months * 30) + dayCount;
+        const fractionalTime = fractionalDays / 360; // Use 360/30 convention
+        const simpleInterest =
+          amountAfterYears * (annualRate / 100) * fractionalTime;
+        const finalAmount = amountAfterYears + simpleInterest;
+
+        return {
+          interest: Math.round(finalAmount - principal),
+          total: Math.round(finalAmount),
+          principal: Math.round(principal),
+        };
+      } else {
+        // For periods less than 1 year, use simple interest only with 360/30 convention
+        const fractionalDays = (months * 30) + dayCount;
+        const fractionalTime = fractionalDays / 360;
+        const simpleInterest = principal * (annualRate / 100) * fractionalTime;
+        const finalAmount = principal + simpleInterest;
+
+        return {
+          interest: Math.round(simpleInterest),
+          total: Math.round(finalAmount),
+          principal: Math.round(principal),
+        };
       }
-      
-      const monthDays = months * monthDaysFactor;
-      const dayFactor = months > 0 ? dayFactorWithMonth : dayFactorNoMonth;
-      const dayDays = dayCount * dayFactor;
-      timeInYears = ((years * 365) + monthDays + dayDays) / 365;
     } else if (frequency === 12) {
-      // Monthly compounding: use financial year method
-      const totalDays = (years * 360) + (months * 30) + dayCount;
+      // Monthly compounding: use 360/30 convention (pure compound)
+      const totalDays = years * 360 + months * 30 + dayCount;
       timeInYears = totalDays / 360;
     } else if (frequency === 4) {
-      // Quarterly compounding: use adjusted calculation
-      // For date ranges, use slightly higher adjustment factor for better accuracy
-      const totalDays = (years * 360) + (months * 30) + dayCount;
-      const adjustmentFactor = 0.9900; // Higher than manual (0.9767) for date ranges
-      timeInYears = (totalDays * adjustmentFactor) / 365;
+      // Quarterly compounding: use 360/30 convention (pure compound)
+      const totalDays = years * 360 + months * 30 + dayCount;
+      timeInYears = totalDays / 360;
     } else {
-      // Default: use direct conversion
-      timeInYears = years + (months / 12) + (dayCount / 365);
+      // Other frequencies: use 360/30 convention (pure compound)
+      const totalDays = years * 360 + months * 30 + dayCount;
+      timeInYears = totalDays / 360;
     }
   } else {
     // Fallback to days-based calculation if dates not available
+    // Vaddi Calculator Method: Always use 360/30 convention
+    // For fallback with just days, assume 360 days/year
     if (frequency === 12) {
+      // Monthly: use 360 days/year
       timeInYears = days / 360;
     } else if (frequency === 4) {
-      timeInYears = (days * 0.9767) / 365;
+      // Quarterly: use 360 days/year
+      timeInYears = days / 360;
     } else if (frequency === 1) {
-      timeInYears = (days * 1.06747) / 365;
+      // Yearly: use 360 days/year
+      timeInYears = days / 360;
     } else {
-      timeInYears = days / 365;
+      // Other frequencies: use 360 days/year
+      timeInYears = days / 360;
     }
   }
-  
-  // Convert monthly rate to annual rate
-  // Annual rate = Monthly rate * 12 (e.g., 2% per month = 24% per annum)
-  const annualRate = percentPerMonth * 12;
-  
+
   // Use standard compound interest formula with the annual rate and selected frequency
   // This ensures the calculation matches what the equivalent annual rate would give
   // Formula: A = P * (1 + annualRate/(100 * frequency))^(frequency * time)
-  const amount = principal * Math.pow(1 + annualRate / (100 * frequency), frequency * timeInYears);
+  const amount =
+    principal *
+    Math.pow(1 + annualRate / (100 * frequency), frequency * timeInYears);
   const interest = amount - principal;
-  
+
   return {
     interest: Math.round(interest),
     total: Math.round(amount),
-    principal: Math.round(principal)
+    principal: Math.round(principal),
   };
 };
-
-
-
-
 
 export const calculateSIP = (
   monthlyInvestment: number,
   expectedReturn: number,
-  years: number
+  years: number,
 ) => {
   const months = years * 12;
   const monthlyRate = expectedReturn / (12 * 100);
 
   // Standard SIP formula: FV = P * (((1 + r)^n - 1) / r) * (1 + r)
-  const futureValue = monthlyInvestment *
+  const futureValue =
+    monthlyInvestment *
     ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) *
     (1 + monthlyRate);
 
@@ -250,7 +275,7 @@ export const calculateSIP = (
   return {
     invested: Math.round(invested),
     returns: Math.round(returns),
-    total: Math.round(futureValue)
+    total: Math.round(futureValue),
   };
 };
 
@@ -258,7 +283,7 @@ export const calculateStepUpSIP = (
   monthlyInvestment: number,
   expectedReturn: number,
   years: number,
-  stepUpPercentage: number = 0
+  stepUpPercentage: number = 0,
 ) => {
   const totalMonths = years * 12;
   const monthlyRate = expectedReturn / (12 * 100);
@@ -272,7 +297,8 @@ export const calculateStepUpSIP = (
     // Calculate current monthly investment based on step-up
     // Step-up is applied at the beginning of each year
     const currentYear = Math.floor(month / 12);
-    const currentMonthlyInvestment = monthlyInvestment * Math.pow(1 + stepUpPercentage / 100, currentYear);
+    const currentMonthlyInvestment =
+      monthlyInvestment * Math.pow(1 + stepUpPercentage / 100, currentYear);
 
     totalInvested += currentMonthlyInvestment;
 
@@ -280,7 +306,8 @@ export const calculateStepUpSIP = (
     // Using the formula: FV = P × (1 + r)^(N - m)
     // Where N is total months, m is current month (0-based)
     const monthsRemaining = totalMonths - month;
-    const futureValueOfThisMonth = currentMonthlyInvestment * Math.pow(1 + monthlyRate, monthsRemaining);
+    const futureValueOfThisMonth =
+      currentMonthlyInvestment * Math.pow(1 + monthlyRate, monthsRemaining);
 
     futureValue += futureValueOfThisMonth;
   }
@@ -290,7 +317,7 @@ export const calculateStepUpSIP = (
   return {
     invested: Math.round(totalInvested),
     returns: Math.round(returns),
-    total: Math.round(futureValue)
+    total: Math.round(futureValue),
   };
 };
 
@@ -298,30 +325,38 @@ export const calculateStepUpSIPWithComparison = (
   monthlyInvestment: number,
   expectedReturn: number,
   years: number,
-  stepUpPercentage: number = 0
+  stepUpPercentage: number = 0,
 ) => {
   // Calculate with step-up
-  const stepUpResult = calculateStepUpSIP(monthlyInvestment, expectedReturn, years, stepUpPercentage);
+  const stepUpResult = calculateStepUpSIP(
+    monthlyInvestment,
+    expectedReturn,
+    years,
+    stepUpPercentage,
+  );
 
   // Calculate without step-up for comparison
   const noStepUpResult = calculateSIP(monthlyInvestment, expectedReturn, years);
 
   // Calculate percentage difference
   const totalDifference = stepUpResult.total - noStepUpResult.total;
-  const percentageDifference = noStepUpResult.total > 0 ? (totalDifference / noStepUpResult.total) * 100 : 0;
+  const percentageDifference =
+    noStepUpResult.total > 0
+      ? (totalDifference / noStepUpResult.total) * 100
+      : 0;
 
   return {
     withStepUp: stepUpResult,
     withoutStepUp: noStepUpResult,
     difference: Math.round(totalDifference),
-    percentageDifference: Math.round(percentageDifference * 100) / 100 // Round to 2 decimal places
+    percentageDifference: Math.round(percentageDifference * 100) / 100, // Round to 2 decimal places
   };
 };
 
 export const calculateMutualFund = (
   monthlyInvestment: number,
   expectedReturn: number,
-  years: number
+  years: number,
 ) => {
   return calculateSIP(monthlyInvestment, expectedReturn, years);
 };
@@ -330,9 +365,14 @@ export const calculateStepUpMutualFund = (
   monthlyInvestment: number,
   expectedReturn: number,
   years: number,
-  stepUpPercentage: number = 0
+  stepUpPercentage: number = 0,
 ) => {
-  return calculateStepUpSIP(monthlyInvestment, expectedReturn, years, stepUpPercentage);
+  return calculateStepUpSIP(
+    monthlyInvestment,
+    expectedReturn,
+    years,
+    stepUpPercentage,
+  );
 };
 
 export const calculateInflationAdjustedSIP = (
@@ -340,13 +380,18 @@ export const calculateInflationAdjustedSIP = (
   expectedReturn: number,
   years: number,
   inflationRate: number,
-  stepUpPercentage: number = 0
+  stepUpPercentage: number = 0,
 ) => {
   // Calculate with inflation-adjusted return rate
   const inflationAdjustedReturn = Math.max(0, expectedReturn - inflationRate);
 
   if (stepUpPercentage > 0) {
-    return calculateStepUpSIP(monthlyInvestment, inflationAdjustedReturn, years, stepUpPercentage);
+    return calculateStepUpSIP(
+      monthlyInvestment,
+      inflationAdjustedReturn,
+      years,
+      stepUpPercentage,
+    );
   } else {
     return calculateSIP(monthlyInvestment, inflationAdjustedReturn, years);
   }
@@ -358,7 +403,7 @@ export const calculateSWP = (
   expectedReturn: number,
   years?: number,
   inflationRate: number = 0,
-  withdrawalStartsThisMonth: boolean = false
+  withdrawalStartsThisMonth: boolean = false,
 ) => {
   const monthlyRate = expectedReturn / (12 * 100);
   const monthlyInflationRate = inflationRate / (12 * 100);
@@ -403,7 +448,7 @@ export const calculateSWP = (
       startingBalance: Math.round(startingBalance),
       interestEarned: Math.round(interestEarned),
       withdrawal: withdrawalPerMonth,
-      endingBalance: Math.round(endingBalance)
+      endingBalance: Math.round(endingBalance),
     });
 
     totalInterest += interestEarned;
@@ -420,9 +465,10 @@ export const calculateSWP = (
   }
 
   // Calculate inflation-adjusted final value
-  const inflationAdjustedFinalValue = years && inflationRate > 0
-    ? balance / Math.pow(1 + inflationRate / 100, years)
-    : balance;
+  const inflationAdjustedFinalValue =
+    years && inflationRate > 0
+      ? balance / Math.pow(1 + inflationRate / 100, years)
+      : balance;
 
   // Calculate sustainable withdrawal if period is given
   let sustainableWithdrawal = 0;
@@ -430,8 +476,11 @@ export const calculateSWP = (
     const monthsInPeriod = years * 12;
     if (monthlyRate > 0) {
       // PMT formula for loan payment (rearranged for withdrawal)
-      sustainableWithdrawal = investmentAmount * monthlyRate * Math.pow(1 + monthlyRate, monthsInPeriod) /
-                             (Math.pow(1 + monthlyRate, monthsInPeriod) - 1);
+      sustainableWithdrawal =
+        (investmentAmount *
+          monthlyRate *
+          Math.pow(1 + monthlyRate, monthsInPeriod)) /
+        (Math.pow(1 + monthlyRate, monthsInPeriod) - 1);
     } else {
       sustainableWithdrawal = investmentAmount / monthsInPeriod;
     }
@@ -446,20 +495,20 @@ export const calculateSWP = (
     depletionMonth,
     sustainableWithdrawal: Math.round(sustainableWithdrawal),
     amortizationData: amortizationData, // Full amortization data
-    fullAmortizationData: amortizationData
+    fullAmortizationData: amortizationData,
   };
 };
 
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
 };
 
 export const formatNumber = (num: number): string => {
-  return new Intl.NumberFormat('en-IN').format(Math.round(num));
+  return new Intl.NumberFormat("en-IN").format(Math.round(num));
 };
 
 export const calculateHRA = (
@@ -467,7 +516,7 @@ export const calculateHRA = (
   dearnessAllowance: number,
   hraReceived: number,
   monthlyRent: number,
-  isMetroCity: boolean
+  isMetroCity: boolean,
 ) => {
   // Calculate annual values
   const annualBasicSalary = basicSalary * 12;
@@ -482,14 +531,18 @@ export const calculateHRA = (
   const actualHRA = annualHRAReceived;
 
   // 2. Actual rent paid minus 10% of basic salary
-  const rentMinus10PercentBasic = annualRent - (annualBasicSalary * 0.1);
+  const rentMinus10PercentBasic = annualRent - annualBasicSalary * 0.1;
 
   // 3. 50% of salary for metro city, 40% for non-metro city
   const percentageOfSalary = isMetroCity ? 0.5 : 0.4;
   const metroNonMetroLimit = salaryForHRA * percentageOfSalary;
 
   // HRA exemption is the lowest of the three amounts
-  const hraExemption = Math.min(actualHRA, rentMinus10PercentBasic, metroNonMetroLimit);
+  const hraExemption = Math.min(
+    actualHRA,
+    rentMinus10PercentBasic,
+    metroNonMetroLimit,
+  );
 
   // Taxable HRA
   const taxableHRA = Math.max(0, annualHRAReceived - hraExemption);
@@ -504,7 +557,7 @@ export const calculateHRA = (
     rentMinus10PercentBasic: Math.round(rentMinus10PercentBasic),
     metroNonMetroLimit: Math.round(metroNonMetroLimit),
     hraExemption: Math.round(hraExemption),
-    taxableHRA: Math.round(taxableHRA)
+    taxableHRA: Math.round(taxableHRA),
   };
 };
 
@@ -513,7 +566,7 @@ export const calculateSSY = (
   girlAge: number,
   investmentStartYear: number,
   currentInterestRate: number = 8.2,
-  inflationRate: number = 0
+  inflationRate: number = 0,
 ) => {
   const investmentYears = 15;
   const totalMaturityYears = 21;
@@ -533,7 +586,8 @@ export const calculateSSY = (
     const growthYears = totalMaturityYears - year + 1;
 
     // Using the compound interest formula: A = P × (1 + r)^t
-    const futureValueOfYearInvestment = annualInvestment * Math.pow(1 + interestRate, growthYears);
+    const futureValueOfYearInvestment =
+      annualInvestment * Math.pow(1 + interestRate, growthYears);
 
     futureValue += futureValueOfYearInvestment;
   }
@@ -542,9 +596,10 @@ export const calculateSSY = (
   const maturityYear = investmentStartYear + totalMaturityYears;
 
   // Calculate inflation-adjusted value
-  const inflationAdjustedValue = inflationRate > 0
-    ? futureValue / Math.pow(1 + inflationRate / 100, totalMaturityYears)
-    : futureValue;
+  const inflationAdjustedValue =
+    inflationRate > 0
+      ? futureValue / Math.pow(1 + inflationRate / 100, totalMaturityYears)
+      : futureValue;
 
   return {
     totalInvested: Math.round(totalInvested),
@@ -555,7 +610,7 @@ export const calculateSSY = (
     investmentYears,
     totalMaturityYears,
     interestRate: currentInterestRate,
-    inflationRate
+    inflationRate,
   };
 };
 
@@ -566,7 +621,7 @@ export const calculateEPF = (
   currentAge: number,
   retirementAge: number,
   salaryGrowthPercent: number,
-  interestRatePercent: number
+  interestRatePercent: number,
 ) => {
   const yearsToRetirement = retirementAge - currentAge;
   if (yearsToRetirement <= 0) {
@@ -576,7 +631,7 @@ export const calculateEPF = (
       totalContributions: 0,
       totalInterest: 0,
       maturityValue: currentBalance,
-      yearsToRetirement: 0
+      yearsToRetirement: 0,
     };
   }
 
@@ -595,9 +650,12 @@ export const calculateEPF = (
   // it compounds monthly to get accurate projections
   for (let year = 1; year <= yearsToRetirement; year++) {
     // Calculate monthly contribution for this year (constant throughout the year)
-    const yearMonthlyEmployeeContribution = (employeeContributionPercent / 100) * currentMonthlySalary;
-    const yearMonthlyEmployerContribution = (employerContributionPercent / 100) * currentMonthlySalary;
-    const yearMonthlyContribution = yearMonthlyEmployeeContribution + yearMonthlyEmployerContribution;
+    const yearMonthlyEmployeeContribution =
+      (employeeContributionPercent / 100) * currentMonthlySalary;
+    const yearMonthlyEmployerContribution =
+      (employerContributionPercent / 100) * currentMonthlySalary;
+    const yearMonthlyContribution =
+      yearMonthlyEmployeeContribution + yearMonthlyEmployerContribution;
 
     // Process each month: Add contributions, calculate interest on closing balance, compound monthly
     for (let month = 1; month <= 12; month++) {
@@ -606,12 +664,12 @@ export const calculateEPF = (
 
       // Add contribution first to get closing balance
       balance += yearMonthlyContribution;
-      
+
       // Calculate interest on closing balance (after adding contributions)
       // This is the method that matches SBI Securities calculator
       const monthlyInterest = balance * monthlyInterestRate;
       totalInterestAccrued += monthlyInterest;
-      
+
       // Add interest immediately to balance for monthly compounding
       // This gives accurate projections even though it's credited annually on statements
       balance += monthlyInterest;
@@ -619,17 +677,19 @@ export const calculateEPF = (
 
     // Apply salary growth at the start of next year
     if (year < yearsToRetirement) {
-      currentMonthlySalary *= (1 + salaryGrowthPercent / 100);
+      currentMonthlySalary *= 1 + salaryGrowthPercent / 100;
     }
   }
 
   return {
     totalEmployeeContribution: Math.round(totalEmployeeContribution),
     totalEmployerContribution: Math.round(totalEmployerContribution),
-    totalContributions: Math.round(totalEmployeeContribution + totalEmployerContribution),
+    totalContributions: Math.round(
+      totalEmployeeContribution + totalEmployerContribution,
+    ),
     totalInterest: Math.round(totalInterestAccrued),
     maturityValue: Math.round(balance),
-    yearsToRetirement
+    yearsToRetirement,
   };
 };
 
@@ -640,18 +700,20 @@ export const calculateGoalPlanning = (
   monthlyContribution: number,
   expectedReturn: number,
   inflationRate: number = 0,
-  stepUpPercentage: number = 0
+  stepUpPercentage: number = 0,
 ) => {
   const months = targetYears * 12;
   const monthlyRate = expectedReturn / (12 * 100);
 
   // Adjust goal amount for inflation if enabled
-  const inflationAdjustedGoal = inflationRate > 0
-    ? goalAmount * Math.pow(1 + inflationRate / 100, targetYears)
-    : goalAmount;
+  const inflationAdjustedGoal =
+    inflationRate > 0
+      ? goalAmount * Math.pow(1 + inflationRate / 100, targetYears)
+      : goalAmount;
 
   // Calculate future value of current savings
-  const futureSavings = currentSavings * Math.pow(1 + expectedReturn / 100, targetYears);
+  const futureSavings =
+    currentSavings * Math.pow(1 + expectedReturn / 100, targetYears);
 
   // Calculate future value of monthly contributions with step-up only
   let futureContributions = 0;
@@ -662,15 +724,15 @@ export const calculateGoalPlanning = (
 
     // Future value of this year's contributions
     const yearsRemaining = targetYears - year + 1;
-    const futureValueOfYearContribution = yearlyContribution *
-      Math.pow(1 + expectedReturn / 100, yearsRemaining);
+    const futureValueOfYearContribution =
+      yearlyContribution * Math.pow(1 + expectedReturn / 100, yearsRemaining);
 
     futureContributions += futureValueOfYearContribution;
 
     // Apply step-up for next year only (no inflation on contributions)
     // Step-up is applied at the END of each completed year
     if (stepUpPercentage > 0 && year < targetYears) {
-      currentMonthlyContrib *= (1 + stepUpPercentage / 100);
+      currentMonthlyContrib *= 1 + stepUpPercentage / 100;
     }
   }
 
@@ -686,13 +748,18 @@ export const calculateGoalPlanning = (
 
   if (!goalMet) {
     // Use the SIP formula to calculate required monthly investment
-    const futureValueFactor = (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
+    const futureValueFactor =
+      (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
 
     // Account for current savings growth
-    const futureSavingsValue = currentSavings * Math.pow(1 + expectedReturn / 100, targetYears);
+    const futureSavingsValue =
+      currentSavings * Math.pow(1 + expectedReturn / 100, targetYears);
 
     // Calculate remaining amount needed after current savings grow
-    const remainingGoal = Math.max(0, inflationAdjustedGoal - futureSavingsValue);
+    const remainingGoal = Math.max(
+      0,
+      inflationAdjustedGoal - futureSavingsValue,
+    );
 
     if (remainingGoal > 0 && futureValueFactor > 0) {
       requiredMonthlyContribution = remainingGoal / futureValueFactor;
@@ -706,7 +773,11 @@ export const calculateGoalPlanning = (
     const averageMonthlyRate = expectedReturn / (12 * 100);
     if (averageMonthlyRate > 0) {
       // Approximate excess contribution (this is a simplified calculation)
-      excessContribution = excessCorpus / (Math.pow(1 + averageMonthlyRate, targetYears) - 1) / averageMonthlyRate / 12;
+      excessContribution =
+        excessCorpus /
+        (Math.pow(1 + averageMonthlyRate, targetYears) - 1) /
+        averageMonthlyRate /
+        12;
     }
 
     // More precise calculation for excess contribution
@@ -715,7 +786,8 @@ export const calculateGoalPlanning = (
     let maxContribution = monthlyContribution;
 
     // Binary search to find the minimum contribution needed
-    for (let i = 0; i < 20; i++) { // Max 20 iterations for precision
+    for (let i = 0; i < 20; i++) {
+      // Max 20 iterations for precision
       const midContribution = (minContribution + maxContribution) / 2;
 
       // Calculate future contributions with step-up for test amount
@@ -725,7 +797,8 @@ export const calculateGoalPlanning = (
       for (let year = 1; year <= targetYears; year++) {
         const yearlyContribution = currentTestContrib * 12;
         const yearsRemaining = targetYears - year + 1;
-        const futureValueOfYearContribution = yearlyContribution *
+        const futureValueOfYearContribution =
+          yearlyContribution *
           Math.pow(1 + expectedReturn / 100, yearsRemaining);
 
         testFutureContributions += futureValueOfYearContribution;
@@ -733,7 +806,7 @@ export const calculateGoalPlanning = (
         // Apply step-up for next year only (no inflation on contributions)
         // Step-up is applied at the END of each completed year
         if (stepUpPercentage > 0 && year < targetYears) {
-          currentTestContrib *= (1 + stepUpPercentage / 100);
+          currentTestContrib *= 1 + stepUpPercentage / 100;
         }
       }
 
@@ -755,17 +828,19 @@ export const calculateGoalPlanning = (
     futureContributions: Math.round(futureContributions),
     totalAchieved: Math.round(totalAchieved),
     shortfall: Math.round(shortfall),
-    requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+    requiredMonthlyContribution: Math.round(
+      Math.max(requiredMonthlyContribution, 0),
+    ),
     excessContribution: Math.round(Math.max(excessContribution, 0)),
     goalMet,
-    inflationAdjustedGoal: Math.round(inflationAdjustedGoal)
+    inflationAdjustedGoal: Math.round(inflationAdjustedGoal),
   };
 };
 
 // Income Tax Calculation for FY 2025-26
 
 interface IncomeTaxInputs {
-  financialYear: '2025-26' | '2024-25' | '2023-24';
+  financialYear: "2025-26" | "2024-25" | "2023-24";
   ageCategory: AgeCategory;
   taxRegime: TaxRegime;
   grossSalary: number;
@@ -775,8 +850,8 @@ interface IncomeTaxInputs {
   homeLoanInterestSelfOccupied: number;
   homeLoanInterestLetOut: number;
   capitalGains: number;
-  capitalGainsType: 'STCG' | 'LTCG';
-  capitalGainsAssetType: 'equity' | 'property' | 'debt' | 'other';
+  capitalGainsType: "STCG" | "LTCG";
+  capitalGainsAssetType: "equity" | "property" | "debt" | "other";
   cryptoIncome: number;
   section80C: number;
   section80CCD1B: number;
@@ -806,7 +881,7 @@ interface IncomeTaxResult {
   cessOld: number;
   totalTaxNew: number;
   totalTaxOld: number;
-  recommendation: 'new' | 'old';
+  recommendation: "new" | "old";
   taxSavings: number;
   breakdown: {
     salaryIncome: number;
@@ -816,55 +891,100 @@ interface IncomeTaxResult {
   };
 }
 
-export const calculateIncomeTax = (inputs: IncomeTaxInputs): IncomeTaxResult => {
+export const calculateIncomeTax = (
+  inputs: IncomeTaxInputs,
+): IncomeTaxResult => {
   // 1. Calculate Gross Total Income
   const salaryIncome = inputs.grossSalary - inputs.exemptAllowances;
-  const housePropertyIncome = Math.max(0, inputs.rentalIncome - (inputs.rentalIncome * 0.3) - inputs.homeLoanInterestLetOut);
+  const housePropertyIncome = Math.max(
+    0,
+    inputs.rentalIncome -
+      inputs.rentalIncome * 0.3 -
+      inputs.homeLoanInterestLetOut,
+  );
   const otherIncome = inputs.interestIncome + inputs.cryptoIncome;
 
   // Capital gains calculation
   let capitalGainsIncome = inputs.capitalGains;
-  if (inputs.capitalGainsType === 'LTCG' && inputs.capitalGainsAssetType === 'equity') {
-    const exemption = inputs.financialYear === '2025-26' 
-      ? CAPITAL_GAINS_EXEMPTION.equityLTCG_FY2025 
-      : CAPITAL_GAINS_EXEMPTION.equityLTCG;
+  if (
+    inputs.capitalGainsType === "LTCG" &&
+    inputs.capitalGainsAssetType === "equity"
+  ) {
+    const exemption =
+      inputs.financialYear === "2025-26"
+        ? CAPITAL_GAINS_EXEMPTION.equityLTCG_FY2025
+        : CAPITAL_GAINS_EXEMPTION.equityLTCG;
     capitalGainsIncome = Math.max(0, inputs.capitalGains - exemption);
   }
 
-  const grossTotalIncome = salaryIncome + housePropertyIncome + capitalGainsIncome + otherIncome;
+  const grossTotalIncome =
+    salaryIncome + housePropertyIncome + capitalGainsIncome + otherIncome;
 
   // 2. Calculate Deductions
   // New Regime: Only standard deduction, 80CCD(1B), 80D
   const stdDeductionNew = inputs.grossSalary > 0 ? STANDARD_DEDUCTION.new : 0;
-  const section80CCD1BNew = Math.min(inputs.section80CCD1B, DEDUCTION_LIMITS.section80CCD1B);
-  const section80DNew = Math.min(inputs.section80D, DEDUCTION_LIMITS.section80D.self);
-  const totalDeductionsNew = stdDeductionNew + section80CCD1BNew + section80DNew;
+  const section80CCD1BNew = Math.min(
+    inputs.section80CCD1B,
+    DEDUCTION_LIMITS.section80CCD1B,
+  );
+  const section80DNew = Math.min(
+    inputs.section80D,
+    DEDUCTION_LIMITS.section80D.self,
+  );
+  const totalDeductionsNew =
+    stdDeductionNew + section80CCD1BNew + section80DNew;
 
   // Old Regime: All deductions
   const stdDeductionOld = inputs.grossSalary > 0 ? STANDARD_DEDUCTION.old : 0;
-  const section80COld = Math.min(inputs.section80C, DEDUCTION_LIMITS.section80C);
-  const section80CCD1BOld = Math.min(inputs.section80CCD1B, DEDUCTION_LIMITS.section80CCD1B);
-  const section80DOld = Math.min(inputs.section80D, DEDUCTION_LIMITS.section80D.self);
-  const section80DAdditionalOld = Math.min(inputs.section80DAdditional, DEDUCTION_LIMITS.section80D.parents);
+  const section80COld = Math.min(
+    inputs.section80C,
+    DEDUCTION_LIMITS.section80C,
+  );
+  const section80CCD1BOld = Math.min(
+    inputs.section80CCD1B,
+    DEDUCTION_LIMITS.section80CCD1B,
+  );
+  const section80DOld = Math.min(
+    inputs.section80D,
+    DEDUCTION_LIMITS.section80D.self,
+  );
+  const section80DAdditionalOld = Math.min(
+    inputs.section80DAdditional,
+    DEDUCTION_LIMITS.section80D.parents,
+  );
   const section80GOld = inputs.section80G; // No limit, varies by organization
   const section80EOld = inputs.section80E; // No limit
-  const section80TTAOld = Math.min(inputs.interestIncome, inputs.section80TTA || DEDUCTION_LIMITS.section80TTA);
-  const section80EEOld = Math.min(inputs.section80EE, DEDUCTION_LIMITS.section80EE);
-  const section80EEAOld = Math.min(inputs.section80EEA, DEDUCTION_LIMITS.section80EEA);
-  const section80UOld = inputs.section80U > 0 ? DEDUCTION_LIMITS.section80U.disability : 0; // Simplified
-  const section24bOld = Math.min(inputs.homeLoanInterestSelfOccupied, DEDUCTION_LIMITS.section24b);
+  const section80TTAOld = Math.min(
+    inputs.interestIncome,
+    inputs.section80TTA || DEDUCTION_LIMITS.section80TTA,
+  );
+  const section80EEOld = Math.min(
+    inputs.section80EE,
+    DEDUCTION_LIMITS.section80EE,
+  );
+  const section80EEAOld = Math.min(
+    inputs.section80EEA,
+    DEDUCTION_LIMITS.section80EEA,
+  );
+  const section80UOld =
+    inputs.section80U > 0 ? DEDUCTION_LIMITS.section80U.disability : 0; // Simplified
+  const section24bOld = Math.min(
+    inputs.homeLoanInterestSelfOccupied,
+    DEDUCTION_LIMITS.section24b,
+  );
 
-  const totalDeductionsOld = stdDeductionOld + 
-    section80COld + 
-    section80CCD1BOld + 
-    section80DOld + 
-    section80DAdditionalOld + 
-    section80GOld + 
-    section80EOld + 
-    section80TTAOld + 
-    section80EEOld + 
-    section80EEAOld + 
-    section80UOld + 
+  const totalDeductionsOld =
+    stdDeductionOld +
+    section80COld +
+    section80CCD1BOld +
+    section80DOld +
+    section80DAdditionalOld +
+    section80GOld +
+    section80EOld +
+    section80TTAOld +
+    section80EEOld +
+    section80EEAOld +
+    section80UOld +
     section24bOld;
 
   // 3. Calculate Taxable Income
@@ -874,7 +994,10 @@ export const calculateIncomeTax = (inputs: IncomeTaxInputs): IncomeTaxResult => 
   // Apply senior citizen exemption (Old Regime only)
   const exemptionLimit = SENIOR_CITIZEN_EXEMPTION[inputs.ageCategory];
   if (exemptionLimit > SENIOR_CITIZEN_EXEMPTION.below60) {
-    taxableIncomeOld = Math.max(0, taxableIncomeOld - (exemptionLimit - SENIOR_CITIZEN_EXEMPTION.below60));
+    taxableIncomeOld = Math.max(
+      0,
+      taxableIncomeOld - (exemptionLimit - SENIOR_CITIZEN_EXEMPTION.below60),
+    );
   }
 
   // 4. Calculate Tax (before rebate)
@@ -882,12 +1005,14 @@ export const calculateIncomeTax = (inputs: IncomeTaxInputs): IncomeTaxResult => 
   const taxOld = calculateTaxFromSlabs(taxableIncomeOld, OLD_REGIME_SLABS);
 
   // 5. Apply Section 87A Rebate
-  const rebateNew = taxableIncomeNew <= REBATE_87A.new.maxTaxableIncome 
-    ? Math.min(taxNew, REBATE_87A.new.rebateAmount) 
-    : 0;
-  const rebateOld = taxableIncomeOld <= REBATE_87A.old.maxTaxableIncome 
-    ? Math.min(taxOld, REBATE_87A.old.rebateAmount) 
-    : 0;
+  const rebateNew =
+    taxableIncomeNew <= REBATE_87A.new.maxTaxableIncome
+      ? Math.min(taxNew, REBATE_87A.new.rebateAmount)
+      : 0;
+  const rebateOld =
+    taxableIncomeOld <= REBATE_87A.old.maxTaxableIncome
+      ? Math.min(taxOld, REBATE_87A.old.rebateAmount)
+      : 0;
 
   const taxAfterRebateNew = Math.max(0, taxNew - rebateNew);
   const taxAfterRebateOld = Math.max(0, taxOld - rebateOld);
@@ -900,14 +1025,14 @@ export const calculateIncomeTax = (inputs: IncomeTaxInputs): IncomeTaxResult => 
   const taxAfterSurchargeOld = taxAfterRebateOld + surchargeOld;
 
   // 7. Add Cess (4%)
-  const cessNew = Math.round(taxAfterSurchargeNew * CESS_RATE / 100);
-  const cessOld = Math.round(taxAfterSurchargeOld * CESS_RATE / 100);
+  const cessNew = Math.round((taxAfterSurchargeNew * CESS_RATE) / 100);
+  const cessOld = Math.round((taxAfterSurchargeOld * CESS_RATE) / 100);
 
   const totalTaxNew = Math.round(taxAfterSurchargeNew + cessNew);
   const totalTaxOld = Math.round(taxAfterSurchargeOld + cessOld);
 
   // 8. Determine Recommendation
-  const recommendation = totalTaxNew <= totalTaxOld ? 'new' : 'old';
+  const recommendation = totalTaxNew <= totalTaxOld ? "new" : "old";
   const taxSavings = Math.abs(totalTaxNew - totalTaxOld);
 
   return {
@@ -938,14 +1063,20 @@ export const calculateIncomeTax = (inputs: IncomeTaxInputs): IncomeTaxResult => 
 };
 
 // Helper function to calculate tax from slabs
-const calculateTaxFromSlabs = (taxableIncome: number, slabs: Array<{ min: number; max: number; rate: number }>): number => {
+const calculateTaxFromSlabs = (
+  taxableIncome: number,
+  slabs: Array<{ min: number; max: number; rate: number }>,
+): number => {
   let tax = 0;
   let remaining = taxableIncome;
 
   for (const slab of slabs) {
     if (remaining <= 0) break;
 
-    const slabAmount = Math.min(remaining, slab.max === Infinity ? remaining : slab.max - slab.min);
+    const slabAmount = Math.min(
+      remaining,
+      slab.max === Infinity ? remaining : slab.max - slab.min,
+    );
     tax += (slabAmount * slab.rate) / 100;
     remaining -= slabAmount;
   }
@@ -956,7 +1087,10 @@ const calculateTaxFromSlabs = (taxableIncome: number, slabs: Array<{ min: number
 // Helper function to calculate surcharge
 const calculateSurcharge = (tax: number, taxableIncome: number): number => {
   for (const surchargeRate of SURCHARGE_RATES) {
-    if (taxableIncome >= surchargeRate.min && taxableIncome < surchargeRate.max) {
+    if (
+      taxableIncome >= surchargeRate.min &&
+      taxableIncome < surchargeRate.max
+    ) {
       return (tax * surchargeRate.rate) / 100;
     }
   }

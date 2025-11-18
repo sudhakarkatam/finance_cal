@@ -136,13 +136,18 @@ const DateRangeInput = ({
   };
 
   const getTimeInYears = () => {
+    // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention
+    // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
     if (inputMode === 'date' && startDate && tempEndDate) {
-      // For date-based input, use actual days
-      return getTotalDays() / 365;
+      // Convert date range to years/months/days, then use 360/30 convention
+      const { years, months, days } = dateRangeToYMD(startDate, tempEndDate);
+      const totalDays = (years * 360) + (months * 30) + days;
+      return totalDays / 360;
     }
-    // For manual input, use direct conversion method
-    // Formula: years + months/12 + days/365
-    return manualYears + (manualMonths / 12) + (manualDays / 365);
+    // For manual input, use 360/30 convention
+    // Formula: (years * 360 + months * 30 + days) / 360
+    const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
+    return totalDays / 360;
   };
 
   const getFormattedDuration = () => {
@@ -438,7 +443,7 @@ const DateRangeInput = ({
             <div className="bg-secondary/50 p-3 rounded-lg text-center">
               <p className="text-xs text-muted-foreground">Duration</p>
               <p className="text-sm font-bold text-primary">
-                {getTotalDays()} days ({getTimeInYears().toFixed(2)} years)
+                {getFormattedDuration()}
               </p>
             </div>
           )}
