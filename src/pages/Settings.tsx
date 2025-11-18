@@ -168,9 +168,9 @@ const Settings = () => {
               <h3 className="font-semibold text-foreground">
                 Financial Calculator
               </h3>
-              <p className="text-sm text-muted-foreground">Version 1.0.3</p>
+              <p className="text-sm text-muted-foreground">Version 1.3.6</p>
               <Badge variant="outline" className="mt-2">
-                Build 4
+                Build 6
               </Badge>
             </div>
 
@@ -226,7 +226,7 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-foreground">
                   Release Notes
                 </h2>
-                <Badge variant="secondary">v1.0.3</Badge>
+                <Badge variant="secondary">v1.3.6</Badge>
               </div>
               {releaseNotesExpanded ? (
                 <ChevronUp className="w-4 h-4" />
@@ -236,11 +236,43 @@ const Settings = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
-            {/* Version 1.0.3 - Current */}
+            {/* Version 1.3.6 - Latest */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Version 1.3.6</h3>
+                <Badge variant="default">Latest</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">January 2025</p>
+
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">
+                    ✨ New Features
+                  </h4>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                    <li>
+                      💼✨ New EPF Calculator — estimate your retirement corpus
+                      with salary growth projections
+                    </li>
+                    <li>
+                      📖💡 Info dialogs added to all calculators — tap the ℹ️ icon
+                      for formulas, examples, and tips
+                    </li>
+                    <li>
+                      🔙🏠 Improved navigation — back button returns to Home
+                      instead of closing the app
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Version 1.0.3 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground">Version 1.0.3</h3>
-                <Badge variant="default">Latest</Badge>
               </div>
               <p className="text-xs text-muted-foreground">December 2025</p>
 
