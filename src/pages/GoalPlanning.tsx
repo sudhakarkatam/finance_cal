@@ -1,20 +1,50 @@
-import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Target, Calculator, Home, Car, Plane, GraduationCap, Heart, Briefcase } from 'lucide-react';
-import CalculatorInput from '@/components/ui/CalculatorInput';
-import SaveDialog from '@/components/SaveDialog';
-import { calculateGoalPlanning, formatCurrency } from '@/lib/calculations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Save,
+  RotateCcw,
+  Target,
+  Calculator,
+  Home,
+  Car,
+  Plane,
+  GraduationCap,
+  Heart,
+  Briefcase,
+} from "lucide-react";
+import CalculatorInput from "@/components/ui/CalculatorInput";
+import SaveDialog from "@/components/SaveDialog";
+import { calculateGoalPlanning, formatCurrency } from "@/lib/calculations";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const GoalPlanning = () => {
   // Goal category and basic inputs
-  const [goalCategory, setGoalCategory] = useState('house');
+  const [goalCategory, setGoalCategory] = useState("house");
   const [goalAmount, setGoalAmount] = useState(5000000);
   const [targetYears, setTargetYears] = useState(10);
   const [currentSavings, setCurrentSavings] = useState(100000);
@@ -34,16 +64,52 @@ const GoalPlanning = () => {
 
   // Goal category configurations
   const goalCategories = {
-    house: { name: 'House Purchase', icon: Home, defaultAmount: 5000000, color: 'bg-blue-500' },
-    car: { name: 'Car Purchase', icon: Car, defaultAmount: 1000000, color: 'bg-red-500' },
-    vacation: { name: 'Dream Vacation', icon: Plane, defaultAmount: 500000, color: 'bg-green-500' },
-    education: { name: 'Education', icon: GraduationCap, defaultAmount: 800000, color: 'bg-purple-500' },
-    wedding: { name: 'Wedding', icon: Heart, defaultAmount: 2000000, color: 'bg-pink-500' },
-    business: { name: 'Business/Startup', icon: Briefcase, defaultAmount: 1000000, color: 'bg-orange-500' },
-    custom: { name: 'Custom Goal', icon: Target, defaultAmount: 1000000, color: 'bg-gray-500' }
+    house: {
+      name: "House Purchase",
+      icon: Home,
+      defaultAmount: 5000000,
+      color: "bg-blue-500",
+    },
+    car: {
+      name: "Car Purchase",
+      icon: Car,
+      defaultAmount: 1000000,
+      color: "bg-red-500",
+    },
+    vacation: {
+      name: "Dream Vacation",
+      icon: Plane,
+      defaultAmount: 500000,
+      color: "bg-green-500",
+    },
+    education: {
+      name: "Education",
+      icon: GraduationCap,
+      defaultAmount: 800000,
+      color: "bg-purple-500",
+    },
+    wedding: {
+      name: "Wedding",
+      icon: Heart,
+      defaultAmount: 2000000,
+      color: "bg-pink-500",
+    },
+    business: {
+      name: "Business/Startup",
+      icon: Briefcase,
+      defaultAmount: 1000000,
+      color: "bg-orange-500",
+    },
+    custom: {
+      name: "Custom Goal",
+      icon: Target,
+      defaultAmount: 1000000,
+      color: "bg-gray-500",
+    },
   };
 
-  const currentGoalConfig = goalCategories[goalCategory as keyof typeof goalCategories];
+  const currentGoalConfig =
+    goalCategories[goalCategory as keyof typeof goalCategories];
 
   const result = useMemo(() => {
     return calculateGoalPlanning(
@@ -53,10 +119,19 @@ const GoalPlanning = () => {
       monthlyContribution,
       expectedReturn,
       inflationEnabled ? inflationRate : 0,
-      stepUpEnabled ? stepUpPercentage : 0
+      stepUpEnabled ? stepUpPercentage : 0,
     );
-  }, [goalAmount, targetYears, currentSavings, monthlyContribution, expectedReturn,
-      inflationEnabled, inflationRate, stepUpEnabled, stepUpPercentage]);
+  }, [
+    goalAmount,
+    targetYears,
+    currentSavings,
+    monthlyContribution,
+    expectedReturn,
+    inflationEnabled,
+    inflationRate,
+    stepUpEnabled,
+    stepUpPercentage,
+  ]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -69,7 +144,7 @@ const GoalPlanning = () => {
   };
 
   const handleReset = () => {
-    setGoalCategory('house');
+    setGoalCategory("house");
     setGoalAmount(5000000);
     setTargetYears(10);
     setCurrentSavings(100000);
@@ -94,7 +169,8 @@ const GoalPlanning = () => {
       const yearsRemaining = targetYears - year;
 
       // Future value of current savings
-      const futureSavingsValue = currentSavings * Math.pow(1 + expectedReturn / 100, yearsRemaining);
+      const futureSavingsValue =
+        currentSavings * Math.pow(1 + expectedReturn / 100, yearsRemaining);
 
       // Future value of all contributions made up to this year
       let futureContributionsValue = 0;
@@ -103,11 +179,12 @@ const GoalPlanning = () => {
       for (let y = 1; y <= year; y++) {
         const yearContribution = tempMonthlyContrib * 12;
         const yearsFromNow = targetYears - y;
-        futureContributionsValue += yearContribution * Math.pow(1 + expectedReturn / 100, yearsFromNow);
+        futureContributionsValue +=
+          yearContribution * Math.pow(1 + expectedReturn / 100, yearsFromNow);
 
         // Apply step-up for next year
         if (stepUpEnabled && y < targetYears) {
-          tempMonthlyContrib *= (1 + stepUpPercentage / 100);
+          tempMonthlyContrib *= 1 + stepUpPercentage / 100;
         }
       }
 
@@ -118,31 +195,49 @@ const GoalPlanning = () => {
         yearlyContribution,
         cumulativeContributions: yearlyContribution * year,
         portfolioValue: Math.round(portfolioValue),
-        goalProgress: Math.round((portfolioValue / goalAmount) * 100)
+        goalProgress: Math.round((portfolioValue / goalAmount) * 100),
       });
 
       // Apply step-up for next year
       if (stepUpEnabled && year < targetYears) {
-        currentMonthlyContrib *= (1 + stepUpPercentage / 100);
+        currentMonthlyContrib *= 1 + stepUpPercentage / 100;
       }
     }
 
     return projection;
   };
 
-  const yearlyProjection = useMemo(() => generateYearlyProjection(), [monthlyContribution, targetYears, currentSavings, expectedReturn, stepUpEnabled, stepUpPercentage]);
+  const yearlyProjection = useMemo(
+    () => generateYearlyProjection(),
+    [
+      monthlyContribution,
+      targetYears,
+      currentSavings,
+      expectedReturn,
+      stepUpEnabled,
+      stepUpPercentage,
+    ],
+  );
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
       <Card className="p-6 space-y-6 shadow-lg">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className={`p-2 ${currentGoalConfig.color.replace('bg-', 'bg-').replace('-500', '-100')} rounded-lg`}>
-              <currentGoalConfig.icon className={`w-6 h-6 ${currentGoalConfig.color.replace('bg-', 'text-').replace('-500', '-600')}`} />
+            <div
+              className={`p-2 ${currentGoalConfig.color.replace("bg-", "bg-").replace("-500", "-100")} rounded-lg`}
+            >
+              <currentGoalConfig.icon
+                className={`w-6 h-6 ${currentGoalConfig.color.replace("bg-", "text-").replace("-500", "-600")}`}
+              />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Goal Planning</h2>
-              <p className="text-xs text-muted-foreground">Plan for {currentGoalConfig.name.toLowerCase()}</p>
+              <h2 className="text-lg font-semibold text-foreground">
+                Goal Planning
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Plan for {currentGoalConfig.name.toLowerCase()}
+              </p>
             </div>
           </div>
           <Button
@@ -158,7 +253,9 @@ const GoalPlanning = () => {
 
         {/* Goal Category Selection */}
         <div className="bg-card p-4 rounded-lg border">
-          <Label className="text-sm font-medium mb-3 block">Select Goal Type</Label>
+          <Label className="text-sm font-medium mb-3 block">
+            Select Goal Type
+          </Label>
           <Select value={goalCategory} onValueChange={handleGoalCategoryChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Choose your goal type" />
@@ -280,7 +377,7 @@ const GoalPlanning = () => {
               value={inflationRate}
               onChange={setInflationRate}
               min={1}
-              max={15}
+              max={50}
               step={0.1}
               suffix="%"
             />
@@ -288,11 +385,7 @@ const GoalPlanning = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            className="flex-1 gap-2"
-            size="lg"
-            onClick={handleCalculate}
-          >
+          <Button className="flex-1 gap-2" size="lg" onClick={handleCalculate}>
             <Calculator className="w-4 h-4" />
             Calculate Goal
           </Button>
@@ -305,93 +398,136 @@ const GoalPlanning = () => {
                   View Projections
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Year-wise Goal Progress</DialogTitle>
-              </DialogHeader>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Year</TableHead>
-                    <TableHead>Yearly Contribution</TableHead>
-                    <TableHead>Cumulative Contributions</TableHead>
-                    <TableHead>Portfolio Value</TableHead>
-                    <TableHead>Goal Progress</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {yearlyProjection.map((row) => (
-                    <TableRow key={row.year}>
-                      <TableCell>{row.year}</TableCell>
-                      <TableCell>{formatCurrency(row.yearlyContribution)}</TableCell>
-                      <TableCell>{formatCurrency(row.cumulativeContributions)}</TableCell>
-                      <TableCell>{formatCurrency(row.portfolioValue)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{row.goalProgress}%</span>
-                          <div className="w-16 h-2 bg-gray-200 rounded">
-                            <div
-                              className={`h-2 rounded ${row.goalProgress >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                              style={{ width: `${Math.min(row.goalProgress, 100)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </TableCell>
+              <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Year-wise Goal Progress</DialogTitle>
+                </DialogHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Yearly Contribution</TableHead>
+                      <TableHead>Cumulative Contributions</TableHead>
+                      <TableHead>Portfolio Value</TableHead>
+                      <TableHead>Goal Progress</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </DialogContent>
+                  </TableHeader>
+                  <TableBody>
+                    {yearlyProjection.map((row) => (
+                      <TableRow key={row.year}>
+                        <TableCell>{row.year}</TableCell>
+                        <TableCell>
+                          {formatCurrency(row.yearlyContribution)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(row.cumulativeContributions)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(row.portfolioValue)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span>{row.goalProgress}%</span>
+                            <div className="w-16 h-2 bg-gray-200 rounded">
+                              <div
+                                className={`h-2 rounded ${row.goalProgress >= 100 ? "bg-green-500" : "bg-blue-500"}`}
+                                style={{
+                                  width: `${Math.min(row.goalProgress, 100)}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DialogContent>
             </Dialog>
           )}
         </div>
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">Goal Achievement Analysis</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Goal Achievement Analysis
+        </h3>
 
         <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
           <p className="text-xs text-primary-foreground/80 mb-1">
-            {inflationEnabled ? 'Inflation-Adjusted Goal Amount' : 'Total Amount Needed'}
+            {inflationEnabled
+              ? "Inflation-Adjusted Goal Amount"
+              : "Total Amount Needed"}
           </p>
           <p className="text-3xl font-bold text-primary-foreground">
-            {formatCurrency(inflationEnabled && 'inflationAdjustedGoal' in result ? result.inflationAdjustedGoal : goalAmount)}
+            {formatCurrency(
+              inflationEnabled && "inflationAdjustedGoal" in result
+                ? result.inflationAdjustedGoal
+                : goalAmount,
+            )}
           </p>
         </div>
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-muted-foreground">Future value of current savings</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.futureSavings)}</span>
+            <span className="text-sm text-muted-foreground">
+              Future value of current savings
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.futureSavings)}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Future value of contributions</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.futureContributions)}</span>
+            <span className="text-sm text-muted-foreground">
+              Future value of contributions
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.futureContributions)}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Total projected amount</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalAchieved)}</span>
+            <span className="text-sm text-muted-foreground">
+              Total projected amount
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.totalAchieved)}
+            </span>
           </div>
           {result.shortfall > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Shortfall</span>
-              <span className="font-semibold text-red-600">{formatCurrency(result.shortfall)}</span>
+              <span className="font-semibold text-red-600">
+                {formatCurrency(result.shortfall)}
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">
-              {result.goalMet && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Min monthly contribution'}
+              {result.goalMet && result.excessContribution > 0
+                ? "Minimum monthly contribution"
+                : "Min monthly contribution"}
             </span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
+            <span className="text-xl font-bold text-primary">
+              {formatCurrency(result.requiredMonthlyContribution)}
+            </span>
           </div>
           {result.goalMet && result.excessContribution > 0 && (
             <div className="bg-green-50 p-3 rounded-md border border-green-200">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">You can reduce your contribution by</span>
-                <span className="font-semibold text-green-800">{formatCurrency(result.excessContribution)}/month</span>
+                <span className="text-sm text-green-700">
+                  You can reduce your contribution by
+                </span>
+                <span className="font-semibold text-green-800">
+                  {formatCurrency(result.excessContribution)}/month
+                </span>
               </div>
               <p className="text-xs text-green-600 mt-1">
-                Your current contribution of {formatCurrency(monthlyContribution)} is {formatCurrency(monthlyContribution - result.requiredMonthlyContribution)} more than needed
+                Your current contribution of{" "}
+                {formatCurrency(monthlyContribution)} is{" "}
+                {formatCurrency(
+                  monthlyContribution - result.requiredMonthlyContribution,
+                )}{" "}
+                more than needed
               </p>
             </div>
           )}
@@ -401,24 +537,29 @@ const GoalPlanning = () => {
           result.excessContribution > 0 ? (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎉 Excellent! Your current monthly contribution of {formatCurrency(monthlyContribution)} exceeds the requirement.
-                You can reduce it by {formatCurrency(result.excessContribution)} to {formatCurrency(result.requiredMonthlyContribution)} per month
-                while still achieving your goal comfortably.
+                🎉 Excellent! Your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatCurrency(result.excessContribution)}{" "}
+                to {formatCurrency(result.requiredMonthlyContribution)} per
+                month while still achieving your goal comfortably.
               </AlertDescription>
             </Alert>
           ) : (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎉 Perfect! With your current monthly contribution of {formatCurrency(monthlyContribution)},
-                you will achieve your goal exactly as planned.
+                🎉 Perfect! With your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)}, you will achieve your
+                goal exactly as planned.
               </AlertDescription>
             </Alert>
           )
         ) : (
           <Alert>
             <AlertDescription className="text-orange-800">
-              To achieve your goal, you need to contribute {formatCurrency(result.requiredMonthlyContribution)} per month.
-              Consider increasing your monthly contribution or extending the time horizon.
+              To achieve your goal, you need to contribute{" "}
+              {formatCurrency(result.requiredMonthlyContribution)} per month.
+              Consider increasing your monthly contribution or extending the
+              time horizon.
             </AlertDescription>
           </Alert>
         )}
@@ -437,27 +578,34 @@ const GoalPlanning = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="goalplanning"
-        inputs={{
-          goalAmount,
-          targetYears,
-          currentSavings,
-          monthlyContribution,
-          expectedReturn,
-          inflationEnabled: inflationEnabled ? 1 : 0,
-          inflationRate,
-          stepUpEnabled: stepUpEnabled ? 1 : 0,
-          stepUpPercentage
-        } as Record<string, number | string>}
-        results={{
-          futureSavings: result.futureSavings,
-          futureContributions: result.futureContributions,
-          totalAchieved: result.totalAchieved,
-          shortfall: result.shortfall,
-          requiredMonthlyContribution: result.requiredMonthlyContribution,
-          excessContribution: result.excessContribution,
-          goalMet: result.goalMet ? 1 : 0,
-          inflationAdjustedGoal: 'inflationAdjustedGoal' in result ? result.inflationAdjustedGoal : goalAmount
-        } as Record<string, number>}
+        inputs={
+          {
+            goalAmount,
+            targetYears,
+            currentSavings,
+            monthlyContribution,
+            expectedReturn,
+            inflationEnabled: inflationEnabled ? 1 : 0,
+            inflationRate,
+            stepUpEnabled: stepUpEnabled ? 1 : 0,
+            stepUpPercentage,
+          } as Record<string, number | string>
+        }
+        results={
+          {
+            futureSavings: result.futureSavings,
+            futureContributions: result.futureContributions,
+            totalAchieved: result.totalAchieved,
+            shortfall: result.shortfall,
+            requiredMonthlyContribution: result.requiredMonthlyContribution,
+            excessContribution: result.excessContribution,
+            goalMet: result.goalMet ? 1 : 0,
+            inflationAdjustedGoal:
+              "inflationAdjustedGoal" in result
+                ? result.inflationAdjustedGoal
+                : goalAmount,
+          } as Record<string, number>
+        }
       />
     </div>
   );

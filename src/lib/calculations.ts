@@ -173,18 +173,18 @@ export const calculateCompoundInterestFromMonthlyRupeesWithDays = (
     // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
     // For yearly compounding: Use Hybrid Method (Compound for years, Simple for fractional)
     // For other frequencies: Use pure compound with 360/30 convention
-    
+
     if (frequency === 1) {
       // Yearly compounding: Hybrid Method (matches Vaddi Calculator output exactly)
       // Compound interest for complete years, Simple interest for fractional period using 360/30
-      
+
       if (years > 0) {
         // Step 1: Calculate compound interest for whole years
         const amountAfterYears =
           principal * Math.pow(1 + annualRate / 100, years);
 
         // Step 2: Calculate simple interest for fractional period using 360/30 convention
-        const fractionalDays = (months * 30) + dayCount;
+        const fractionalDays = months * 30 + dayCount;
         const fractionalTime = fractionalDays / 360; // Use 360/30 convention
         const simpleInterest =
           amountAfterYears * (annualRate / 100) * fractionalTime;
@@ -197,7 +197,7 @@ export const calculateCompoundInterestFromMonthlyRupeesWithDays = (
         };
       } else {
         // For periods less than 1 year, use simple interest only with 360/30 convention
-        const fractionalDays = (months * 30) + dayCount;
+        const fractionalDays = months * 30 + dayCount;
         const fractionalTime = fractionalDays / 360;
         const simpleInterest = principal * (annualRate / 100) * fractionalTime;
         const finalAmount = principal + simpleInterest;
@@ -262,6 +262,16 @@ export const calculateSIP = (
 ) => {
   const months = years * 12;
   const monthlyRate = expectedReturn / (12 * 100);
+
+  // Handle edge cases
+  if (monthlyRate === 0 || months === 0) {
+    const invested = monthlyInvestment * months;
+    return {
+      invested: Math.round(invested),
+      returns: 0,
+      total: Math.round(invested),
+    };
+  }
 
   // Standard SIP formula: FV = P * (((1 + r)^n - 1) / r) * (1 + r)
   const futureValue =
@@ -383,17 +393,22 @@ export const calculateInflationAdjustedSIP = (
   stepUpPercentage: number = 0,
 ) => {
   // Calculate with inflation-adjusted return rate
-  const inflationAdjustedReturn = Math.max(0, expectedReturn - inflationRate);
+  // Handle edge case where inflation might be higher than return
+  const inflationAdjustedReturn = expectedReturn - inflationRate;
+
+  // If inflation-adjusted return is negative or zero, use minimal positive value
+  const safeReturn =
+    inflationAdjustedReturn <= 0 ? 0.01 : inflationAdjustedReturn;
 
   if (stepUpPercentage > 0) {
     return calculateStepUpSIP(
       monthlyInvestment,
-      inflationAdjustedReturn,
+      safeReturn,
       years,
       stepUpPercentage,
     );
   } else {
-    return calculateSIP(monthlyInvestment, inflationAdjustedReturn, years);
+    return calculateSIP(monthlyInvestment, safeReturn, years);
   }
 };
 
@@ -1062,6 +1077,96 @@ export const calculateIncomeTax = (
   };
 };
 
+// Percentage Calculator
+export const calculatePercentage = (number: number, percentage: number) => {
+  // What is X% of Y?
+  const result = (number * percentage) / 100;
+  return {
+    number,
+    percentage,
+    result: Math.round(result * 100) / 100,
+  };
+};
+
+export const findPercentage = (part: number, whole: number) => {
+  // X is what % of Y?
+  if (whole === 0) return { part, whole, percentage: 0 };
+  const percentage = (part / whole) * 100;
+  return {
+    part,
+    whole,
+    percentage: Math.round(percentage * 100) / 100,
+  };
+};
+
+export const percentageChange = (originalValue: number, newValue: number) => {
+  // % increase/decrease from X to Y
+  if (originalValue === 0) {
+    return {
+      originalValue,
+      newValue,
+      change: newValue,
+      percentageChange: 0,
+      isIncrease: newValue > 0,
+    };
+  }
+
+  const change = newValue - originalValue;
+  const percentageChange = (change / originalValue) * 100;
+  const isIncrease = change > 0;
+
+  return {
+    originalValue,
+    newValue,
+    change: Math.round(change * 100) / 100,
+    percentageChange: Math.round(percentageChange * 100) / 100,
+    isIncrease,
+  };
+};
+
+export const addPercentage = (
+  number: number,
+  percentage: number,
+  operation: "add" | "subtract",
+) => {
+  // Add or subtract X% to/from Y
+  const percentageAmount = (number * percentage) / 100;
+  const result =
+    operation === "add" ? number + percentageAmount : number - percentageAmount;
+
+  return {
+    number,
+    percentage,
+    operation,
+    percentageAmount: Math.round(percentageAmount * 100) / 100,
+    result: Math.round(result * 100) / 100,
+  };
+};
+
+export const percentageDifference = (value1: number, value2: number) => {
+  // What's the % difference between X and Y?
+  const difference = Math.abs(value2 - value1);
+  const average = (value1 + value2) / 2;
+
+  if (average === 0) {
+    return {
+      value1,
+      value2,
+      difference,
+      percentageDifference: 0,
+    };
+  }
+
+  const percentageDiff = (difference / average) * 100;
+
+  return {
+    value1,
+    value2,
+    difference: Math.round(difference * 100) / 100,
+    percentageDifference: Math.round(percentageDiff * 100) / 100,
+  };
+};
+
 // Helper function to calculate tax from slabs
 const calculateTaxFromSlabs = (
   taxableIncome: number,
@@ -1095,4 +1200,76 @@ const calculateSurcharge = (tax: number, taxableIncome: number): number => {
     }
   }
   return 0;
+};
+
+// Inflation Calculator
+export const calculateInflation = (
+  currentPrice: number,
+  inflationRate: number,
+  years: number,
+) => {
+  const futurePrice = currentPrice * Math.pow(1 + inflationRate / 100, years);
+  const totalInflation = futurePrice - currentPrice;
+  const inflationPercentage = ((futurePrice - currentPrice) / currentPrice) * 100;
+
+  return {
+    currentPrice: Math.round(currentPrice),
+    futurePrice: Math.round(futurePrice),
+    totalInflation: Math.round(totalInflation),
+    inflationPercentage: Math.round(inflationPercentage * 100) / 100,
+    inflationRate,
+    years,
+  };
+};
+
+export const calculatePresentValue = (
+  futurePrice: number,
+  inflationRate: number,
+  years: number,
+) => {
+  const presentValue = futurePrice / Math.pow(1 + inflationRate / 100, years);
+  const totalInflation = futurePrice - presentValue;
+
+  return {
+    futurePrice: Math.round(futurePrice),
+    presentValue: Math.round(presentValue),
+    totalInflation: Math.round(totalInflation),
+    inflationRate,
+    years,
+  };
+};
+
+// GST Calculator
+export const calculateGST = (
+  amount: number,
+  gstRate: number,
+  isInclusive: boolean,
+) => {
+  let originalAmount: number;
+  let gstAmount: number;
+  let totalAmount: number;
+
+  if (isInclusive) {
+    totalAmount = amount;
+    originalAmount = amount / (1 + gstRate / 100);
+    gstAmount = amount - originalAmount;
+  } else {
+    originalAmount = amount;
+    gstAmount = (amount * gstRate) / 100;
+    totalAmount = amount + gstAmount;
+  }
+
+  const cgst = gstAmount / 2;
+  const sgst = gstAmount / 2;
+
+  return {
+    originalAmount: Math.round(originalAmount * 100) / 100,
+    gstAmount: Math.round(gstAmount * 100) / 100,
+    cgst: Math.round(cgst * 100) / 100,
+    sgst: Math.round(sgst * 100) / 100,
+    igst: Math.round(gstAmount * 100) / 100,
+    totalAmount: Math.round(totalAmount * 100) / 100,
+    gstRate,
+    isInclusive,
+  };
 };

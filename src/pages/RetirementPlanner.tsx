@@ -1,16 +1,36 @@
-import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Calculator, Users, PiggyBank, TrendingUp } from 'lucide-react';
-import CalculatorInput from '@/components/ui/CalculatorInput';
-import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import ResultChart from '@/components/ui/ResultChart';
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Save,
+  RotateCcw,
+  Calculator,
+  Users,
+  PiggyBank,
+  TrendingUp,
+} from "lucide-react";
+import CalculatorInput from "@/components/ui/CalculatorInput";
+import SaveDialog from "@/components/SaveDialog";
+import { formatCurrency } from "@/lib/calculations";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import ResultChart from "@/components/ui/ResultChart";
 
 const RetirementPlanner = () => {
   // Basic inputs
@@ -18,7 +38,8 @@ const RetirementPlanner = () => {
   const [retirementAge, setRetirementAge] = useState(60);
   const [currentSavings, setCurrentSavings] = useState(500000);
   const [monthlyContribution, setMonthlyContribution] = useState(25000);
-  const [expectedReturnAccumulation, setExpectedReturnAccumulation] = useState(10); // During working years
+  const [expectedReturnAccumulation, setExpectedReturnAccumulation] =
+    useState(10); // During working years
   const [expectedReturnRetirement, setExpectedReturnRetirement] = useState(7); // During retirement
 
   // Advanced features
@@ -45,12 +66,14 @@ const RetirementPlanner = () => {
         totalReturns: 0,
         shortfall: 0,
         requiredMonthlyContribution: 0,
-        isAchievable: true
+        isAchievable: true,
       };
     }
 
     // Future value of current savings
-    const futureSavings = currentSavings * Math.pow(1 + expectedReturnAccumulation / 100, yearsToRetirement);
+    const futureSavings =
+      currentSavings *
+      Math.pow(1 + expectedReturnAccumulation / 100, yearsToRetirement);
 
     // Future value of monthly contributions
     const months = yearsToRetirement * 12;
@@ -60,8 +83,9 @@ const RetirementPlanner = () => {
     if (monthlyRate === 0) {
       futureContributions = monthlyContribution * months;
     } else {
-      futureContributions = monthlyContribution *
-        (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
+      futureContributions =
+        (monthlyContribution * (Math.pow(1 + monthlyRate, months) - 1)) /
+        monthlyRate;
     }
 
     const corpusAtRetirement = futureSavings + futureContributions;
@@ -73,27 +97,35 @@ const RetirementPlanner = () => {
       const monthlyPensionNeeded = lifestyleExpenses - monthlyPension;
       if (monthlyPensionNeeded > 0) {
         const retirementMonths = yearsInRetirement * 12;
-        const pensionRate = inflationEnabled ? (expectedReturnRetirement - inflationRate) / 100 : expectedReturnRetirement / 100;
+        const pensionRate = inflationEnabled
+          ? (expectedReturnRetirement - inflationRate) / 100
+          : expectedReturnRetirement / 100;
         const pensionMonthlyRate = pensionRate / 12;
 
         if (pensionMonthlyRate === 0) {
           requiredCorpus = monthlyPensionNeeded * retirementMonths;
         } else {
-          requiredCorpus = monthlyPensionNeeded *
-            (1 - Math.pow(1 + pensionMonthlyRate, -retirementMonths)) / pensionMonthlyRate;
+          requiredCorpus =
+            (monthlyPensionNeeded *
+              (1 - Math.pow(1 + pensionMonthlyRate, -retirementMonths))) /
+            pensionMonthlyRate;
         }
       }
     } else {
       // No pension, need full corpus for expenses
       const retirementMonths = yearsInRetirement * 12;
-      const expenseRate = inflationEnabled ? (expectedReturnRetirement - inflationRate) / 100 : expectedReturnRetirement / 100;
+      const expenseRate = inflationEnabled
+        ? (expectedReturnRetirement - inflationRate) / 100
+        : expectedReturnRetirement / 100;
       const expenseMonthlyRate = expenseRate / 12;
 
       if (expenseMonthlyRate === 0) {
         requiredCorpus = lifestyleExpenses * retirementMonths;
       } else {
-        requiredCorpus = lifestyleExpenses *
-          (1 - Math.pow(1 + expenseMonthlyRate, -retirementMonths)) / expenseMonthlyRate;
+        requiredCorpus =
+          (lifestyleExpenses *
+            (1 - Math.pow(1 + expenseMonthlyRate, -retirementMonths))) /
+          expenseMonthlyRate;
       }
     }
 
@@ -107,7 +139,8 @@ const RetirementPlanner = () => {
     if (shortfall > 0) {
       const targetCorpus = requiredCorpus - futureSavings;
       if (monthlyRate > 0 && targetCorpus > 0) {
-        requiredMonthlyContribution = targetCorpus * monthlyRate /
+        requiredMonthlyContribution =
+          (targetCorpus * monthlyRate) /
           (Math.pow(1 + monthlyRate, months) - 1);
       }
     } else if (isAchievable && monthlyContribution > 0) {
@@ -117,7 +150,11 @@ const RetirementPlanner = () => {
       // Calculate the excess contribution by working backwards
       const averageMonthlyRate = expectedReturnAccumulation / (12 * 100);
       if (averageMonthlyRate > 0) {
-        excessContribution = excessCorpus / (Math.pow(1 + averageMonthlyRate, yearsToRetirement) - 1) / averageMonthlyRate / 12;
+        excessContribution =
+          excessCorpus /
+          (Math.pow(1 + averageMonthlyRate, yearsToRetirement) - 1) /
+          averageMonthlyRate /
+          12;
       }
 
       // More precise calculation for excess contribution
@@ -134,8 +171,9 @@ const RetirementPlanner = () => {
         if (averageMonthlyRate === 0) {
           testFutureContributions = midContribution * months;
         } else {
-          testFutureContributions = midContribution *
-            (Math.pow(1 + averageMonthlyRate, months) - 1) / averageMonthlyRate;
+          testFutureContributions =
+            (midContribution * (Math.pow(1 + averageMonthlyRate, months) - 1)) /
+            averageMonthlyRate;
         }
 
         const testCorpusAtRetirement = futureSavings + testFutureContributions;
@@ -154,21 +192,39 @@ const RetirementPlanner = () => {
     return {
       corpusAtRetirement: Math.round(corpusAtRetirement),
       totalContributions: Math.round(futureContributions),
-      totalReturns: Math.round(corpusAtRetirement - futureContributions - futureSavings + currentSavings),
+      totalReturns: Math.round(
+        corpusAtRetirement -
+          futureContributions -
+          futureSavings +
+          currentSavings,
+      ),
       shortfall: Math.round(shortfall),
-      requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+      requiredMonthlyContribution: Math.round(
+        Math.max(requiredMonthlyContribution, 0),
+      ),
       excessContribution: Math.round(Math.max(excessContribution, 0)),
       requiredCorpus: Math.round(requiredCorpus),
       isAchievable,
       yearsToRetirement,
-      yearsInRetirement
+      yearsInRetirement,
     };
   };
 
   const result = useMemo(() => {
     return calculateRetirement();
-  }, [currentAge, retirementAge, currentSavings, monthlyContribution, expectedReturnAccumulation,
-      inflationEnabled, inflationRate, pensionEnabled, monthlyPension, lifeExpectancy, lifestyleExpenses]);
+  }, [
+    currentAge,
+    retirementAge,
+    currentSavings,
+    monthlyContribution,
+    expectedReturnAccumulation,
+    inflationEnabled,
+    inflationRate,
+    pensionEnabled,
+    monthlyPension,
+    lifeExpectancy,
+    lifestyleExpenses,
+  ]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -200,8 +256,11 @@ const RetirementPlanner = () => {
       const yearsRemaining = yearsToRetirement - year;
 
       // Future value calculations
-      const futureSavingsValue = currentSavings * Math.pow(1 + expectedReturnAccumulation / 100, yearsRemaining);
-      const futureContributionsValue = monthlyContribution * 12 * yearsRemaining;
+      const futureSavingsValue =
+        currentSavings *
+        Math.pow(1 + expectedReturnAccumulation / 100, yearsRemaining);
+      const futureContributionsValue =
+        monthlyContribution * 12 * yearsRemaining;
 
       const portfolioValue = futureSavingsValue + futureContributionsValue;
 
@@ -209,7 +268,7 @@ const RetirementPlanner = () => {
         year,
         age,
         portfolioValue: Math.round(portfolioValue),
-        contributionsThisYear: monthlyContribution * 12
+        contributionsThisYear: monthlyContribution * 12,
       });
     }
 
@@ -227,8 +286,12 @@ const RetirementPlanner = () => {
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Retirement Planner</h2>
-              <p className="text-xs text-muted-foreground">Plan your retirement corpus and savings</p>
+              <h2 className="text-lg font-semibold text-foreground">
+                Retirement Planner
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Plan your retirement corpus and savings
+              </p>
             </div>
           </div>
           <Button
@@ -380,7 +443,7 @@ const RetirementPlanner = () => {
               value={inflationRate}
               onChange={setInflationRate}
               min={1}
-              max={15}
+              max={50}
               step={0.1}
               suffix="%"
             />
@@ -388,11 +451,7 @@ const RetirementPlanner = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button
-            className="flex-1 gap-2"
-            size="lg"
-            onClick={handleCalculate}
-          >
+          <Button className="flex-1 gap-2" size="lg" onClick={handleCalculate}>
             <Calculator className="w-4 h-4" />
             Calculate Retirement Plan
           </Button>
@@ -407,7 +466,9 @@ const RetirementPlanner = () => {
               </DialogTrigger>
               <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Year-wise Retirement Savings Projection</DialogTitle>
+                  <DialogTitle>
+                    Year-wise Retirement Savings Projection
+                  </DialogTitle>
                 </DialogHeader>
                 <Table>
                   <TableHeader>
@@ -423,8 +484,12 @@ const RetirementPlanner = () => {
                       <TableRow key={row.year}>
                         <TableCell>{row.year}</TableCell>
                         <TableCell>{row.age}</TableCell>
-                        <TableCell>{formatCurrency(row.contributionsThisYear)}</TableCell>
-                        <TableCell>{formatCurrency(row.portfolioValue)}</TableCell>
+                        <TableCell>
+                          {formatCurrency(row.contributionsThisYear)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(row.portfolioValue)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -436,46 +501,77 @@ const RetirementPlanner = () => {
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">Retirement Analysis</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Retirement Analysis
+        </h3>
 
         <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
-          <p className="text-xs text-primary-foreground/80 mb-1">Projected Corpus at Retirement</p>
-          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.corpusAtRetirement)}</p>
+          <p className="text-xs text-primary-foreground/80 mb-1">
+            Projected Corpus at Retirement
+          </p>
+          <p className="text-3xl font-bold text-primary-foreground">
+            {formatCurrency(result.corpusAtRetirement)}
+          </p>
         </div>
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-muted-foreground">Total contributions</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalContributions)}</span>
+            <span className="text-sm text-muted-foreground">
+              Total contributions
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.totalContributions)}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Total returns</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalReturns)}</span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.totalReturns)}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Required corpus</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.requiredCorpus)}</span>
+            <span className="text-sm text-muted-foreground">
+              Required corpus
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.requiredCorpus)}
+            </span>
           </div>
           {result.shortfall > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Shortfall</span>
-              <span className="font-semibold text-red-600">{formatCurrency(result.shortfall)}</span>
+              <span className="font-semibold text-red-600">
+                {formatCurrency(result.shortfall)}
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">
-              {result.isAchievable && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Required monthly contribution'}
+              {result.isAchievable && result.excessContribution > 0
+                ? "Minimum monthly contribution"
+                : "Required monthly contribution"}
             </span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
+            <span className="text-xl font-bold text-primary">
+              {formatCurrency(result.requiredMonthlyContribution)}
+            </span>
           </div>
           {result.isAchievable && result.excessContribution > 0 && (
             <div className="bg-green-50 p-3 rounded-md border border-green-200">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">You can reduce your contribution by</span>
-                <span className="font-semibold text-green-800">{formatCurrency(result.excessContribution)}/month</span>
+                <span className="text-sm text-green-700">
+                  You can reduce your contribution by
+                </span>
+                <span className="font-semibold text-green-800">
+                  {formatCurrency(result.excessContribution)}/month
+                </span>
               </div>
               <p className="text-xs text-green-600 mt-1">
-                Your current contribution of {formatCurrency(monthlyContribution)} is {formatCurrency(monthlyContribution - result.requiredMonthlyContribution)} more than needed
+                Your current contribution of{" "}
+                {formatCurrency(monthlyContribution)} is{" "}
+                {formatCurrency(
+                  monthlyContribution - result.requiredMonthlyContribution,
+                )}{" "}
+                more than needed
               </p>
             </div>
           )}
@@ -485,24 +581,29 @@ const RetirementPlanner = () => {
           result.excessContribution > 0 ? (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎉 Excellent! Your current monthly contribution of {formatCurrency(monthlyContribution)} exceeds the requirement.
-                You can reduce it by {formatCurrency(result.excessContribution)} to {formatCurrency(result.requiredMonthlyContribution)} per month
-                while still achieving your retirement goal comfortably.
+                🎉 Excellent! Your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatCurrency(result.excessContribution)}{" "}
+                to {formatCurrency(result.requiredMonthlyContribution)} per
+                month while still achieving your retirement goal comfortably.
               </AlertDescription>
             </Alert>
           ) : (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎉 Perfect! With your current monthly contribution of {formatCurrency(monthlyContribution)},
-                you will achieve your retirement goal exactly as planned.
+                🎉 Perfect! With your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)}, you will achieve your
+                retirement goal exactly as planned.
               </AlertDescription>
             </Alert>
           )
         ) : (
           <Alert>
             <AlertDescription className="text-orange-800">
-              To achieve your retirement goal, you need to contribute {formatCurrency(result.requiredMonthlyContribution)} per month.
-              Consider increasing your monthly contribution or extending your working years.
+              To achieve your retirement goal, you need to contribute{" "}
+              {formatCurrency(result.requiredMonthlyContribution)} per month.
+              Consider increasing your monthly contribution or extending your
+              working years.
             </AlertDescription>
           </Alert>
         )}
@@ -533,20 +634,22 @@ const RetirementPlanner = () => {
           pensionEnabled: pensionEnabled ? 1 : 0,
           monthlyPension,
           lifeExpectancy,
-          lifestyleExpenses
+          lifestyleExpenses,
         }}
-        results={{
-          corpusAtRetirement: result.corpusAtRetirement,
-          totalContributions: result.totalContributions,
-          totalReturns: result.totalReturns,
-          shortfall: result.shortfall,
-          requiredMonthlyContribution: result.requiredMonthlyContribution,
-          excessContribution: result.excessContribution,
-          requiredCorpus: result.requiredCorpus,
-          isAchievable: result.isAchievable ? 1 : 0,
-          yearsToRetirement: result.yearsToRetirement,
-          yearsInRetirement: result.yearsInRetirement
-        } as Record<string, number>}
+        results={
+          {
+            corpusAtRetirement: result.corpusAtRetirement,
+            totalContributions: result.totalContributions,
+            totalReturns: result.totalReturns,
+            shortfall: result.shortfall,
+            requiredMonthlyContribution: result.requiredMonthlyContribution,
+            excessContribution: result.excessContribution,
+            requiredCorpus: result.requiredCorpus,
+            isAchievable: result.isAchievable ? 1 : 0,
+            yearsToRetirement: result.yearsToRetirement,
+            yearsInRetirement: result.yearsInRetirement,
+          } as Record<string, number>
+        }
       />
     </div>
   );

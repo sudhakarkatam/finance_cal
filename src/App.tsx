@@ -31,7 +31,10 @@ import SSYCalculator from "./pages/SSYCalculator";
 import EPFCalculator from "./pages/EPFCalculator";
 import IncomeTaxCalculator from "./pages/IncomeTaxCalculator";
 import GermanTaxCalculator from "./pages/GermanTaxCalculator";
+import PercentageCalculator from "./pages/PercentageCalculator";
 import Settings from "./pages/Settings";
+import InflationCalculator from "./pages/InflationCalculator";
+import GSTCalculator from "./pages/GSTCalculator";
 
 const queryClient = new QueryClient();
 
@@ -243,10 +246,26 @@ const App = () => (
             }
           />
           <Route
-            path="/income-tax"
+            path="/inflation"
             element={
               <CalculatorLayout>
-                <IncomeTaxCalculator />
+                <InflationCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/gst"
+            element={
+              <CalculatorLayout>
+                <GSTCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/percentage"
+            element={
+              <CalculatorLayout>
+                <PercentageCalculator />
               </CalculatorLayout>
             }
           />

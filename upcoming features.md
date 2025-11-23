@@ -255,3 +255,4 @@
 - Add **visual charts** where applicable
 - Support **dark/light theme** (✅ Already implemented)
 
+

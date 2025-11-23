@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,23 +6,51 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { saveCalculation } from '@/lib/storage';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { saveCalculation } from "@/lib/storage";
+import { toast } from "sonner";
 
 interface SaveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  calculationType: 'simple' | 'compound' | 'sip' | 'mutualfund' | 'swp' | 'emi' | 'loancompare' | 'homeloan' | 'lumpsum' | 'ppf' | 'fd' | 'rd' | 'goalplanning' | 'retirement' | 'education' | 'hra' | 'ssy' | 'incometax' | 'germantax';
+  calculationType:
+    | "simple"
+    | "compound"
+    | "sip"
+    | "mutualfund"
+    | "swp"
+    | "emi"
+    | "loancompare"
+    | "homeloan"
+    | "lumpsum"
+    | "ppf"
+    | "fd"
+    | "rd"
+    | "goalplanning"
+    | "retirement"
+    | "education"
+    | "hra"
+    | "ssy"
+    | "incometax"
+    | "germantax"
+    | "inflation"
+    | "gst"
+    | "percentage";
   inputs: Record<string, number | string>;
   results: Record<string, number>;
 }
 
-const SaveDialog = ({ open, onOpenChange, calculationType, inputs, results }: SaveDialogProps) => {
-  const [note, setNote] = useState('');
+const SaveDialog = ({
+  open,
+  onOpenChange,
+  calculationType,
+  inputs,
+  results,
+}: SaveDialogProps) => {
+  const [note, setNote] = useState("");
 
   const handleSave = () => {
     saveCalculation({
@@ -31,8 +59,8 @@ const SaveDialog = ({ open, onOpenChange, calculationType, inputs, results }: Sa
       results,
       note: note.trim() || undefined,
     });
-    toast.success('Calculation saved to history!');
-    setNote('');
+    toast.success("Calculation saved to history!");
+    setNote("");
     onOpenChange(false);
   };
 
@@ -61,9 +89,7 @@ const SaveDialog = ({ open, onOpenChange, calculationType, inputs, results }: Sa
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
-            Save
-          </Button>
+          <Button onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,16 +1,42 @@
-import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Calculator, GraduationCap, PiggyBank, TrendingUp } from 'lucide-react';
-import CalculatorInput from '@/components/ui/CalculatorInput';
-import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Save,
+  RotateCcw,
+  Calculator,
+  GraduationCap,
+  PiggyBank,
+  TrendingUp,
+} from "lucide-react";
+import CalculatorInput from "@/components/ui/CalculatorInput";
+import SaveDialog from "@/components/SaveDialog";
+import { formatCurrency } from "@/lib/calculations";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const EducationPlanner = () => {
   // Basic inputs
@@ -22,13 +48,14 @@ const EducationPlanner = () => {
   const [expectedReturn, setExpectedReturn] = useState(10);
 
   // Advanced features
-  const [educationInflationEnabled, setEducationInflationEnabled] = useState(true);
+  const [educationInflationEnabled, setEducationInflationEnabled] =
+    useState(true);
   const [educationInflationRate, setEducationInflationRate] = useState(8);
   const [stepUpEnabled, setStepUpEnabled] = useState(false);
   const [stepUpPercentage, setStepUpPercentage] = useState(10);
 
   // Education type
-  const [educationType, setEducationType] = useState('undergraduate');
+  const [educationType, setEducationType] = useState("undergraduate");
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -37,15 +64,16 @@ const EducationPlanner = () => {
 
   // Education type configurations
   const educationTypes = {
-    school: { name: 'School Education', duration: 4, multiplier: 0.8 },
-    undergraduate: { name: 'Undergraduate', duration: 4, multiplier: 1.0 },
-    postgraduate: { name: 'Postgraduate', duration: 2, multiplier: 1.5 },
-    medical: { name: 'Medical', duration: 5, multiplier: 3.0 },
-    engineering: { name: 'Engineering', duration: 4, multiplier: 1.8 },
-    mba: { name: 'MBA', duration: 2, multiplier: 2.5 }
+    school: { name: "School Education", duration: 4, multiplier: 0.8 },
+    undergraduate: { name: "Undergraduate", duration: 4, multiplier: 1.0 },
+    postgraduate: { name: "Postgraduate", duration: 2, multiplier: 1.5 },
+    medical: { name: "Medical", duration: 5, multiplier: 3.0 },
+    engineering: { name: "Engineering", duration: 4, multiplier: 1.8 },
+    mba: { name: "MBA", duration: 2, multiplier: 2.5 },
   };
 
-  const currentEducationConfig = educationTypes[educationType as keyof typeof educationTypes];
+  const currentEducationConfig =
+    educationTypes[educationType as keyof typeof educationTypes];
 
   const calculateEducation = () => {
     const yearsToEducation = educationStartAge - childCurrentAge;
@@ -59,19 +87,21 @@ const EducationPlanner = () => {
         shortfall: 0,
         requiredMonthlyContribution: 0,
         isAchievable: true,
-        yearsToEducation: 0
+        yearsToEducation: 0,
       };
     }
 
     // Calculate future cost of education with inflation
     const futureEducationCost = educationInflationEnabled
-      ? currentEducationCost * Math.pow(1 + educationInflationRate / 100, yearsToEducation)
+      ? currentEducationCost *
+        Math.pow(1 + educationInflationRate / 100, yearsToEducation)
       : currentEducationCost;
 
     const totalRequiredCorpus = futureEducationCost * educationDuration;
 
     // Future value of current savings
-    const futureSavings = currentSavings * Math.pow(1 + expectedReturn / 100, yearsToEducation);
+    const futureSavings =
+      currentSavings * Math.pow(1 + expectedReturn / 100, yearsToEducation);
 
     // Future value of monthly contributions with step-up
     const months = yearsToEducation * 12;
@@ -83,12 +113,13 @@ const EducationPlanner = () => {
     for (let month = 1; month <= months; month++) {
       // Calculate future value of this month's investment
       const monthsRemaining = months - month;
-      const monthFutureValue = currentMonthlyContrib * Math.pow(1 + monthlyRate, monthsRemaining);
+      const monthFutureValue =
+        currentMonthlyContrib * Math.pow(1 + monthlyRate, monthsRemaining);
       futureContributions += monthFutureValue;
 
       // Apply step-up at the beginning of each year
       if (stepUpEnabled && month % 12 === 0 && month < months) {
-        currentMonthlyContrib *= (1 + stepUpPercentage / 100);
+        currentMonthlyContrib *= 1 + stepUpPercentage / 100;
       }
     }
 
@@ -104,7 +135,8 @@ const EducationPlanner = () => {
       // User needs to contribute more
       const targetCorpus = totalRequiredCorpus - futureSavings;
       if (monthlyRate > 0 && targetCorpus > 0) {
-        requiredMonthlyContribution = targetCorpus * monthlyRate /
+        requiredMonthlyContribution =
+          (targetCorpus * monthlyRate) /
           (Math.pow(1 + monthlyRate, months) - 1);
       }
     } else if (isAchievable && monthlyContribution > 0) {
@@ -116,7 +148,11 @@ const EducationPlanner = () => {
       const averageMonthlyRate = expectedReturn / (12 * 100);
       if (averageMonthlyRate > 0) {
         // Approximate excess contribution (this is a simplified calculation)
-        excessContribution = excessCorpus / (Math.pow(1 + averageMonthlyRate, yearsToEducation) - 1) / averageMonthlyRate / 12;
+        excessContribution =
+          excessCorpus /
+          (Math.pow(1 + averageMonthlyRate, yearsToEducation) - 1) /
+          averageMonthlyRate /
+          12;
       }
 
       // More precise calculation for excess contribution
@@ -125,18 +161,20 @@ const EducationPlanner = () => {
       let maxContribution = monthlyContribution;
 
       // Binary search to find the minimum contribution needed
-      for (let i = 0; i < 20; i++) { // Max 20 iterations for precision
+      for (let i = 0; i < 20; i++) {
+        // Max 20 iterations for precision
         const midContribution = (minContribution + maxContribution) / 2;
         let testFutureContributions = 0;
         let currentTestContrib = midContribution;
 
         for (let month = 1; month <= months; month++) {
           const monthsRemaining = months - month;
-          const monthFutureValue = currentTestContrib * Math.pow(1 + monthlyRate, monthsRemaining);
+          const monthFutureValue =
+            currentTestContrib * Math.pow(1 + monthlyRate, monthsRemaining);
           testFutureContributions += monthFutureValue;
 
           if (stepUpEnabled && month % 12 === 0 && month < months) {
-            currentTestContrib *= (1 + stepUpPercentage / 100);
+            currentTestContrib *= 1 + stepUpPercentage / 100;
           }
         }
 
@@ -156,21 +194,39 @@ const EducationPlanner = () => {
     return {
       requiredCorpus: Math.round(totalRequiredCorpus),
       totalContributions: Math.round(futureContributions),
-      totalReturns: Math.round(totalCorpusAtEducation - futureContributions - futureSavings + currentSavings),
+      totalReturns: Math.round(
+        totalCorpusAtEducation -
+          futureContributions -
+          futureSavings +
+          currentSavings,
+      ),
       shortfall: Math.round(shortfall),
-      requiredMonthlyContribution: Math.round(Math.max(requiredMonthlyContribution, 0)),
+      requiredMonthlyContribution: Math.round(
+        Math.max(requiredMonthlyContribution, 0),
+      ),
       excessContribution: Math.round(Math.max(excessContribution, 0)),
       isAchievable,
       yearsToEducation,
       futureEducationCost: Math.round(futureEducationCost),
-      totalCorpusAtEducation: Math.round(totalCorpusAtEducation)
+      totalCorpusAtEducation: Math.round(totalCorpusAtEducation),
     };
   };
 
   const result = useMemo(() => {
     return calculateEducation();
-  }, [childCurrentAge, educationStartAge, currentEducationCost, currentSavings, monthlyContribution,
-      expectedReturn, educationInflationEnabled, educationInflationRate, stepUpEnabled, stepUpPercentage, educationType]);
+  }, [
+    childCurrentAge,
+    educationStartAge,
+    currentEducationCost,
+    currentSavings,
+    monthlyContribution,
+    expectedReturn,
+    educationInflationEnabled,
+    educationInflationRate,
+    stepUpEnabled,
+    stepUpPercentage,
+    educationType,
+  ]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -194,7 +250,7 @@ const EducationPlanner = () => {
     setEducationInflationRate(8);
     setStepUpEnabled(false);
     setStepUpPercentage(10);
-    setEducationType('undergraduate');
+    setEducationType("undergraduate");
     setIsCalculated(false);
   };
 
@@ -208,13 +264,16 @@ const EducationPlanner = () => {
       const yearsRemaining = yearsToEducation - year;
 
       // Future value calculations
-      const futureSavingsValue = currentSavings * Math.pow(1 + expectedReturn / 100, yearsRemaining);
-      const futureContributionsValue = monthlyContribution * 12 * yearsRemaining;
+      const futureSavingsValue =
+        currentSavings * Math.pow(1 + expectedReturn / 100, yearsRemaining);
+      const futureContributionsValue =
+        monthlyContribution * 12 * yearsRemaining;
       const portfolioValue = futureSavingsValue + futureContributionsValue;
 
       // Future education cost
       const futureCost = educationInflationEnabled
-        ? currentEducationCost * Math.pow(1 + educationInflationRate / 100, yearsRemaining)
+        ? currentEducationCost *
+          Math.pow(1 + educationInflationRate / 100, yearsRemaining)
         : currentEducationCost;
 
       projection.push({
@@ -222,7 +281,7 @@ const EducationPlanner = () => {
         age,
         portfolioValue: Math.round(portfolioValue),
         educationCost: Math.round(futureCost),
-        contributionsThisYear: monthlyContribution * 12
+        contributionsThisYear: monthlyContribution * 12,
       });
     }
 
@@ -240,8 +299,12 @@ const EducationPlanner = () => {
               <GraduationCap className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Education Planner</h2>
-              <p className="text-xs text-muted-foreground">Plan your child's education fund</p>
+              <h2 className="text-lg font-semibold text-foreground">
+                Education Planner
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Plan your child's education fund
+              </p>
             </div>
           </div>
           <Button
@@ -280,8 +343,13 @@ const EducationPlanner = () => {
 
         {/* Education Type Selection */}
         <div className="bg-card p-4 rounded-lg border">
-          <Label className="text-sm font-medium mb-3 block">Education Type</Label>
-          <Select value={educationType} onValueChange={handleEducationTypeChange}>
+          <Label className="text-sm font-medium mb-3 block">
+            Education Type
+          </Label>
+          <Select
+            value={educationType}
+            onValueChange={handleEducationTypeChange}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Choose education type" />
             </SelectTrigger>
@@ -290,7 +358,9 @@ const EducationPlanner = () => {
                 <SelectItem key={key} value={key}>
                   <div className="flex items-center gap-2">
                     <span>{config.name}</span>
-                    <span className="text-xs text-muted-foreground">({config.duration} years)</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({config.duration} years)
+                    </span>
                   </div>
                 </SelectItem>
               ))}
@@ -373,7 +443,10 @@ const EducationPlanner = () => {
         {/* Education Inflation */}
         <div className="bg-card p-4 rounded-lg border">
           <div className="flex items-center justify-between mb-3">
-            <Label htmlFor="education-inflation" className="text-sm font-medium">
+            <Label
+              htmlFor="education-inflation"
+              className="text-sm font-medium"
+            >
               Education Cost Inflation
             </Label>
             <Switch
@@ -391,7 +464,7 @@ const EducationPlanner = () => {
               value={educationInflationRate}
               onChange={setEducationInflationRate}
               min={1}
-              max={20}
+              max={50}
               step={0.1}
               suffix="%"
             />
@@ -399,11 +472,7 @@ const EducationPlanner = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            className="flex-1 gap-2"
-            size="lg"
-            onClick={handleCalculate}
-          >
+          <Button className="flex-1 gap-2" size="lg" onClick={handleCalculate}>
             <Calculator className="w-4 h-4" />
             Calculate Education Plan
           </Button>
@@ -418,7 +487,9 @@ const EducationPlanner = () => {
               </DialogTrigger>
               <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Year-wise Education Planning Projection</DialogTitle>
+                  <DialogTitle>
+                    Year-wise Education Planning Projection
+                  </DialogTitle>
                 </DialogHeader>
                 <Table>
                   <TableHeader>
@@ -435,9 +506,15 @@ const EducationPlanner = () => {
                       <TableRow key={row.year}>
                         <TableCell>{row.year}</TableCell>
                         <TableCell>{row.age}</TableCell>
-                        <TableCell>{formatCurrency(row.contributionsThisYear)}</TableCell>
-                        <TableCell>{formatCurrency(row.portfolioValue)}</TableCell>
-                        <TableCell>{formatCurrency(row.educationCost)}</TableCell>
+                        <TableCell>
+                          {formatCurrency(row.contributionsThisYear)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(row.portfolioValue)}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(row.educationCost)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -449,46 +526,84 @@ const EducationPlanner = () => {
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">Education Fund Analysis</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Education Fund Analysis
+        </h3>
 
         <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
-          <p className="text-xs text-primary-foreground/80 mb-1">Total Education Cost ({currentEducationConfig.duration} years)</p>
-          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.requiredCorpus)}</p>
+          <p className="text-xs text-primary-foreground/80 mb-1">
+            Total Education Cost ({currentEducationConfig.duration} years)
+          </p>
+          <p className="text-3xl font-bold text-primary-foreground">
+            {formatCurrency(result.requiredCorpus)}
+          </p>
         </div>
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-muted-foreground">Future value of current savings</span>
-            <span className="font-semibold text-foreground">{formatCurrency(Math.round(currentSavings * Math.pow(1 + expectedReturn / 100, result.yearsToEducation)))}</span>
+            <span className="text-sm text-muted-foreground">
+              Future value of current savings
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(
+                Math.round(
+                  currentSavings *
+                    Math.pow(1 + expectedReturn / 100, result.yearsToEducation),
+                ),
+              )}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Future value of contributions</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalContributions)}</span>
+            <span className="text-sm text-muted-foreground">
+              Future value of contributions
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.totalContributions)}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Total projected amount</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalCorpusAtEducation)}</span>
+            <span className="text-sm text-muted-foreground">
+              Total projected amount
+            </span>
+            <span className="font-semibold text-foreground">
+              {formatCurrency(result.totalCorpusAtEducation)}
+            </span>
           </div>
           {result.shortfall > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Shortfall</span>
-              <span className="font-semibold text-red-600">{formatCurrency(result.shortfall)}</span>
+              <span className="font-semibold text-red-600">
+                {formatCurrency(result.shortfall)}
+              </span>
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">
-              {result.isAchievable && result.excessContribution > 0 ? 'Minimum monthly contribution' : 'Required monthly contribution'}
+              {result.isAchievable && result.excessContribution > 0
+                ? "Minimum monthly contribution"
+                : "Required monthly contribution"}
             </span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.requiredMonthlyContribution)}</span>
+            <span className="text-xl font-bold text-primary">
+              {formatCurrency(result.requiredMonthlyContribution)}
+            </span>
           </div>
           {result.isAchievable && result.excessContribution > 0 && (
             <div className="bg-green-50 p-3 rounded-md border border-green-200">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">You can reduce your contribution by</span>
-                <span className="font-semibold text-green-800">{formatCurrency(result.excessContribution)}/month</span>
+                <span className="text-sm text-green-700">
+                  You can reduce your contribution by
+                </span>
+                <span className="font-semibold text-green-800">
+                  {formatCurrency(result.excessContribution)}/month
+                </span>
               </div>
               <p className="text-xs text-green-600 mt-1">
-                Your current contribution of {formatCurrency(monthlyContribution)} is {formatCurrency(monthlyContribution - result.requiredMonthlyContribution)} more than needed
+                Your current contribution of{" "}
+                {formatCurrency(monthlyContribution)} is{" "}
+                {formatCurrency(
+                  monthlyContribution - result.requiredMonthlyContribution,
+                )}{" "}
+                more than needed
               </p>
             </div>
           )}
@@ -498,23 +613,29 @@ const EducationPlanner = () => {
           result.excessContribution > 0 ? (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎓 Excellent! Your current monthly contribution of {formatCurrency(monthlyContribution)} exceeds the requirement.
-                You can reduce it by {formatCurrency(result.excessContribution)} to {formatCurrency(result.requiredMonthlyContribution)} per month
-                while still funding your child's {currentEducationConfig.name.toLowerCase()} comfortably.
+                🎓 Excellent! Your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatCurrency(result.excessContribution)}{" "}
+                to {formatCurrency(result.requiredMonthlyContribution)} per
+                month while still funding your child's{" "}
+                {currentEducationConfig.name.toLowerCase()} comfortably.
               </AlertDescription>
             </Alert>
           ) : (
             <Alert>
               <AlertDescription className="text-green-800">
-                🎓 Perfect! With your current monthly contribution of {formatCurrency(monthlyContribution)},
-                you will be able to fund your child's {currentEducationConfig.name.toLowerCase()} exactly as planned.
+                🎓 Perfect! With your current monthly contribution of{" "}
+                {formatCurrency(monthlyContribution)}, you will be able to fund
+                your child's {currentEducationConfig.name.toLowerCase()} exactly
+                as planned.
               </AlertDescription>
             </Alert>
           )
         ) : (
           <Alert>
             <AlertDescription className="text-orange-800">
-              To fund your child's education, you need to contribute {formatCurrency(result.requiredMonthlyContribution)} per month.
+              To fund your child's education, you need to contribute{" "}
+              {formatCurrency(result.requiredMonthlyContribution)} per month.
               Consider starting early or increasing your monthly contribution.
             </AlertDescription>
           </Alert>
@@ -545,7 +666,7 @@ const EducationPlanner = () => {
           educationInflationRate,
           stepUpEnabled: stepUpEnabled ? 1 : 0,
           stepUpPercentage,
-          educationType
+          educationType,
         }}
         results={{
           requiredCorpus: result.requiredCorpus,
@@ -556,7 +677,7 @@ const EducationPlanner = () => {
           isAchievable: result.isAchievable ? 1 : 0,
           yearsToEducation: result.yearsToEducation,
           futureEducationCost: result.futureEducationCost,
-          totalCorpusAtEducation: result.totalCorpusAtEducation
+          totalCorpusAtEducation: result.totalCorpusAtEducation,
         }}
       />
     </div>

@@ -1,13 +1,19 @@
-import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Calculator, TrendingUp } from 'lucide-react';
-import CalculatorInput from '@/components/ui/CalculatorInput';
-import ResultChart from '@/components/ui/ResultChart';
-import SaveDialog from '@/components/SaveDialog';
-import { calculateMutualFund, calculateStepUpMutualFund, calculateInflationAdjustedSIP, calculateStepUpSIPWithComparison, formatCurrency } from '@/lib/calculations';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Save, RotateCcw, Calculator, TrendingUp } from "lucide-react";
+import CalculatorInput from "@/components/ui/CalculatorInput";
+import ResultChart from "@/components/ui/ResultChart";
+import SaveDialog from "@/components/SaveDialog";
+import {
+  calculateMutualFund,
+  calculateStepUpMutualFund,
+  calculateInflationAdjustedSIP,
+  calculateStepUpSIPWithComparison,
+  formatCurrency,
+} from "@/lib/calculations";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const MutualFund = () => {
   // Basic SIP inputs
@@ -28,18 +34,31 @@ const MutualFund = () => {
 
   const calculateAdvancedSIP = () => {
     if (stepUpEnabled && stepUpPercentage > 0) {
-      return calculateStepUpMutualFund(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
+      return calculateStepUpMutualFund(
+        monthlyInvestment,
+        expectedReturn,
+        totalYears,
+        stepUpPercentage,
+      );
     }
 
     // Fallback to regular mutual fund calculation
     return calculateMutualFund(monthlyInvestment, expectedReturn, totalYears);
   };
 
-  const totalYears = years + (months / 12);
+  const totalYears = years + months / 12;
 
   const normalResult = useMemo(() => {
-    return stepUpEnabled ? calculateAdvancedSIP() : calculateMutualFund(monthlyInvestment, expectedReturn, totalYears);
-  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
+    return stepUpEnabled
+      ? calculateAdvancedSIP()
+      : calculateMutualFund(monthlyInvestment, expectedReturn, totalYears);
+  }, [
+    monthlyInvestment,
+    expectedReturn,
+    totalYears,
+    stepUpEnabled,
+    stepUpPercentage,
+  ]);
 
   const result = useMemo(() => {
     if (!inflationEnabled) return normalResult;
@@ -50,7 +69,7 @@ const MutualFund = () => {
       expectedReturn,
       totalYears,
       inflationRate,
-      stepUpEnabled ? stepUpPercentage : 0
+      stepUpEnabled ? stepUpPercentage : 0,
     );
 
     // Return result with both normal and inflation-adjusted values
@@ -58,16 +77,36 @@ const MutualFund = () => {
       ...inflationAdjustedResult,
       normalTotal: normalResult.total,
       inflationAdjustedTotal: inflationAdjustedResult.total,
-      inflationRate: inflationRate
+      inflationRate: inflationRate,
     };
-  }, [normalResult, inflationEnabled, inflationRate, monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
+  }, [
+    normalResult,
+    inflationEnabled,
+    inflationRate,
+    monthlyInvestment,
+    expectedReturn,
+    totalYears,
+    stepUpEnabled,
+    stepUpPercentage,
+  ]);
 
   const comparisonResult = useMemo(() => {
     if (stepUpEnabled && stepUpPercentage > 0) {
-      return calculateStepUpSIPWithComparison(monthlyInvestment, expectedReturn, totalYears, stepUpPercentage);
+      return calculateStepUpSIPWithComparison(
+        monthlyInvestment,
+        expectedReturn,
+        totalYears,
+        stepUpPercentage,
+      );
     }
     return null;
-  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
+  }, [
+    monthlyInvestment,
+    expectedReturn,
+    totalYears,
+    stepUpEnabled,
+    stepUpPercentage,
+  ]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -93,7 +132,9 @@ const MutualFund = () => {
             <div className="p-2 bg-primary/10 rounded-lg">
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Mutual Fund Calculator</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              Mutual Fund Calculator
+            </h2>
           </div>
           <Button
             variant="outline"
@@ -128,7 +169,9 @@ const MutualFund = () => {
 
         <div className="bg-card p-4 rounded-lg border">
           <div className="mb-3">
-            <label className="text-sm font-medium text-foreground">Investment Period</label>
+            <label className="text-sm font-medium text-foreground">
+              Investment Period
+            </label>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <CalculatorInput
@@ -149,7 +192,10 @@ const MutualFund = () => {
             />
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            Total period: <span className="font-semibold text-foreground">{totalYears.toFixed(1)} years</span>
+            Total period:{" "}
+            <span className="font-semibold text-foreground">
+              {totalYears.toFixed(1)} years
+            </span>
           </div>
         </div>
 
@@ -202,7 +248,7 @@ const MutualFund = () => {
               value={inflationRate}
               onChange={setInflationRate}
               min={1}
-              max={15}
+              max={50}
               step={0.1}
               suffix="%"
             />
@@ -220,39 +266,55 @@ const MutualFund = () => {
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">Investment Analysis</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Investment Analysis
+        </h3>
 
         <ResultChart
           principal={result.invested}
           returns={result.returns}
           principalLabel="Invested amount"
-          returnsLabel={inflationEnabled ? "Inflation-Adjusted Returns" : "Est. returns"}
+          returnsLabel={
+            inflationEnabled ? "Inflation-Adjusted Returns" : "Est. returns"
+          }
         />
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-secondary/50 p-4 rounded-lg text-center border">
-              <p className="text-xs text-muted-foreground mb-1">Total Invested</p>
-              <p className="text-base font-bold text-foreground">{formatCurrency(result.invested)}</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                Total Invested
+              </p>
+              <p className="text-base font-bold text-foreground">
+                {formatCurrency(result.invested)}
+              </p>
             </div>
             <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
               <p className="text-xs text-muted-foreground mb-1">Returns</p>
-              <p className="text-base font-bold text-primary">{formatCurrency(result.returns)}</p>
+              <p className="text-base font-bold text-primary">
+                {formatCurrency(result.returns)}
+              </p>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md">
               <p className="text-xs text-primary-foreground/80 mb-1">
-                {inflationEnabled ? 'Inflation-Adjusted Value' : 'Total Value'}
+                {inflationEnabled ? "Inflation-Adjusted Value" : "Total Value"}
               </p>
-              <p className="text-2xl font-bold text-primary-foreground">{formatCurrency(result.total)}</p>
+              <p className="text-2xl font-bold text-primary-foreground">
+                {formatCurrency(result.total)}
+              </p>
             </div>
 
-            {inflationEnabled && 'normalTotal' in result && (
+            {inflationEnabled && "normalTotal" in result && (
               <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-xl text-center shadow-md">
-                <p className="text-xs text-green-100 mb-1">Normal Value (without inflation)</p>
-                <p className="text-xl font-bold text-green-50">{formatCurrency(result.normalTotal)}</p>
+                <p className="text-xs text-green-100 mb-1">
+                  Normal Value (without inflation)
+                </p>
+                <p className="text-xl font-bold text-green-50">
+                  {formatCurrency(result.normalTotal)}
+                </p>
               </div>
             )}
           </div>
@@ -260,20 +322,30 @@ const MutualFund = () => {
           {/* Step-Up vs No Step-Up Comparison */}
           {stepUpEnabled && comparisonResult && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-              <h4 className="font-semibold text-blue-800 mb-3 text-center">📈 Step-Up SIP Benefit Analysis</h4>
+              <h4 className="font-semibold text-blue-800 mb-3 text-center">
+                📈 Step-Up SIP Benefit Analysis
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
                   <p className="text-xs text-blue-600 mb-1">Without Step-Up</p>
-                  <p className="text-lg font-bold text-blue-800">{formatCurrency(comparisonResult.withoutStepUp.total)}</p>
+                  <p className="text-lg font-bold text-blue-800">
+                    {formatCurrency(comparisonResult.withoutStepUp.total)}
+                  </p>
                 </div>
                 <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
                   <p className="text-xs text-green-600 mb-1">With Step-Up</p>
-                  <p className="text-lg font-bold text-green-800">{formatCurrency(comparisonResult.withStepUp.total)}</p>
+                  <p className="text-lg font-bold text-green-800">
+                    {formatCurrency(comparisonResult.withStepUp.total)}
+                  </p>
                 </div>
                 <div className="bg-gradient-to-r from-green-100 to-emerald-100 p-3 rounded-lg text-center border border-green-200">
                   <p className="text-xs text-green-700 mb-1">Benefit</p>
-                  <p className="text-lg font-bold text-green-800">+{comparisonResult.percentageDifference}%</p>
-                  <p className="text-sm font-semibold text-green-700">{formatCurrency(comparisonResult.difference)}</p>
+                  <p className="text-lg font-bold text-green-800">
+                    +{comparisonResult.percentageDifference}%
+                  </p>
+                  <p className="text-sm font-semibold text-green-700">
+                    {formatCurrency(comparisonResult.difference)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -283,18 +355,26 @@ const MutualFund = () => {
         {/* Advanced Features Summary */}
         {(stepUpEnabled || inflationEnabled) && (
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h4 className="font-semibold text-blue-800 mb-2">📊 Advanced Features Applied</h4>
+            <h4 className="font-semibold text-blue-800 mb-2">
+              📊 Advanced Features Applied
+            </h4>
             <div className="space-y-2">
               {stepUpEnabled && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-blue-700">Step-Up SIP</span>
-                  <span className="font-semibold text-blue-800">{stepUpPercentage}% annual increase</span>
+                  <span className="font-semibold text-blue-800">
+                    {stepUpPercentage}% annual increase
+                  </span>
                 </div>
               )}
               {inflationEnabled && (
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Inflation Adjustment</span>
-                  <span className="font-semibold text-blue-800">{inflationRate}% per year</span>
+                  <span className="text-sm text-blue-700">
+                    Inflation Adjustment
+                  </span>
+                  <span className="font-semibold text-blue-800">
+                    {inflationRate}% per year
+                  </span>
                 </div>
               )}
             </div>
@@ -315,12 +395,21 @@ const MutualFund = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="mutualfund"
-        inputs={{ monthlyInvestment, expectedReturn, years, months, stepUpEnabled: stepUpEnabled ? 1 : 0, stepUpPercentage, inflationEnabled: inflationEnabled ? 1 : 0, inflationRate }}
+        inputs={{
+          monthlyInvestment,
+          expectedReturn,
+          years,
+          months,
+          stepUpEnabled: stepUpEnabled ? 1 : 0,
+          stepUpPercentage,
+          inflationEnabled: inflationEnabled ? 1 : 0,
+          inflationRate,
+        }}
         results={{
           ...result,
           normalTotal: normalResult.total,
           inflationAdjustedTotal: result.total,
-          inflationRate: inflationEnabled ? inflationRate : 0
+          inflationRate: inflationEnabled ? inflationRate : 0,
         }}
       />
     </div>
