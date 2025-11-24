@@ -67,12 +67,12 @@ const CalculatorLayout = ({
     { path: "/hra", icon: HomeIcon, label: "HRA Calculator" },
     { path: "/ssy", icon: PiggyBank, label: "SSY Calculator" },
     { path: "/epf", icon: Briefcase, label: "EPF Calculator" },
-    
+
     { path: "/inflation", icon: TrendingUp, label: "Inflation Cal" },
     { path: "/gst", icon: Percent, label: "GST Calculator" },
     { path: "/percentage", icon: Percent, label: "Percentage Cal" },
     // Hidden calculators - routes still accessible via direct URL
-    //{ path: "/income-tax", icon: Receipt, label: "Income Tax" },
+    { path: "/income-tax", icon: Receipt, label: "Income Tax" },
     // { path: "/german-tax", icon: Flag, label: "Germany Tax" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];

@@ -6,9 +6,9 @@ interface CalculatorInputProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
-  min: number;
-  max: number;
-  step: number;
+  min?: number;
+  max?: number;
+  step?: number;
   prefix?: string;
   suffix?: string;
   placeholder?: string;
@@ -18,9 +18,9 @@ const CalculatorInput = ({
   label,
   value,
   onChange,
-  min,
-  max,
-  step,
+  min = 0,
+  max = 1000000000,
+  step = 1,
   prefix = '',
   suffix = '',
   placeholder,

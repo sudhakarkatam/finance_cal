@@ -270,6 +270,14 @@ const App = () => (
             }
           />
           <Route
+            path="/income-tax"
+            element={
+              <CalculatorLayout>
+                <IncomeTaxCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
             path="/german-tax"
             element={
               <CalculatorLayout>

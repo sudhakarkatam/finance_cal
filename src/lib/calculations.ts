@@ -864,9 +864,13 @@ interface IncomeTaxInputs {
   rentalIncome: number;
   homeLoanInterestSelfOccupied: number;
   homeLoanInterestLetOut: number;
-  capitalGains: number;
-  capitalGainsType: "STCG" | "LTCG";
-  capitalGainsAssetType: "equity" | "property" | "debt" | "other";
+  // Capital Gains - Specific Types
+  capitalGains: {
+    equityLTCG: number;
+    equitySTCG: number;
+    propertyLTCG: number;
+    otherGains: number; // Taxed at slab rate (e.g., Debt funds after Apr 2023)
+  };
   cryptoIncome: number;
   section80C: number;
   section80CCD1B: number;
@@ -878,202 +882,322 @@ interface IncomeTaxInputs {
   section80EE: number;
   section80EEA: number;
   section80U: number;
+  // New Fields
+  employmentType: 'salaried' | 'business';
+  businessIncome?: {
+    type: '44AD' | '44ADA' | 'regular';
+    turnover?: number;
+    cashTurnover?: number;
+    grossReceipts?: number;
+    expenses?: number;
+    netProfit?: number;
+  };
+  section80CCD2: number;
+  otherDeductionsNew: number;
+  otherDeductionsOld: number;
+  section80TTB: number;
+  hraExemption: number;
+}
+
+interface RegimeResult {
+  grossSalary: number;
+  otherExemptions: number;
+  hraExemption: number;
+  ltaExemption: number;
+  standardDeduction: number;
+  netSalary: number;
+  totalDeductions: number;
+  taxableIncome: number;
+  basicTax: number;
+  rebate87A: number;
+  surcharge: number;
+  cess: number;
+  totalTax: number;
+  taxSlabs: Array<{ rate: string; amount: number; tax: number }>;
 }
 
 interface IncomeTaxResult {
-  grossTotalIncome: number;
-  taxableIncomeNew: number;
-  taxableIncomeOld: number;
-  totalDeductionsNew: number;
-  totalDeductionsOld: number;
-  taxNew: number;
-  taxOld: number;
-  rebateNew: number;
-  rebateOld: number;
-  surchargeNew: number;
-  surchargeOld: number;
-  cessNew: number;
-  cessOld: number;
-  totalTaxNew: number;
-  totalTaxOld: number;
-  recommendation: "new" | "old";
-  taxSavings: number;
-  breakdown: {
-    salaryIncome: number;
-    housePropertyIncome: number;
-    capitalGainsIncome: number;
-    otherIncome: number;
-  };
+  oldRegime: RegimeResult;
+  newRegime: RegimeResult;
 }
+
+// Helper to calculate tax slabs breakdown
+const calculateTaxSlabsBreakdown = (
+  taxableIncome: number,
+  slabs: Array<{ min: number; max: number; rate: number }>,
+): Array<{ rate: string; amount: number; tax: number }> => {
+  let remaining = taxableIncome;
+  const breakdown: Array<{ rate: string; amount: number; tax: number }> = [];
+
+  for (const slab of slabs) {
+    if (remaining <= 0) break;
+
+    const slabAmount = Math.min(
+      remaining,
+      slab.max === Infinity ? remaining : slab.max - slab.min,
+    );
+    const tax = (slabAmount * slab.rate) / 100;
+
+    if (slabAmount > 0) {
+      breakdown.push({
+        rate: `${slab.rate}%`,
+        amount: Math.round(slabAmount),
+        tax: Math.round(tax),
+      });
+    }
+
+    remaining -= slabAmount;
+  }
+
+  return breakdown;
+};
 
 export const calculateIncomeTax = (
   inputs: IncomeTaxInputs,
 ): IncomeTaxResult => {
-  // 1. Calculate Gross Total Income
-  const salaryIncome = inputs.grossSalary - inputs.exemptAllowances;
+  // 1. Calculate Gross Total Income Components
+  let salaryIncome = 0;
+  let businessIncome = 0;
+
+  if (inputs.employmentType === 'salaried') {
+    salaryIncome = inputs.grossSalary;
+  } else {
+    // Business Income Calculation
+    if (inputs.businessIncome?.type === '44AD') {
+      // Presumptive Business (6% digital, 8% cash)
+      const digitalProfit = (inputs.businessIncome.turnover || 0) * 0.06;
+      const cashProfit = (inputs.businessIncome.cashTurnover || 0) * 0.08;
+      businessIncome = Math.round(digitalProfit + cashProfit);
+    } else if (inputs.businessIncome?.type === '44ADA') {
+      // Presumptive Professional (50% of receipts)
+      businessIncome = Math.round((inputs.businessIncome.grossReceipts || 0) * 0.5);
+    } else {
+      // Regular Business (Net Profit)
+      businessIncome = inputs.businessIncome?.netProfit || 0;
+    }
+  }
+
+  // Exemptions (Only for Salaried)
+  const hraExemption = inputs.employmentType === 'salaried' ? inputs.hraExemption : 0;
+  const ltaExemption = 0; // Still placeholder if not added to inputs
+  const otherExemptions = inputs.employmentType === 'salaried' ? inputs.exemptAllowances : 0;
+  const totalExemptions = hraExemption + ltaExemption + otherExemptions;
+
   const housePropertyIncome = Math.max(
     0,
     inputs.rentalIncome -
-      inputs.rentalIncome * 0.3 -
-      inputs.homeLoanInterestLetOut,
+    inputs.rentalIncome * 0.3 -
+    inputs.homeLoanInterestLetOut,
   );
+
   const otherIncome = inputs.interestIncome + inputs.cryptoIncome;
 
-  // Capital gains calculation
-  let capitalGainsIncome = inputs.capitalGains;
-  if (
-    inputs.capitalGainsType === "LTCG" &&
-    inputs.capitalGainsAssetType === "equity"
-  ) {
-    const exemption =
-      inputs.financialYear === "2025-26"
-        ? CAPITAL_GAINS_EXEMPTION.equityLTCG_FY2025
-        : CAPITAL_GAINS_EXEMPTION.equityLTCG;
-    capitalGainsIncome = Math.max(0, inputs.capitalGains - exemption);
-  }
+
+
+  // Capital Gains Analysis
+  // 1. Slab Rate Gains: Added to GTI
+  const slabRateGains = inputs.capitalGains.otherGains;
+
+  // 2. Special Rate Gains: Taxed separately
+  // Equity LTCG: 12.5% above 1.25L (FY 25-26)
+  const equityLTCGExemption = inputs.financialYear === "2025-26" ? 125000 : 100000;
+  const taxableEquityLTCG = Math.max(0, inputs.capitalGains.equityLTCG - equityLTCGExemption);
+
+  // Equity STCG: 20% (FY 25-26)
+  const taxableEquitySTCG = inputs.capitalGains.equitySTCG;
+
+  // Property LTCG: 12.5% (Simplified for new rule)
+  const taxablePropertyLTCG = inputs.capitalGains.propertyLTCG;
 
   const grossTotalIncome =
-    salaryIncome + housePropertyIncome + capitalGainsIncome + otherIncome;
+    (Math.max(0, salaryIncome - totalExemptions)) + businessIncome + housePropertyIncome + slabRateGains + otherIncome;
 
-  // 2. Calculate Deductions
-  // New Regime: Only standard deduction, 80CCD(1B), 80D
-  const stdDeductionNew = inputs.grossSalary > 0 ? STANDARD_DEDUCTION.new : 0;
-  const section80CCD1BNew = Math.min(
-    inputs.section80CCD1B,
-    DEDUCTION_LIMITS.section80CCD1B,
-  );
-  const section80DNew = Math.min(
-    inputs.section80D,
-    DEDUCTION_LIMITS.section80D.self,
-  );
-  const totalDeductionsNew =
-    stdDeductionNew + section80CCD1BNew + section80DNew;
+  // --- New Regime Calculations ---
+  // Standard Deduction only for Salaried
+  const stdDeductionNew = inputs.employmentType === 'salaried' && inputs.grossSalary > 0
+    ? STANDARD_DEDUCTION.new
+    : 0;
 
-  // Old Regime: All deductions
-  const stdDeductionOld = inputs.grossSalary > 0 ? STANDARD_DEDUCTION.old : 0;
-  const section80COld = Math.min(
-    inputs.section80C,
-    DEDUCTION_LIMITS.section80C,
-  );
-  const section80CCD1BOld = Math.min(
-    inputs.section80CCD1B,
-    DEDUCTION_LIMITS.section80CCD1B,
-  );
-  const section80DOld = Math.min(
-    inputs.section80D,
-    DEDUCTION_LIMITS.section80D.self,
-  );
-  const section80DAdditionalOld = Math.min(
-    inputs.section80DAdditional,
-    DEDUCTION_LIMITS.section80D.parents,
-  );
-  const section80GOld = inputs.section80G; // No limit, varies by organization
-  const section80EOld = inputs.section80E; // No limit
-  const section80TTAOld = Math.min(
-    inputs.interestIncome,
-    inputs.section80TTA || DEDUCTION_LIMITS.section80TTA,
-  );
-  const section80EEOld = Math.min(
-    inputs.section80EE,
-    DEDUCTION_LIMITS.section80EE,
-  );
-  const section80EEAOld = Math.min(
-    inputs.section80EEA,
-    DEDUCTION_LIMITS.section80EEA,
-  );
-  const section80UOld =
-    inputs.section80U > 0 ? DEDUCTION_LIMITS.section80U.disability : 0; // Simplified
-  const section24bOld = Math.min(
-    inputs.homeLoanInterestSelfOccupied,
-    DEDUCTION_LIMITS.section24b,
-  );
+  // New Regime Deductions
+  // 80CCD(2) is allowed in New Regime
+  const section80CCD2New = inputs.section80CCD2; // Employer NPS
+
+  // Agniveer Corpus Fund (80CCH) - assuming 'otherDeductionsNew' might cover this or similar allowed deductions
+  const otherDeductionsNew = inputs.otherDeductionsNew;
+
+  // 80CCD(1B) is NOT allowed in New Regime usually, but 80CCD(2) is.
+  // We will include 80CCD(2) and Other Deductions (New) here.
+
+  const totalDeductionsNew = stdDeductionNew + section80CCD2New + otherDeductionsNew;
+
+  const netSalaryNew = Math.max(0, salaryIncome - totalExemptions - stdDeductionNew);
+
+  // Taxable Income New Regime (Slab Income)
+  // GTI - Deductions
+  const taxableSlabIncomeNew = Math.max(0, grossTotalIncome - totalDeductionsNew);
+
+  // Calculate Tax on Slab Income
+  const taxOnSlabIncomeNew = calculateTaxFromSlabs(taxableSlabIncomeNew, NEW_REGIME_SLABS);
+
+  // Calculate Tax on Special Income
+  // Equity LTCG @ 12.5%
+  const taxEquityLTCG = taxableEquityLTCG * 0.125;
+  // Equity STCG @ 20%
+  const taxEquitySTCG = taxableEquitySTCG * 0.20;
+  // Property LTCG @ 12.5%
+  const taxPropertyLTCG = taxablePropertyLTCG * 0.125;
+
+  const totalSpecialTax = taxEquityLTCG + taxEquitySTCG + taxPropertyLTCG;
+
+  const taxNew = taxOnSlabIncomeNew + totalSpecialTax;
+
+  const totalTaxableIncomeNew = taxableSlabIncomeNew + taxableEquityLTCG + taxableEquitySTCG + taxablePropertyLTCG;
+
+  const rebateNew =
+    totalTaxableIncomeNew <= REBATE_87A.new.maxTaxableIncome
+      ? Math.min(taxNew, REBATE_87A.new.rebateAmount)
+      : 0;
+
+  const taxAfterRebateNew = Math.max(0, taxNew - rebateNew);
+  const surchargeNew = calculateSurcharge(taxAfterRebateNew, totalTaxableIncomeNew);
+  const taxAfterSurchargeNew = taxAfterRebateNew + surchargeNew;
+  const cessNew = Math.round((taxAfterSurchargeNew * CESS_RATE) / 100);
+  const totalTaxNew = Math.round(taxAfterSurchargeNew + cessNew);
+
+  const newRegimeResult: RegimeResult = {
+    grossSalary: salaryIncome,
+    otherExemptions: 0,
+    hraExemption: 0,
+    ltaExemption: 0,
+    standardDeduction: stdDeductionNew,
+    netSalary: netSalaryNew,
+    totalDeductions: totalDeductionsNew,
+    taxableIncome: Math.round(totalTaxableIncomeNew),
+    basicTax: Math.round(taxNew),
+    rebate87A: Math.round(rebateNew),
+    surcharge: Math.round(surchargeNew),
+    cess: Math.round(cessNew),
+    totalTax: totalTaxNew,
+    taxSlabs: calculateTaxSlabsBreakdown(taxableSlabIncomeNew, NEW_REGIME_SLABS),
+  };
+
+  // --- Old Regime Calculations ---
+  // Standard Deduction only for Salaried
+  const stdDeductionOld = inputs.employmentType === 'salaried' && inputs.grossSalary > 0
+    ? STANDARD_DEDUCTION.old
+    : 0;
+
+  const section80COld = Math.min(inputs.section80C, DEDUCTION_LIMITS.section80C);
+  const section80CCD1BOld = Math.min(inputs.section80CCD1B, DEDUCTION_LIMITS.section80CCD1B);
+  const section80CCD2Old = inputs.section80CCD2; // Employer NPS allowed in Old Regime too
+  const section80DOld = Math.min(inputs.section80D, DEDUCTION_LIMITS.section80D.self);
+  const section80DAdditionalOld = Math.min(inputs.section80DAdditional, DEDUCTION_LIMITS.section80D.parents);
+  const section80GOld = inputs.section80G;
+  const section80EOld = inputs.section80E;
+
+  // 80TTA vs 80TTB
+  // If Senior Citizen (60+), 80TTB applies (Max 50k), 80TTA not allowed.
+  // If <60, 80TTA applies (Max 10k), 80TTB not allowed.
+  let section80TTAOld = 0;
+  let section80TTBOld = 0;
+
+  if (inputs.ageCategory === 'below60') {
+    section80TTAOld = Math.min(inputs.interestIncome, inputs.section80TTA || DEDUCTION_LIMITS.section80TTA);
+  } else {
+    // Senior or Super Senior
+    section80TTBOld = Math.min(inputs.interestIncome, inputs.section80TTB || 50000); // 80TTB limit is 50k
+  }
+
+  const section80EEOld = Math.min(inputs.section80EE, DEDUCTION_LIMITS.section80EE);
+  const section80EEAOld = Math.min(inputs.section80EEA, DEDUCTION_LIMITS.section80EEA);
+  const section80UOld = inputs.section80U > 0 ? DEDUCTION_LIMITS.section80U.disability : 0;
+  const section24bOld = Math.min(inputs.homeLoanInterestSelfOccupied, DEDUCTION_LIMITS.section24b);
+  const otherDeductionsOld = inputs.otherDeductionsOld;
 
   const totalDeductionsOld =
-    stdDeductionOld +
     section80COld +
     section80CCD1BOld +
+    section80CCD2Old +
     section80DOld +
     section80DAdditionalOld +
     section80GOld +
     section80EOld +
     section80TTAOld +
+    section80TTBOld +
     section80EEOld +
     section80EEAOld +
     section80UOld +
-    section24bOld;
+    section24bOld +
+    otherDeductionsOld;
 
-  // 3. Calculate Taxable Income
-  const taxableIncomeNew = Math.max(0, grossTotalIncome - totalDeductionsNew);
-  let taxableIncomeOld = Math.max(0, grossTotalIncome - totalDeductionsOld);
+  // Gross Total Income for Old Regime (includes exemptions deduction)
+  // Salary Income = Gross - Exemptions - Std Deduction
+  // Gross Total Income for Old Regime (includes exemptions deduction)
+  // Salary Income = Gross - Exemptions - Std Deduction
+  const netSalaryOld = Math.max(0, salaryIncome - totalExemptions - stdDeductionOld);
+
+  // House Property Income (Self Occupied Interest is a deduction u/s 24b, but often calculated in HP head)
+  // Here we treated 24b as a deduction from GTI for simplicity in the previous code, 
+  // but strictly it's a loss from House Property.
+  // Let's stick to the previous flow: GTI - Deductions.
+  // GTI = (Salary - Exemptions) + House Property + Capital Gains + Other Sources
+  // Note: Std Deduction is u/s 16(ia), so it reduces Salary Income.
+
+  const grossTotalIncomeOld =
+    netSalaryOld + // Already deducted Std Deduction
+    businessIncome +
+    housePropertyIncome +
+    otherIncome;
+
+  let taxableSlabIncomeOld = Math.max(0, grossTotalIncomeOld - totalDeductionsOld);
 
   // Apply senior citizen exemption (Old Regime only)
   const exemptionLimit = SENIOR_CITIZEN_EXEMPTION[inputs.ageCategory];
   if (exemptionLimit > SENIOR_CITIZEN_EXEMPTION.below60) {
-    taxableIncomeOld = Math.max(
+    taxableSlabIncomeOld = Math.max(
       0,
-      taxableIncomeOld - (exemptionLimit - SENIOR_CITIZEN_EXEMPTION.below60),
+      taxableSlabIncomeOld - (exemptionLimit - SENIOR_CITIZEN_EXEMPTION.below60),
     );
   }
 
-  // 4. Calculate Tax (before rebate)
-  const taxNew = calculateTaxFromSlabs(taxableIncomeNew, NEW_REGIME_SLABS);
-  const taxOld = calculateTaxFromSlabs(taxableIncomeOld, OLD_REGIME_SLABS);
+  const taxOnSlabIncomeOld = calculateTaxFromSlabs(taxableSlabIncomeOld, OLD_REGIME_SLABS);
 
-  // 5. Apply Section 87A Rebate
-  const rebateNew =
-    taxableIncomeNew <= REBATE_87A.new.maxTaxableIncome
-      ? Math.min(taxNew, REBATE_87A.new.rebateAmount)
-      : 0;
+  // Special Rate Tax is SAME for Old Regime usually (Chapter XII rates apply regardless of regime)
+  const taxOld = taxOnSlabIncomeOld + totalSpecialTax;
+
+  const totalTaxableIncomeOld = taxableSlabIncomeOld + taxableEquityLTCG + taxableEquitySTCG + taxablePropertyLTCG;
+
   const rebateOld =
-    taxableIncomeOld <= REBATE_87A.old.maxTaxableIncome
+    totalTaxableIncomeOld <= REBATE_87A.old.maxTaxableIncome
       ? Math.min(taxOld, REBATE_87A.old.rebateAmount)
       : 0;
 
-  const taxAfterRebateNew = Math.max(0, taxNew - rebateNew);
   const taxAfterRebateOld = Math.max(0, taxOld - rebateOld);
-
-  // 6. Add Surcharge
-  const surchargeNew = calculateSurcharge(taxAfterRebateNew, taxableIncomeNew);
-  const surchargeOld = calculateSurcharge(taxAfterRebateOld, taxableIncomeOld);
-
-  const taxAfterSurchargeNew = taxAfterRebateNew + surchargeNew;
+  const surchargeOld = calculateSurcharge(taxAfterRebateOld, totalTaxableIncomeOld);
   const taxAfterSurchargeOld = taxAfterRebateOld + surchargeOld;
-
-  // 7. Add Cess (4%)
-  const cessNew = Math.round((taxAfterSurchargeNew * CESS_RATE) / 100);
   const cessOld = Math.round((taxAfterSurchargeOld * CESS_RATE) / 100);
-
-  const totalTaxNew = Math.round(taxAfterSurchargeNew + cessNew);
   const totalTaxOld = Math.round(taxAfterSurchargeOld + cessOld);
 
-  // 8. Determine Recommendation
-  const recommendation = totalTaxNew <= totalTaxOld ? "new" : "old";
-  const taxSavings = Math.abs(totalTaxNew - totalTaxOld);
+  const oldRegimeResult: RegimeResult = {
+    grossSalary: salaryIncome,
+    otherExemptions: otherExemptions,
+    hraExemption: hraExemption,
+    ltaExemption: ltaExemption,
+    standardDeduction: stdDeductionOld,
+    netSalary: netSalaryOld,
+    totalDeductions: totalDeductionsOld, // Includes 80C, 80D, etc.
+    taxableIncome: Math.round(totalTaxableIncomeOld),
+    basicTax: Math.round(taxOld),
+    rebate87A: Math.round(rebateOld),
+    surcharge: Math.round(surchargeOld),
+    cess: Math.round(cessOld),
+    totalTax: totalTaxOld,
+    taxSlabs: calculateTaxSlabsBreakdown(taxableSlabIncomeOld, OLD_REGIME_SLABS),
+  };
 
   return {
-    grossTotalIncome: Math.round(grossTotalIncome),
-    taxableIncomeNew: Math.round(taxableIncomeNew),
-    taxableIncomeOld: Math.round(taxableIncomeOld),
-    totalDeductionsNew: Math.round(totalDeductionsNew),
-    totalDeductionsOld: Math.round(totalDeductionsOld),
-    taxNew: Math.round(taxNew),
-    taxOld: Math.round(taxOld),
-    rebateNew: Math.round(rebateNew),
-    rebateOld: Math.round(rebateOld),
-    surchargeNew: Math.round(surchargeNew),
-    surchargeOld: Math.round(surchargeOld),
-    cessNew,
-    cessOld,
-    totalTaxNew,
-    totalTaxOld,
-    recommendation,
-    taxSavings: Math.round(taxSavings),
-    breakdown: {
-      salaryIncome: Math.round(salaryIncome),
-      housePropertyIncome: Math.round(housePropertyIncome),
-      capitalGainsIncome: Math.round(capitalGainsIncome),
-      otherIncome: Math.round(otherIncome),
-    },
+    oldRegime: oldRegimeResult,
+    newRegime: newRegimeResult,
   };
 };
 
