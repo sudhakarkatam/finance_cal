@@ -39,6 +39,7 @@ import {
   Target as TargetIcon,
   GraduationCap as GraduationCapIcon,
   Shield,
+  Globe,
 } from "lucide-react";
 
 interface CalculatorCard {
@@ -140,6 +141,14 @@ const Home = () => {
       available: true,
       color: "orange",
     },
+    {
+      title: "NPS Calculator",
+      icon: Briefcase,
+      path: "/nps",
+      description: "Pension & Tax Benefits",
+      available: true,
+      color: "blue",
+    },
   ];
 
   const planningCalculators: CalculatorCard[] = [
@@ -175,6 +184,22 @@ const Home = () => {
       available: true,
       color: "green",
     },
+    {
+      title: "Rent vs Buy",
+      icon: HomeIcon,
+      path: "/rent-vs-buy",
+      description: "Renting vs Buying Home",
+      available: true,
+      color: "yellow",
+    },
+    /* {
+      title: "Global Tax",
+      icon: Globe,
+      path: "/global-tax",
+      description: "US, UK, DE, AU Taxes",
+      available: true,
+      color: "red",
+    }, */
   ];
 
   const basicCalculators: CalculatorCard[] = [
@@ -251,11 +276,10 @@ const Home = () => {
               <Card
                 key={calc.title}
                 onClick={() => handleCardClick(calc)}
-                className={`p-4 flex flex-col items-center justify-center gap-3 text-center transition-all min-h-[140px] ${
-                  calc.available
-                    ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
-                    : "opacity-50 cursor-not-allowed"
-                }`}
+                className={`p-4 flex flex-col items-center justify-center gap-3 text-center transition-all min-h-[140px] ${calc.available
+                  ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
+                  : "opacity-50 cursor-not-allowed"
+                  }`}
               >
                 <div
                   className={`p-3 rounded-full ${calc.available ? colorClasses : "bg-muted"}`}
@@ -319,11 +343,10 @@ const Home = () => {
               <Card
                 key={calc.title}
                 onClick={() => handleCardClick(calc)}
-                className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[120px] ${
-                  calc.available
-                    ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
-                    : "opacity-50 cursor-not-allowed"
-                }`}
+                className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[120px] ${calc.available
+                  ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
+                  : "opacity-50 cursor-not-allowed"
+                  }`}
               >
                 <div
                   className={`p-2 rounded-full ${calc.available ? colorClasses : "bg-muted"}`}

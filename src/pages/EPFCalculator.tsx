@@ -4,10 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, Briefcase, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateEPF, formatCurrency } from '@/lib/calculations';
+import { calculateEPF } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const EPFCalculator = () => {
+  const symbol = "₹";
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   const [basicSalary, setBasicSalary] = useState(50000);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [employeeContribution, setEmployeeContribution] = useState(12);
@@ -218,7 +227,7 @@ const EPFCalculator = () => {
             min={0}
             max={10000000}
             step={100}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -228,7 +237,7 @@ const EPFCalculator = () => {
             min={0}
             max={100000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -289,7 +298,7 @@ const EPFCalculator = () => {
             </p>
           </div>
         )}
-        
+
         {(retirementAge > 60) && (
           <div className="bg-red-50 p-3 rounded-lg border border-red-200">
             <p className="text-xs text-red-700">
@@ -297,7 +306,7 @@ const EPFCalculator = () => {
             </p>
           </div>
         )}
-        
+
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
           <p className="text-xs text-blue-700">
             <strong>Note:</strong> Current EPF interest rate: 8.25% p.a. (FY 2024-25). Employer's EPF contribution is 3.67% of basic salary (8.33% goes to EPS, not included in EPF corpus).

@@ -17,10 +17,10 @@ import {
   calculateStepUpSIP,
   calculateInflationAdjustedSIP,
   calculateStepUpSIPWithComparison,
-  formatCurrency,
 } from "@/lib/calculations";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 
 const SIPCalculator = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   // Basic SIP inputs
   const [monthlyInvestment, setMonthlyInvestment] = useState(100000);
   const [expectedReturn, setExpectedReturn] = useState(12);
@@ -476,7 +477,7 @@ const SIPCalculator = () => {
               min={0}
               max={10000000}
               step={500}
-              prefix="₹"
+              prefix={symbol}
               placeholder="100000"
             />
           </div>

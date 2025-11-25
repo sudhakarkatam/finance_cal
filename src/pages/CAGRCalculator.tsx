@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, TrendingUp, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const CAGRCalculator = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [beginningValue, setBeginningValue] = useState(10000);
   const [endingValue, setEndingValue] = useState(15000);
   const [years, setYears] = useState(3);
@@ -217,7 +218,7 @@ const CAGRCalculator = () => {
               min={1}
               max={10000000}
               step={100}
-              prefix="₹"
+              prefix={symbol}
               placeholder="10000"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -233,7 +234,7 @@ const CAGRCalculator = () => {
               min={1}
               max={100000000}
               step={100}
-              prefix="₹"
+              prefix={symbol}
               placeholder="15000"
             />
             <p className="text-xs text-muted-foreground mt-1">

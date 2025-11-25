@@ -1,15 +1,29 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, HandCoins, Info } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { HandCoins, Info, RotateCcw, Save } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 const GratuityCalculator = () => {
+  const symbol = "₹";
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const [lastDrawnSalary, setLastDrawnSalary] = useState(50000);
   const [yearsOfService, setYearsOfService] = useState(5);
   const [isGratuityActCovered, setIsGratuityActCovered] = useState(true);
@@ -264,7 +278,7 @@ const GratuityCalculator = () => {
               min={10000}
               max={500000}
               step={1000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="50000"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -332,7 +346,7 @@ const GratuityCalculator = () => {
             <div className="bg-gradient-to-br from-primary/5 to-accent/5 p-4 rounded-xl">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">Gratuity Amount</p>
-                <p className="text-3xl font-bold text-primary">{formatCurrency(result.gratuityAmount)}</p>
+                <p className="text-3xl font-bold text-primary">{formatAmount(result.gratuityAmount)}</p>
                 <p className="text-xs text-muted-foreground mt-1">{result.message}</p>
               </div>
             </div>
@@ -340,7 +354,7 @@ const GratuityCalculator = () => {
             <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-muted-foreground">Last Drawn Salary</span>
-                <span className="font-semibold text-foreground">{formatCurrency(result.basicSalary)}</span>
+                <span className="font-semibold text-foreground">{formatAmount(result.basicSalary)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-t border-border">
                 <span className="text-sm text-muted-foreground">Completed Years</span>

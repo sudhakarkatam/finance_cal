@@ -7,8 +7,8 @@ import SaveDialog from "@/components/SaveDialog";
 import {
   calculateInflation,
   calculatePresentValue,
-  formatCurrency,
 } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 const InflationCalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
   const [calculationType, setCalculationType] = useState<"future" | "present">(
     "future",
   );
@@ -343,7 +344,7 @@ const InflationCalculator = () => {
             min={1}
             max={100000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
         ) : (
           <CalculatorInput
@@ -353,7 +354,7 @@ const InflationCalculator = () => {
             min={1}
             max={100000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
         )}
 
@@ -394,14 +395,14 @@ const InflationCalculator = () => {
               Future Price
             </p>
             <p className="text-3xl font-bold text-primary-foreground">
-              {formatCurrency("futurePrice" in result ? result.futurePrice : 0)}
+              {formatAmount("futurePrice" in result ? result.futurePrice : 0)}
             </p>
           </div>
         ) : (
           <div className="bg-gradient-to-r from-green-500 to-green-600 p-5 rounded-xl text-center shadow-md">
             <p className="text-xs text-green-100 mb-1">Present Value</p>
             <p className="text-3xl font-bold text-green-50">
-              {formatCurrency(
+              {formatAmount(
                 "presentValue" in result ? result.presentValue : 0,
               )}
             </p>
@@ -424,9 +425,9 @@ const InflationCalculator = () => {
           calculationType === "future"
             ? { futurePrice: "futurePrice" in result ? result.futurePrice : 0 }
             : {
-                presentValue:
-                  "presentValue" in result ? result.presentValue : 0,
-              }
+              presentValue:
+                "presentValue" in result ? result.presentValue : 0,
+            }
         }
       />
     </div>

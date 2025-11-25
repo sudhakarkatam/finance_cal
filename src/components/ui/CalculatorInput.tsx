@@ -1,6 +1,14 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
+import { useCurrency } from '@/hooks/useCurrency';
+import { Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CalculatorInputProps {
   label: string;
@@ -12,6 +20,7 @@ interface CalculatorInputProps {
   prefix?: string;
   suffix?: string;
   placeholder?: string;
+  tooltip?: string;
 }
 
 const CalculatorInput = ({
@@ -24,7 +33,9 @@ const CalculatorInput = ({
   prefix = '',
   suffix = '',
   placeholder,
+  tooltip,
 }: CalculatorInputProps) => {
+  const { locale } = useCurrency();
   const [displayValue, setDisplayValue] = useState(value.toString());
 
   // Helper function to format number with commas
@@ -33,7 +44,7 @@ const CalculatorInput = ({
     if (num % 1 !== 0) {
       return num.toString();
     }
-    return new Intl.NumberFormat('en-IN').format(num);
+    return new Intl.NumberFormat(locale).format(num);
   };
 
   // Helper function to parse number from comma-separated string
@@ -94,7 +105,21 @@ const CalculatorInput = ({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-medium text-foreground">{label}</Label>
+        {tooltip && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs text-xs">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       <div className="relative">
         <div className="flex items-center gap-1 bg-secondary px-3 py-2 rounded-md border">
           {prefix && <span className="text-sm text-muted-foreground">{prefix}</span>}

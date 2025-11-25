@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, Home, Calculator, TrendingDown, Clock, Eye, EyeOff, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const HomeLoanCalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
   // Basic loan inputs
   const [propertyValue, setPropertyValue] = useState(6000000);
   const [downPayment, setDownPayment] = useState(1200000);
@@ -47,7 +48,7 @@ const HomeLoanCalculator = () => {
   }, [tenureYears, tenureMonths]);
 
   // Calculate remaining loan balance after specified months completed
-  const calculateRemainingBalance = (baseResult: {principal: number; tenure: number; emi: number}, monthsCompleted: number): number => {
+  const calculateRemainingBalance = (baseResult: { principal: number; tenure: number; emi: number }, monthsCompleted: number): number => {
     if (monthsCompleted <= 0) {
       return baseResult.principal;
     }
@@ -91,7 +92,7 @@ const HomeLoanCalculator = () => {
       emi = principal / months;
     } else {
       emi = principal * monthlyRate * Math.pow(1 + monthlyRate, months) /
-                 (Math.pow(1 + monthlyRate, months) - 1);
+        (Math.pow(1 + monthlyRate, months) - 1);
     }
 
     const totalPayment = emi * months;
@@ -144,7 +145,7 @@ const HomeLoanCalculator = () => {
       // Reduce EMI, keep tenure same
       const newPrincipal = baseResult.principal - netPrepaymentAmount;
       const newEmi = newPrincipal * monthlyRate * Math.pow(1 + monthlyRate, baseResult.tenure) /
-                     (Math.pow(1 + monthlyRate, baseResult.tenure) - 1);
+        (Math.pow(1 + monthlyRate, baseResult.tenure) - 1);
 
       const newTotalPayment = newEmi * baseResult.tenure;
       const newTotalInterest = newTotalPayment - newPrincipal;
@@ -228,8 +229,8 @@ const HomeLoanCalculator = () => {
   const result = useMemo((): BaseResult | PrepaymentResult => {
     return prepaymentEnabled ? calculatePrepayment() : calculateHomeLoan();
   }, [propertyValue, interestRate, tenureYears, tenureMonths, downPayment, processingFee, isExistingLoan,
-      outstandingAmount, monthsCompleted, remainingTenureYears, remainingTenureMonths, prepaymentEnabled,
-      prepaymentAmount, prepaymentOption, prepaymentChargeType, prepaymentChargeValue]);
+    outstandingAmount, monthsCompleted, remainingTenureYears, remainingTenureMonths, prepaymentEnabled,
+    prepaymentAmount, prepaymentOption, prepaymentChargeType, prepaymentChargeValue]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -485,7 +486,7 @@ const HomeLoanCalculator = () => {
                 min={100000}
                 max={100000000}
                 step={100000}
-                prefix="₹"
+                prefix={symbol}
               />
               <CalculatorInput
                 label="Interest Rate (p.a)"
@@ -525,7 +526,7 @@ const HomeLoanCalculator = () => {
                 min={500000}
                 max={100000000}
                 step={100000}
-                prefix="₹"
+                prefix={symbol}
                 placeholder="6000000"
               />
               <CalculatorInput
@@ -535,7 +536,7 @@ const HomeLoanCalculator = () => {
                 min={0}
                 max={propertyValue * 0.5}
                 step={100000}
-                prefix="₹"
+                prefix={symbol}
               />
               <CalculatorInput
                 label="Interest rate (p.a)"
@@ -570,10 +571,10 @@ const HomeLoanCalculator = () => {
 
         <div className="bg-muted/30 p-3 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            Loan amount: <span className="font-semibold text-foreground">{formatCurrency(result.principal)}</span>
+            Loan amount: <span className="font-semibold text-foreground">{formatAmount(result.principal)}</span>
             {!isExistingLoan && (
               <span className="ml-4">
-                Property value: <span className="font-semibold text-foreground">{formatCurrency(result.propertyValue)}</span>
+                Property value: <span className="font-semibold text-foreground">{formatAmount(result.propertyValue)}</span>
               </span>
             )}
             {isExistingLoan && (
@@ -628,7 +629,7 @@ const HomeLoanCalculator = () => {
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-700 mb-1">Calculated Remaining Balance:</p>
                 <p className="text-sm font-semibold text-blue-800">
-                  {monthsCompleted > 0 ? formatCurrency(actualRemainingBalance) : formatCurrency(result.principal)}
+                  {monthsCompleted > 0 ? formatAmount(actualRemainingBalance) : formatAmount(result.principal)}
                 </p>
                 <p className="text-xs text-blue-600">
                   {monthsCompleted > 0 ? `After ${monthsCompleted} EMI payments` : 'Original loan amount'}
@@ -642,7 +643,7 @@ const HomeLoanCalculator = () => {
                 min={0}
                 max={calculateRemainingBalance(result, monthsCompleted)}
                 step={10000}
-                prefix="₹"
+                prefix={symbol}
                 placeholder="100000"
               />
 
@@ -654,7 +655,7 @@ const HomeLoanCalculator = () => {
                   min={0}
                   max={prepaymentChargeType === 'percentage' ? 10 : prepaymentAmount}
                   step={prepaymentChargeType === 'percentage' ? 0.1 : 1000}
-                  prefix={prepaymentChargeType === 'fixed' ? '₹' : ''}
+                  prefix={prepaymentChargeType === 'fixed' ? symbol : ''}
                   suffix={prepaymentChargeType === 'percentage' ? '%' : ''}
                   placeholder={prepaymentChargeType === 'fixed' ? '5000' : '2'}
                 />
@@ -665,22 +666,20 @@ const HomeLoanCalculator = () => {
                     <button
                       type="button"
                       onClick={() => setPrepaymentChargeType('fixed')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
-                        prepaymentChargeType === 'fixed'
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${prepaymentChargeType === 'fixed'
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background text-muted-foreground border-border hover:bg-accent'
-                      }`}
+                        }`}
                     >
                       Fixed (₹)
                     </button>
                     <button
                       type="button"
                       onClick={() => setPrepaymentChargeType('percentage')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
-                        prepaymentChargeType === 'percentage'
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${prepaymentChargeType === 'percentage'
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background text-muted-foreground border-border hover:bg-accent'
-                      }`}
+                        }`}
                     >
                       Percentage (%)
                     </button>
@@ -692,9 +691,8 @@ const HomeLoanCalculator = () => {
                 <Label className="text-sm font-medium">Choose prepayment option:</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      prepaymentOption === 'reduce_emi' ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${prepaymentOption === 'reduce_emi' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
                     onClick={() => setPrepaymentOption('reduce_emi')}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -707,9 +705,8 @@ const HomeLoanCalculator = () => {
                   </div>
 
                   <div
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      prepaymentOption === 'reduce_tenure' ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${prepaymentOption === 'reduce_tenure' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
                     onClick={() => setPrepaymentOption('reduce_tenure')}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -765,10 +762,10 @@ const HomeLoanCalculator = () => {
                           {(showAllRows ? amortizationSchedule : amortizationSchedule.slice(0, 24)).map((row) => (
                             <TableRow key={row.month} className="hover:bg-muted/30">
                               <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-medium">{row.month}</TableCell>
-                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">{formatCurrency(row.emi)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">+{formatCurrency(row.principalPayment)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-orange-600">+{formatCurrency(row.interestPayment)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold">{formatCurrency(row.balance)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">{formatAmount(row.emi)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">+{formatAmount(row.principalPayment)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-orange-600">+{formatAmount(row.interestPayment)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold">{formatAmount(row.balance)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -813,44 +810,44 @@ const HomeLoanCalculator = () => {
 
         <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
           <p className="text-xs text-primary-foreground/80 mb-1">Monthly EMI</p>
-          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.emi)}</p>
+          <p className="text-3xl font-bold text-primary-foreground">{formatAmount(result.emi)}</p>
         </div>
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
             <span className="text-sm text-muted-foreground">Loan amount</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.principal)}</span>
+            <span className="font-semibold text-foreground">{formatAmount(result.principal)}</span>
           </div>
           {!isExistingLoan && (
             <>
               <div className="flex justify-between items-center py-2 border-t border-border">
                 <span className="text-sm text-muted-foreground">Down payment</span>
-                <span className="font-semibold text-foreground">{formatCurrency(result.downPayment)}</span>
+                <span className="font-semibold text-foreground">{formatAmount(result.downPayment)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-t border-border">
                 <span className="text-sm text-muted-foreground">Property value</span>
-                <span className="font-semibold text-foreground">{formatCurrency(result.propertyValue)}</span>
+                <span className="font-semibold text-foreground">{formatAmount(result.propertyValue)}</span>
               </div>
             </>
           )}
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Total interest</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.totalInterest)}</span>
+            <span className="font-semibold text-foreground">{formatAmount(result.totalInterest)}</span>
           </div>
           {processingFee > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Processing fees</span>
-              <span className="font-semibold text-foreground">{formatCurrency(result.processingFees)}</span>
+              <span className="font-semibold text-foreground">{formatAmount(result.processingFees)}</span>
             </div>
           )}
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Tax benefit (approx)</span>
-            <span className="font-semibold text-green-600">{formatCurrency(result.taxBenefit)}</span>
+            <span className="font-semibold text-green-600">{formatAmount(result.taxBenefit)}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">Total amount</span>
             <span className="text-xl font-bold text-primary">
-              {formatCurrency(processingFee > 0 ? result.totalPayment + result.processingFees : result.totalPayment)}
+              {formatAmount(processingFee > 0 ? result.totalPayment + result.processingFees : result.totalPayment)}
             </span>
           </div>
         </div>
@@ -866,11 +863,11 @@ const HomeLoanCalculator = () => {
                 <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-yellow-700">Prepayment charges</span>
-                    <span className="font-semibold text-yellow-800">{formatCurrency(result.prepaymentCharges)}</span>
+                    <span className="font-semibold text-yellow-800">{formatAmount(result.prepaymentCharges)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-yellow-700">Net prepayment amount</span>
-                    <span className="font-semibold text-yellow-800">{formatCurrency(result.netPrepaymentAmount)}</span>
+                    <span className="font-semibold text-yellow-800">{formatAmount(result.netPrepaymentAmount)}</span>
                   </div>
                 </div>
               )}
@@ -878,7 +875,7 @@ const HomeLoanCalculator = () => {
               <div className="flex justify-between items-center">
                 <span className={`text-sm ${result.prepaymentAmount > 0 ? 'text-green-700' : 'text-blue-700'}`}>Interest saved</span>
                 <span className={`font-semibold ${result.prepaymentAmount > 0 ? 'text-green-800' : 'text-blue-800'}`}>
-                  {formatCurrency(result.interestSaved)}
+                  {formatAmount(result.interestSaved)}
                 </span>
               </div>
 
@@ -886,7 +883,7 @@ const HomeLoanCalculator = () => {
                 prepaymentOption === 'reduce_emi' ? (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-green-700">New EMI</span>
-                    <span className="font-semibold text-green-800">{formatCurrency(result.emi)}</span>
+                    <span className="font-semibold text-green-800">{formatAmount(result.emi)}</span>
                   </div>
                 ) : (
                   <>
@@ -918,7 +915,7 @@ const HomeLoanCalculator = () => {
           <Alert>
             <AlertDescription className="text-green-800">
               💡 <strong>Recommendation:</strong> {prepaymentOption === 'reduce_tenure'
-                ? `Reducing tenure saves you ${formatCurrency(result.interestSaved)} in interest and helps you become debt-free faster!`
+                ? `Reducing tenure saves you ${formatAmount(result.interestSaved)} in interest and helps you become debt-free faster!`
                 : `Reducing EMI lowers your monthly burden while keeping the same loan duration.`}
             </AlertDescription>
           </Alert>

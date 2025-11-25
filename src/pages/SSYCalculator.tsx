@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import { calculateSSY, formatCurrency } from "@/lib/calculations";
+import { calculateSSY } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,6 +24,14 @@ import {
 } from "@/components/ui/dialog";
 
 const SSYCalculator = () => {
+  const symbol = "₹";
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   const [annualInvestment, setAnnualInvestment] = useState(150000);
   const [girlAge, setGirlAge] = useState(5);
   const [investmentStartYear, setInvestmentStartYear] = useState(
@@ -404,7 +413,7 @@ const SSYCalculator = () => {
             min={250}
             max={150000}
             step={250}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -508,7 +517,7 @@ const SSYCalculator = () => {
                 Total Invested
               </p>
               <p className="text-base font-bold text-foreground">
-                {formatCurrency(result.totalInvested)}
+                {formatAmount(result.totalInvested)}
               </p>
             </div>
             <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
@@ -516,7 +525,7 @@ const SSYCalculator = () => {
                 Total Interest
               </p>
               <p className="text-base font-bold text-primary">
-                {formatCurrency(result.totalInterest)}
+                {formatAmount(result.totalInterest)}
               </p>
             </div>
           </div>
@@ -529,7 +538,7 @@ const SSYCalculator = () => {
                   : "Maturity Value"}
               </p>
               <p className="text-2xl font-bold text-green-50">
-                {formatCurrency(
+                {formatAmount(
                   inflationEnabled
                     ? result.inflationAdjustedValue
                     : result.maturityValue,
@@ -543,7 +552,7 @@ const SSYCalculator = () => {
                   Nominal Maturity Value (without inflation)
                 </p>
                 <p className="text-xl font-bold text-blue-50">
-                  {formatCurrency(result.maturityValue)}
+                  {formatAmount(result.maturityValue)}
                 </p>
               </div>
             )}
@@ -559,7 +568,7 @@ const SSYCalculator = () => {
             <div className="flex justify-between">
               <span>Annual Investment:</span>
               <span className="font-semibold">
-                {formatCurrency(annualInvestment)}
+                {formatAmount(annualInvestment)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -593,7 +602,7 @@ const SSYCalculator = () => {
               <div className="text-center">
                 <p className="text-xs text-purple-600 mb-1">Nominal Value</p>
                 <p className="text-lg font-bold text-purple-800">
-                  {formatCurrency(result.maturityValue)}
+                  {formatAmount(result.maturityValue)}
                 </p>
               </div>
               <div className="text-center">
@@ -601,7 +610,7 @@ const SSYCalculator = () => {
                   Real Value (Inflation-Adjusted)
                 </p>
                 <p className="text-lg font-bold text-purple-800">
-                  {formatCurrency(result.inflationAdjustedValue)}
+                  {formatAmount(result.inflationAdjustedValue)}
                 </p>
               </div>
             </div>
@@ -610,7 +619,7 @@ const SSYCalculator = () => {
               {Math.round(
                 ((result.maturityValue - result.inflationAdjustedValue) /
                   result.maturityValue) *
-                  100,
+                100,
               )}
               % over {result.totalMaturityYears} years
             </p>

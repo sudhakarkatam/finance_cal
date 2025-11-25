@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import { formatCurrency } from "@/lib/calculations";
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 
 const EducationPlanner = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   // Basic inputs
   const [childCurrentAge, setChildCurrentAge] = useState(5);
   const [educationStartAge, setEducationStartAge] = useState(18);
@@ -94,7 +95,7 @@ const EducationPlanner = () => {
     // Calculate future cost of education with inflation
     const futureEducationCost = educationInflationEnabled
       ? currentEducationCost *
-        Math.pow(1 + educationInflationRate / 100, yearsToEducation)
+      Math.pow(1 + educationInflationRate / 100, yearsToEducation)
       : currentEducationCost;
 
     const totalRequiredCorpus = futureEducationCost * educationDuration;
@@ -196,9 +197,9 @@ const EducationPlanner = () => {
       totalContributions: Math.round(futureContributions),
       totalReturns: Math.round(
         totalCorpusAtEducation -
-          futureContributions -
-          futureSavings +
-          currentSavings,
+        futureContributions -
+        futureSavings +
+        currentSavings,
       ),
       shortfall: Math.round(shortfall),
       requiredMonthlyContribution: Math.round(
@@ -273,7 +274,7 @@ const EducationPlanner = () => {
       // Future education cost
       const futureCost = educationInflationEnabled
         ? currentEducationCost *
-          Math.pow(1 + educationInflationRate / 100, yearsRemaining)
+        Math.pow(1 + educationInflationRate / 100, yearsRemaining)
         : currentEducationCost;
 
       projection.push({
@@ -376,7 +377,7 @@ const EducationPlanner = () => {
             min={100000}
             max={10000000}
             step={50000}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -386,7 +387,7 @@ const EducationPlanner = () => {
             min={0}
             max={50000000}
             step={10000}
-            prefix="₹"
+            prefix={symbol}
           />
         </div>
 
@@ -398,7 +399,7 @@ const EducationPlanner = () => {
             min={0}
             max={200000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -548,7 +549,7 @@ const EducationPlanner = () => {
               {formatCurrency(
                 Math.round(
                   currentSavings *
-                    Math.pow(1 + expectedReturn / 100, result.yearsToEducation),
+                  Math.pow(1 + expectedReturn / 100, result.yearsToEducation),
                 ),
               )}
             </span>

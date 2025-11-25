@@ -3,8 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Calendar } from 'lucide-react';
 import { getHistory, deleteCalculation, CalculationHistory } from '@/lib/storage';
-import { formatCurrency } from '@/lib/calculations';
 import { format } from 'date-fns';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 
 const History = () => {
+  const { formatAmount } = useCurrency();
   const [history, setHistory] = useState<CalculationHistory[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -58,7 +59,7 @@ const History = () => {
     // Format currency values
     const currencyKeys = ['amount', 'principal', 'total', 'invested', 'returns', 'interest', 'maturity', 'value', 'future', 'shortfall', 'required', 'achieved', 'savings', 'contributions', 'withdrawn', 'balance', 'withdrawal'];
     if (currencyKeys.some(currencyKey => key.toLowerCase().includes(currencyKey))) {
-      return formatCurrency(value);
+      return formatAmount(value);
     }
     // Format percentage values
     if (key.toLowerCase().includes('rate') || key.toLowerCase().includes('return') || key.toLowerCase().includes('inflation') || key.toLowerCase().includes('percentage') || key.toLowerCase().includes('progress')) {
@@ -70,7 +71,7 @@ const History = () => {
     }
     // Format EMI values
     if (key.toLowerCase().includes('emi') || key.toLowerCase().includes('installment')) {
-      return formatCurrency(value);
+      return formatAmount(value);
     }
     // Format boolean values
     if (key.toLowerCase().includes('met') || key.toLowerCase().includes('enabled')) {
@@ -156,10 +157,10 @@ const History = () => {
                             </div>
                             <div className="text-xs font-bold text-foreground">
                               {key.toLowerCase().includes('rate') ? `${value}%` :
-                               key.toLowerCase().includes('months') ? `${value} months` :
-                               key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') ? `${value} years` :
-                               key.toLowerCase().includes('enabled') ? (value === 1 ? 'Yes' : 'No') :
-                               formatCurrency(Number(value))}
+                                key.toLowerCase().includes('months') ? `${value} months` :
+                                  key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') ? `${value} years` :
+                                    key.toLowerCase().includes('enabled') ? (value === 1 ? 'Yes' : 'No') :
+                                      formatAmount(Number(value))}
                             </div>
                           </div>
                         ))}

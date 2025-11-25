@@ -9,11 +9,13 @@ import CalculatorInput from '@/components/ui/CalculatorInput';
 import DateRangeInput from '@/components/ui/DateRangeInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateCompoundInterest, calculateCompoundInterestFromMonthlyRupees, calculateCompoundInterestFromMonthlyRupeesWithDays, formatCurrency } from '@/lib/calculations';
-import { differenceInDays, differenceInYears, differenceInMonths, differenceInCalendarDays, differenceInCalendarMonths, differenceInCalendarYears } from 'date-fns';
+import { calculateCompoundInterest, calculateCompoundInterestFromMonthlyRupees, calculateCompoundInterestFromMonthlyRupeesWithDays } from '@/lib/calculations';
+import { differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const CompoundInterest = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [principal, setPrincipal] = useState(100000);
   const [rate, setRate] = useState(6);
   const [interestRateType, setInterestRateType] = useState<'percent-per-annum' | 'rupee-per-month'>('percent-per-annum');
@@ -31,20 +33,20 @@ const CompoundInterest = () => {
     let years = end.getFullYear() - start.getFullYear();
     let months = end.getMonth() - start.getMonth();
     let days = end.getDate() - start.getDate();
-    
+
     // Adjust for negative days
     if (days < 0) {
       months--;
       const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
       days += lastDayOfPrevMonth.getDate();
     }
-    
+
     // Adjust for negative months
     if (months < 0) {
       years--;
       months += 12;
     }
-    
+
     return { years, months, days };
   };
 
@@ -54,11 +56,11 @@ const CompoundInterest = () => {
       // This ensures consistent calculation regardless of input method
       const { years, months, days } = dateRangeToYMD(startDate, endDate);
       const compoundingFrequency = Number(frequency);
-      
+
       // Vaddi Calculator Method: Use 360 days/year, 30 days/month convention
       // For yearly compounding: Hybrid method handles time internally (not needed here)
       // For other frequencies: Use pure compound with 360/30 convention
-      
+
       if (compoundingFrequency === 12) {
         // Monthly compounding: use 360/30 convention (pure compound)
         const totalDays = (years * 360) + (months * 30) + days;
@@ -75,7 +77,7 @@ const CompoundInterest = () => {
         const totalDays = (years * 360) + (months * 30) + days;
         return totalDays / 360;
       }
-      
+
       // Default: use 360/30 convention
       const totalDays = (years * 360) + (months * 30) + days;
       return totalDays / 360;
@@ -84,7 +86,7 @@ const CompoundInterest = () => {
     // This matches Indian rural lending practices (https://interest-calculator.anreddy.in)
     // Convert years, months, days to total days using 360/30 convention
     const totalDays = (manualYears * 360) + (manualMonths * 30) + manualDays;
-    
+
     // For all frequencies, use the same 360/30 convention
     // Time in years = totalDays / 360
     return totalDays / 360;
@@ -105,20 +107,20 @@ const CompoundInterest = () => {
         }
         return { years: manualYears, months: manualMonths, days: manualDays };
       };
-      
+
       const { years, months, days } = getYMD();
       const annualRate = interestRateType === 'rupee-per-month' ? rate * 12 : rate;
-      
+
       if (years > 0) {
         // Step 1: Compound interest for whole years
         const amountAfterYears = principal * Math.pow(1 + annualRate / 100, years);
-        
+
         // Step 2: Simple interest for fractional period using 360/30 convention
         const fractionalDays = (months * 30) + days;
         const fractionalTime = fractionalDays / 360;
         const simpleInterest = amountAfterYears * (annualRate / 100) * fractionalTime;
         const finalAmount = amountAfterYears + simpleInterest;
-        
+
         return {
           interest: Math.round(finalAmount - principal),
           total: Math.round(finalAmount),
@@ -130,7 +132,7 @@ const CompoundInterest = () => {
         const fractionalTime = fractionalDays / 360;
         const simpleInterest = principal * (annualRate / 100) * fractionalTime;
         const finalAmount = principal + simpleInterest;
-        
+
         return {
           interest: Math.round(simpleInterest),
           total: Math.round(finalAmount),
@@ -345,8 +347,8 @@ const CompoundInterest = () => {
               </DialogContent>
             </Dialog>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -355,7 +357,7 @@ const CompoundInterest = () => {
             Reset
           </Button>
         </div>
-        
+
         <CalculatorInput
           label="Principal amount"
           value={principal}
@@ -363,7 +365,7 @@ const CompoundInterest = () => {
           min={1000}
           max={10000000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <div className="space-y-3">
@@ -444,7 +446,7 @@ const CompoundInterest = () => {
 
       <Card className="p-6 space-y-4 shadow-lg">
         <h3 className="text-lg font-semibold text-foreground">Results</h3>
-        
+
         <ResultChart
           principal={result.principal}
           returns={result.interest}
@@ -479,13 +481,13 @@ const CompoundInterest = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="compound"
-        inputs={{ 
-          principal, 
-          rate, 
+        inputs={{
+          principal,
+          rate,
           interestRateType,
           annualRate: annualRate.toFixed(2),
-          time: getTimeInYears(), 
-          frequency: Number(frequency) 
+          time: getTimeInYears(),
+          frequency: Number(frequency)
         }}
         results={result}
       />

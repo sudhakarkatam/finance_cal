@@ -80,6 +80,14 @@ const CalculatorHistory = ({ calculatorType, title = "History" }: CalculatorHist
       goalplanning: 'Goal Planning',
       retirement: 'Retirement',
       education: 'Education',
+      incometax: 'Income Tax',
+      germantax: 'German Tax',
+      inflation: 'Inflation',
+      gst: 'GST',
+      percentage: 'Percentage',
+      nps: 'NPS Calculator',
+      'rent-vs-buy': 'Rent vs Buy',
+      'global-tax': 'Global Tax',
     };
     return names[type] || type;
   };
@@ -181,10 +189,10 @@ const CalculatorHistory = ({ calculatorType, title = "History" }: CalculatorHist
                               </div>
                               <div className="text-xs font-bold text-foreground">
                                 {key.toLowerCase().includes('rate') ? `${value}%` :
-                                 key.toLowerCase().includes('months') ? `${value} months` :
-                                 key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') ? `${value} years` :
-                                 key.toLowerCase().includes('enabled') ? (value === 1 ? 'Yes' : 'No') :
-                                 formatCurrency(Number(value))}
+                                  key.toLowerCase().includes('months') ? `${value} months` :
+                                    key.toLowerCase().includes('time') || key.toLowerCase().includes('years') || key.toLowerCase().includes('period') ? `${value} years` :
+                                      key.toLowerCase().includes('enabled') ? (value === 1 ? 'Yes' : 'No') :
+                                        formatCurrency(Number(value))}
                               </div>
                             </div>
                           ))}
@@ -207,26 +215,26 @@ const CalculatorHistory = ({ calculatorType, title = "History" }: CalculatorHist
                               <div key={rowIndex} className="grid grid-cols-3 gap-2">
                                 {filteredResults
                                   .slice(rowIndex * 3, (rowIndex + 1) * 3)
-                                .map(([key, value]) => (
-                                  <div key={key} className="bg-gradient-to-r from-primary/5 to-primary/10 p-2 rounded-md border border-primary/20">
-                                    <div className="text-xs text-muted-foreground font-medium mb-0.5">
-                                      {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                                  .map(([key, value]) => (
+                                    <div key={key} className="bg-gradient-to-r from-primary/5 to-primary/10 p-2 rounded-md border border-primary/20">
+                                      <div className="text-xs text-muted-foreground font-medium mb-0.5">
+                                        {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                                      </div>
+                                      <div className="text-sm font-bold text-primary">
+                                        {key.toLowerCase().includes('normal') ? (
+                                          <span title="Normal value (without inflation)">{formatResultValue(key, value)}</span>
+                                        ) : key.toLowerCase().includes('inflation') ? (
+                                          <span title="Inflation-adjusted value" className="text-orange-600">{formatResultValue(key, value)}</span>
+                                        ) : (
+                                          formatResultValue(key, value)
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="text-sm font-bold text-primary">
-                                      {key.toLowerCase().includes('normal') ? (
-                                        <span title="Normal value (without inflation)">{formatResultValue(key, value)}</span>
-                                      ) : key.toLowerCase().includes('inflation') ? (
-                                        <span title="Inflation-adjusted value" className="text-orange-600">{formatResultValue(key, value)}</span>
-                                      ) : (
-                                        formatResultValue(key, value)
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          ));
-                        })()}
-                      </div>
+                                  ))}
+                              </div>
+                            ));
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </div>

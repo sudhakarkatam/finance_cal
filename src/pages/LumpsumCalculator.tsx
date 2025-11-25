@@ -5,10 +5,11 @@ import { Save, RotateCcw, Coins, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const LumpsumCalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
   const [investment, setInvestment] = useState(100000);
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState(10);
@@ -193,8 +194,8 @@ const LumpsumCalculator = () => {
               </DialogContent>
             </Dialog>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -211,7 +212,7 @@ const LumpsumCalculator = () => {
           min={1000}
           max={10000000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -254,7 +255,7 @@ const LumpsumCalculator = () => {
 
       <Card className="p-6 space-y-4 shadow-lg">
         <h3 className="text-lg font-semibold text-foreground">Results</h3>
-        
+
         <ResultChart
           principal={result.invested}
           returns={result.returns}
@@ -265,20 +266,20 @@ const LumpsumCalculator = () => {
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
             <span className="text-sm text-muted-foreground">Invested amount</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.invested)}</span>
+            <span className="font-semibold text-foreground">{formatAmount(result.invested)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Expected returns</span>
-            <span className="font-semibold text-primary">{formatCurrency(result.returns)}</span>
+            <span className="font-semibold text-primary">{formatAmount(result.returns)}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">Total value</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.total)}</span>
+            <span className="text-xl font-bold text-primary">{formatAmount(result.total)}</span>
           </div>
         </div>
 
-        <Button 
-          className="w-full gap-2" 
+        <Button
+          className="w-full gap-2"
           size="lg"
           onClick={() => setSaveDialogOpen(true)}
         >

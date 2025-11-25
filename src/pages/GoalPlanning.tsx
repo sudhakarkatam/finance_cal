@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import { calculateGoalPlanning, formatCurrency } from "@/lib/calculations";
+import { calculateGoalPlanning } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ import {
 } from "@/components/ui/select";
 
 const GoalPlanning = () => {
+  const { formatAmount, symbol } = useCurrency();
   // Goal category and basic inputs
   const [goalCategory, setGoalCategory] = useState("house");
   const [goalAmount, setGoalAmount] = useState(5000000);
@@ -281,7 +283,7 @@ const GoalPlanning = () => {
             min={1000}
             max={30000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
             placeholder="5000000"
           />
 
@@ -304,7 +306,7 @@ const GoalPlanning = () => {
             min={0}
             max={goalAmount}
             step={10000}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -325,7 +327,7 @@ const GoalPlanning = () => {
           min={0}
           max={500000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         {/* Step-Up Contributions */}
@@ -417,13 +419,13 @@ const GoalPlanning = () => {
                       <TableRow key={row.year}>
                         <TableCell>{row.year}</TableCell>
                         <TableCell>
-                          {formatCurrency(row.yearlyContribution)}
+                          {formatAmount(row.yearlyContribution)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(row.cumulativeContributions)}
+                          {formatAmount(row.cumulativeContributions)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(row.portfolioValue)}
+                          {formatAmount(row.portfolioValue)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -460,7 +462,7 @@ const GoalPlanning = () => {
               : "Total Amount Needed"}
           </p>
           <p className="text-3xl font-bold text-primary-foreground">
-            {formatCurrency(
+            {formatAmount(
               inflationEnabled && "inflationAdjustedGoal" in result
                 ? result.inflationAdjustedGoal
                 : goalAmount,
@@ -474,7 +476,7 @@ const GoalPlanning = () => {
               Future value of current savings
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.futureSavings)}
+              {formatAmount(result.futureSavings)}
             </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
@@ -482,7 +484,7 @@ const GoalPlanning = () => {
               Future value of contributions
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.futureContributions)}
+              {formatAmount(result.futureContributions)}
             </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
@@ -490,14 +492,14 @@ const GoalPlanning = () => {
               Total projected amount
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.totalAchieved)}
+              {formatAmount(result.totalAchieved)}
             </span>
           </div>
           {result.shortfall > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Shortfall</span>
               <span className="font-semibold text-red-600">
-                {formatCurrency(result.shortfall)}
+                {formatAmount(result.shortfall)}
               </span>
             </div>
           )}
@@ -508,7 +510,7 @@ const GoalPlanning = () => {
                 : "Min monthly contribution"}
             </span>
             <span className="text-xl font-bold text-primary">
-              {formatCurrency(result.requiredMonthlyContribution)}
+              {formatAmount(result.requiredMonthlyContribution)}
             </span>
           </div>
           {result.goalMet && result.excessContribution > 0 && (
@@ -518,13 +520,13 @@ const GoalPlanning = () => {
                   You can reduce your contribution by
                 </span>
                 <span className="font-semibold text-green-800">
-                  {formatCurrency(result.excessContribution)}/month
+                  {formatAmount(result.excessContribution)}/month
                 </span>
               </div>
               <p className="text-xs text-green-600 mt-1">
                 Your current contribution of{" "}
-                {formatCurrency(monthlyContribution)} is{" "}
-                {formatCurrency(
+                {formatAmount(monthlyContribution)} is{" "}
+                {formatAmount(
                   monthlyContribution - result.requiredMonthlyContribution,
                 )}{" "}
                 more than needed
@@ -538,9 +540,9 @@ const GoalPlanning = () => {
             <Alert>
               <AlertDescription className="text-green-800">
                 🎉 Excellent! Your current monthly contribution of{" "}
-                {formatCurrency(monthlyContribution)} exceeds the requirement.
-                You can reduce it by {formatCurrency(result.excessContribution)}{" "}
-                to {formatCurrency(result.requiredMonthlyContribution)} per
+                {formatAmount(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatAmount(result.excessContribution)}{" "}
+                to {formatAmount(result.requiredMonthlyContribution)} per
                 month while still achieving your goal comfortably.
               </AlertDescription>
             </Alert>
@@ -548,7 +550,7 @@ const GoalPlanning = () => {
             <Alert>
               <AlertDescription className="text-green-800">
                 🎉 Perfect! With your current monthly contribution of{" "}
-                {formatCurrency(monthlyContribution)}, you will achieve your
+                {formatAmount(monthlyContribution)}, you will achieve your
                 goal exactly as planned.
               </AlertDescription>
             </Alert>
@@ -557,7 +559,7 @@ const GoalPlanning = () => {
           <Alert>
             <AlertDescription className="text-orange-800">
               To achieve your goal, you need to contribute{" "}
-              {formatCurrency(result.requiredMonthlyContribution)} per month.
+              {formatAmount(result.requiredMonthlyContribution)} per month.
               Consider increasing your monthly contribution or extending the
               time horizon.
             </AlertDescription>

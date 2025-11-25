@@ -5,7 +5,8 @@ import { Save, RotateCcw, Info, Receipt, ChevronDown, ChevronUp, AlertTriangle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateIncomeTax, formatCurrency } from '@/lib/calculations';
+import { calculateIncomeTax } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -16,6 +17,13 @@ import { NEW_REGIME_SLABS, OLD_REGIME_SLABS } from '@/lib/taxConstants';
 
 
 const TaxSlabsTable = ({ slabs, title }: { slabs: Array<{ min: number; max: number; rate: number }>, title: string }) => {
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="bg-muted p-3 border-b font-semibold text-sm">{title}</div>
@@ -30,7 +38,7 @@ const TaxSlabsTable = ({ slabs, title }: { slabs: Array<{ min: number; max: numb
           {slabs.map((slab, i) => (
             <TableRow key={i}>
               <TableCell className="text-xs">
-                {formatCurrency(slab.min)} - {slab.max === Infinity ? 'Above' : formatCurrency(slab.max)}
+                {formatAmount(slab.min)} - {slab.max === Infinity ? 'Above' : formatAmount(slab.max)}
               </TableCell>
               <TableCell className="text-right text-xs">{slab.rate}%</TableCell>
             </TableRow>
@@ -44,6 +52,14 @@ const TaxSlabsTable = ({ slabs, title }: { slabs: Array<{ min: number; max: numb
 
 
 const IncomeTaxCalculator = () => {
+  const symbol = "₹";
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   // Basic Details
 
   const [financialYear, setFinancialYear] = useState<'2025-26' | '2024-25'>('2025-26');
@@ -655,9 +671,9 @@ const IncomeTaxCalculator = () => {
 
   const savings = result.oldRegime.totalTax - result.newRegime.totalTax;
   const recommendation = savings > 0
-    ? `New Regime saves you ${formatCurrency(savings)}`
+    ? `New Regime saves you ${formatAmount(savings)}`
     : savings < 0
-      ? `Old Regime saves you ${formatCurrency(Math.abs(savings))}`
+      ? `Old Regime saves you ${formatAmount(Math.abs(savings))}`
       : "Both regimes have same tax liability";
 
   return (
@@ -757,7 +773,7 @@ const IncomeTaxCalculator = () => {
                       label="Gross Salary"
                       value={grossSalary}
                       onChange={setGrossSalary}
-                      prefix="₹"
+                      prefix={symbol}
                     />
                     <div className="flex items-center gap-2">
                       <Label className="flex-1">Exempt Allowances (LTA/Other)</Label>
@@ -767,7 +783,7 @@ const IncomeTaxCalculator = () => {
                       label=""
                       value={exemptAllowances}
                       onChange={setExemptAllowances}
-                      prefix="₹"
+                      prefix={symbol}
                     />
                     <div className="flex items-center gap-2">
                       <Label className="flex-1">HRA Exemption</Label>
@@ -777,7 +793,7 @@ const IncomeTaxCalculator = () => {
                       label=""
                       value={hraExemption}
                       onChange={setHraExemption}
-                      prefix="₹"
+                      prefix={symbol}
                     />
                   </>
                 ) : (
@@ -803,13 +819,13 @@ const IncomeTaxCalculator = () => {
                           label="Turnover (Digital Mode)"
                           value={businessTurnover}
                           onChange={setBusinessTurnover}
-                          prefix="₹"
+                          prefix={symbol}
                         />
                         <CalculatorInput
                           label="Turnover (Cash Mode)"
                           value={businessCashTurnover}
                           onChange={setBusinessCashTurnover}
-                          prefix="₹"
+                          prefix={symbol}
                         />
                       </>
                     )}
@@ -818,7 +834,7 @@ const IncomeTaxCalculator = () => {
                         label="Gross Receipts"
                         value={businessGrossReceipts}
                         onChange={setBusinessGrossReceipts}
-                        prefix="₹"
+                        prefix={symbol}
                       />
                     )}
                     {businessIncomeType === 'regular' && (
@@ -826,7 +842,7 @@ const IncomeTaxCalculator = () => {
                         label="Net Profit"
                         value={businessNetProfit}
                         onChange={setBusinessNetProfit}
-                        prefix="₹"
+                        prefix={symbol}
                       />
                     )}
                   </>
@@ -1062,10 +1078,10 @@ const IncomeTaxCalculator = () => {
                         {row.label}
                       </TableCell>
                       <TableCell className={`text-right ${row.isTotal ? "text-primary text-lg" : ""}`}>
-                        {formatCurrency(row.old)}
+                        {formatAmount(row.old)}
                       </TableCell>
                       <TableCell className={`text-right ${row.isTotal ? "text-primary text-lg" : ""}`}>
-                        {formatCurrency(row.new)}
+                        {formatAmount(row.new)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1079,8 +1095,8 @@ const IncomeTaxCalculator = () => {
                 <div className="space-y-1 text-xs text-muted-foreground">
                   {result.oldRegime.taxSlabs.map((slab, i) => (
                     <div key={i} className="flex justify-between">
-                      <span>{slab.rate} Slab ({formatCurrency(slab.amount)})</span>
-                      <span>{formatCurrency(slab.tax)}</span>
+                      <span>{slab.rate} Slab ({formatAmount(slab.amount)})</span>
+                      <span>{formatAmount(slab.tax)}</span>
                     </div>
                   ))}
                 </div>
@@ -1090,8 +1106,8 @@ const IncomeTaxCalculator = () => {
                 <div className="space-y-1 text-xs text-muted-foreground">
                   {result.newRegime.taxSlabs.map((slab, i) => (
                     <div key={i} className="flex justify-between">
-                      <span>{slab.rate} Slab ({formatCurrency(slab.amount)})</span>
-                      <span>{formatCurrency(slab.tax)}</span>
+                      <span>{slab.rate} Slab ({formatAmount(slab.amount)})</span>
+                      <span>{formatAmount(slab.tax)}</span>
                     </div>
                   ))}
                 </div>
@@ -1175,17 +1191,48 @@ const IncomeTaxCalculator = () => {
       <SaveDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
-        onSave={(name) => {
-          console.log('Saving calculation:', name);
-          setSaveDialogOpen(false);
-        }}
-        data={{
+        calculationType="incometax"
+        inputs={{
           financialYear,
+          ageCategory,
+          employmentType,
           grossSalary,
-          totalTaxOld: result.oldRegime.totalTax,
-          totalTaxNew: result.newRegime.totalTax
+          exemptAllowances,
+          hraExemption,
+          businessIncomeType,
+          businessTurnover,
+          businessCashTurnover,
+          businessGrossReceipts,
+          businessNetProfit,
+          businessExpenses,
+          interestIncome,
+          rentalIncome,
+          homeLoanInterestSelfOccupied,
+          homeLoanInterestLetOut,
+          equityLTCG,
+          equitySTCG,
+          propertyLTCG,
+          otherGains,
+          cryptoIncome,
+          section80C,
+          section80CCD1B,
+          section80CCD2,
+          section80D,
+          section80DAdditional,
+          section80TTA,
+          section80TTB,
+          section80G,
+          section80E,
+          section80EEA,
+          section80GG,
+          otherDeductionsOld,
+          otherDeductionsNew
         }}
-        type="tax"
+        results={{
+          totalTaxOld: result.oldRegime.totalTax,
+          totalTaxNew: result.newRegime.totalTax,
+          savings: result.oldRegime.totalTax - result.newRegime.totalTax
+        }}
       />
     </div>
   );

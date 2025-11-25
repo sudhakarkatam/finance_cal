@@ -4,14 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, Receipt, Calculator, TrendingDown, Clock, Eye, EyeOff, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const EMICalculator = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   // Basic loan inputs
   const [loanAmount, setLoanAmount] = useState(1000000);
   const [interestRate, setInterestRate] = useState(6.5);
@@ -41,7 +42,7 @@ const EMICalculator = () => {
   }, [tenureYears, tenureMonths]);
 
   // Calculate remaining loan balance after specified months completed
-  const calculateRemainingBalance = (baseResult: {principal: number; tenure: number; emi: number}, monthsCompleted: number): number => {
+  const calculateRemainingBalance = (baseResult: { principal: number; tenure: number; emi: number }, monthsCompleted: number): number => {
     if (monthsCompleted <= 0) {
       return baseResult.principal;
     }
@@ -84,7 +85,7 @@ const EMICalculator = () => {
       emi = principal / months;
     } else {
       emi = principal * monthlyRate * Math.pow(1 + monthlyRate, months) /
-                  (Math.pow(1 + monthlyRate, months) - 1);
+        (Math.pow(1 + monthlyRate, months) - 1);
     }
 
     const totalPayment = emi * months;
@@ -134,7 +135,7 @@ const EMICalculator = () => {
       // Reduce EMI, keep tenure same
       const newPrincipal = currentPrincipal - netPrepaymentAmount;
       const newEmi = newPrincipal * monthlyRate * Math.pow(1 + monthlyRate, baseResult.tenure) /
-                     (Math.pow(1 + monthlyRate, baseResult.tenure) - 1);
+        (Math.pow(1 + monthlyRate, baseResult.tenure) - 1);
 
       const newTotalPayment = newEmi * baseResult.tenure;
       const newTotalInterest = newTotalPayment - newPrincipal;
@@ -215,8 +216,8 @@ const EMICalculator = () => {
   const result = useMemo((): BaseResult | PrepaymentResult => {
     return prepaymentEnabled ? calculatePrepayment() : calculateEMI();
   }, [loanAmount, interestRate, totalTenureMonths, processingFee, prepaymentEnabled,
-      monthsCompleted, remainingLoanAmount, prepaymentAmount, prepaymentOption,
-      prepaymentChargeType, prepaymentChargeValue]);
+    monthsCompleted, remainingLoanAmount, prepaymentAmount, prepaymentOption,
+    prepaymentChargeType, prepaymentChargeValue]);
 
   const handleCalculate = () => {
     setIsCalculated(true);
@@ -444,7 +445,7 @@ const EMICalculator = () => {
             min={10000}
             max={50000000}
             step={100000}
-            prefix="₹"
+            prefix={symbol}
             placeholder="1000000"
           />
 
@@ -542,7 +543,7 @@ const EMICalculator = () => {
                 min={0}
                 max={loanAmount}
                 step={10000}
-                prefix="₹"
+                prefix={symbol}
                 placeholder="Leave empty to use calculated balance"
               />
 
@@ -553,7 +554,7 @@ const EMICalculator = () => {
                 min={0}
                 max={calculateRemainingBalance(result, monthsCompleted)}
                 step={10000}
-                prefix="₹"
+                prefix={symbol}
                 placeholder="100000"
               />
 
@@ -565,7 +566,7 @@ const EMICalculator = () => {
                   min={0}
                   max={prepaymentChargeType === 'percentage' ? 10 : prepaymentAmount}
                   step={prepaymentChargeType === 'percentage' ? 0.1 : 1000}
-                  prefix={prepaymentChargeType === 'fixed' ? '₹' : ''}
+                  prefix={prepaymentChargeType === 'fixed' ? symbol : ''}
                   suffix={prepaymentChargeType === 'percentage' ? '%' : ''}
                   placeholder={prepaymentChargeType === 'fixed' ? '5000' : '2'}
                 />
@@ -576,22 +577,20 @@ const EMICalculator = () => {
                     <button
                       type="button"
                       onClick={() => setPrepaymentChargeType('fixed')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
-                        prepaymentChargeType === 'fixed'
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background text-muted-foreground border-border hover:bg-accent'
-                      }`}
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${prepaymentChargeType === 'fixed'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                        }`}
                     >
                       Fixed (₹)
                     </button>
                     <button
                       type="button"
                       onClick={() => setPrepaymentChargeType('percentage')}
-                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
-                        prepaymentChargeType === 'percentage'
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background text-muted-foreground border-border hover:bg-accent'
-                      }`}
+                      className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${prepaymentChargeType === 'percentage'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-muted-foreground border-border hover:bg-accent'
+                        }`}
                     >
                       Percentage (%)
                     </button>
@@ -603,9 +602,8 @@ const EMICalculator = () => {
                 <Label className="text-sm font-medium">Choose prepayment option:</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      prepaymentOption === 'reduce_emi' ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${prepaymentOption === 'reduce_emi' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
                     onClick={() => setPrepaymentOption('reduce_emi')}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -618,9 +616,8 @@ const EMICalculator = () => {
                   </div>
 
                   <div
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      prepaymentOption === 'reduce_tenure' ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${prepaymentOption === 'reduce_tenure' ? 'border-primary bg-primary/5' : 'border-border'
+                      }`}
                     onClick={() => setPrepaymentOption('reduce_tenure')}
                   >
                     <div className="flex items-center gap-2 mb-1">

@@ -3,9 +3,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Scale } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
-import { formatCurrency } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const LoanComparison = () => {
+  const { formatAmount, symbol } = useCurrency();
   // Loan 1
   const [amount1, setAmount1] = useState(3500000);
   const [rate1, setRate1] = useState(8.5);
@@ -18,8 +19,8 @@ const LoanComparison = () => {
 
   const calculateLoan = (principal: number, rate: number, months: number) => {
     const monthlyRate = rate / (12 * 100);
-    const emi = principal * monthlyRate * Math.pow(1 + monthlyRate, months) / 
-                (Math.pow(1 + monthlyRate, months) - 1);
+    const emi = principal * monthlyRate * Math.pow(1 + monthlyRate, months) /
+      (Math.pow(1 + monthlyRate, months) - 1);
     const totalPayment = emi * months;
     const totalInterest = totalPayment - principal;
 
@@ -63,8 +64,8 @@ const LoanComparison = () => {
               <p className="text-xs text-muted-foreground">Find the best loan option</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -78,7 +79,7 @@ const LoanComparison = () => {
           {/* Loan 1 */}
           <div className="space-y-4">
             <h3 className="font-semibold text-primary text-center pb-2 border-b">LOAN 1</h3>
-            
+
             <CalculatorInput
               label="Amount"
               value={amount1}
@@ -86,7 +87,7 @@ const LoanComparison = () => {
               min={0}
               max={50000000}
               step={100000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="3500000"
             />
 
@@ -116,7 +117,7 @@ const LoanComparison = () => {
           {/* Loan 2 */}
           <div className="space-y-4">
             <h3 className="font-semibold text-primary text-center pb-2 border-b">LOAN 2</h3>
-            
+
             <CalculatorInput
               label="Amount"
               value={amount2}
@@ -124,7 +125,7 @@ const LoanComparison = () => {
               min={0}
               max={50000000}
               step={100000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="4000000"
             />
 
@@ -163,17 +164,17 @@ const LoanComparison = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.emi, loan2.emi) === 'loan1' ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
                 <p className={`text-xl font-bold ${getBetterOption(loan1.emi, loan2.emi) === 'loan1' ? 'text-green-600' : 'text-foreground'}`}>
-                  {formatCurrency(loan1.emi)}
+                  {formatAmount(loan1.emi)}
                 </p>
               </div>
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.emi, loan2.emi) === 'loan2' ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
                 <p className={`text-xl font-bold ${getBetterOption(loan1.emi, loan2.emi) === 'loan2' ? 'text-green-600' : 'text-foreground'}`}>
-                  {formatCurrency(loan2.emi)}
+                  {formatAmount(loan2.emi)}
                 </p>
               </div>
             </div>
             <p className="text-center text-sm text-muted-foreground mt-2">
-              Difference: {formatCurrency(getDifference(loan1.emi, loan2.emi))}
+              Difference: {formatAmount(getDifference(loan1.emi, loan2.emi))}
             </p>
           </div>
 
@@ -183,17 +184,17 @@ const LoanComparison = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.totalInterest, loan2.totalInterest) === 'loan1' ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
                 <p className={`text-lg font-bold ${getBetterOption(loan1.totalInterest, loan2.totalInterest) === 'loan1' ? 'text-green-600' : 'text-foreground'}`}>
-                  {formatCurrency(loan1.totalInterest)}
+                  {formatAmount(loan1.totalInterest)}
                 </p>
               </div>
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.totalInterest, loan2.totalInterest) === 'loan2' ? 'bg-green-500/10 border border-green-500/20' : ''}`}>
                 <p className={`text-lg font-bold ${getBetterOption(loan1.totalInterest, loan2.totalInterest) === 'loan2' ? 'text-green-600' : 'text-foreground'}`}>
-                  {formatCurrency(loan2.totalInterest)}
+                  {formatAmount(loan2.totalInterest)}
                 </p>
               </div>
             </div>
             <p className="text-center text-sm text-muted-foreground mt-2">
-              Difference: {formatCurrency(getDifference(loan1.totalInterest, loan2.totalInterest))}
+              Difference: {formatAmount(getDifference(loan1.totalInterest, loan2.totalInterest))}
             </p>
           </div>
 
@@ -203,17 +204,17 @@ const LoanComparison = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan1' ? 'bg-green-500/10 border-2 border-green-500' : ''}`}>
                 <p className={`text-xl font-bold ${getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan1' ? 'text-green-600' : 'text-primary'}`}>
-                  {formatCurrency(loan1.totalPayment)}
+                  {formatAmount(loan1.totalPayment)}
                 </p>
               </div>
               <div className={`text-center p-3 rounded ${getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan2' ? 'bg-green-500/10 border-2 border-green-500' : ''}`}>
                 <p className={`text-xl font-bold ${getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan2' ? 'text-green-600' : 'text-primary'}`}>
-                  {formatCurrency(loan2.totalPayment)}
+                  {formatAmount(loan2.totalPayment)}
                 </p>
               </div>
             </div>
             <p className="text-center text-sm text-muted-foreground mt-2">
-              You save: {formatCurrency(getDifference(loan1.totalPayment, loan2.totalPayment))}
+              You save: {formatAmount(getDifference(loan1.totalPayment, loan2.totalPayment))}
             </p>
           </div>
 

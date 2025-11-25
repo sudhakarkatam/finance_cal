@@ -5,10 +5,19 @@ import { Save, RotateCcw, Landmark, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
+
 const PPFCalculator = () => {
+  // PPF is an Indian specific scheme, so we enforce INR
+  const symbol = "₹";
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   const [yearlyInvestment, setYearlyInvestment] = useState(150000);
   const [years, setYears] = useState(15);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -214,8 +223,8 @@ const PPFCalculator = () => {
               </DialogContent>
             </Dialog>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -241,7 +250,7 @@ const PPFCalculator = () => {
           min={500}
           max={150000}
           step={500}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -256,8 +265,8 @@ const PPFCalculator = () => {
 
         <div className="bg-muted/30 p-3 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            • 15 years minimum lock-in period<br/>
-            • Extendable in blocks of 5 years<br/>
+            • 15 years minimum lock-in period<br />
+            • Extendable in blocks of 5 years<br />
             • Tax-free returns under Section 80C
           </p>
         </div>
@@ -265,7 +274,7 @@ const PPFCalculator = () => {
 
       <Card className="p-6 space-y-4 shadow-lg">
         <h3 className="text-lg font-semibold text-foreground">Results</h3>
-        
+
         <ResultChart
           principal={result.invested}
           returns={result.returns}
@@ -276,20 +285,20 @@ const PPFCalculator = () => {
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
             <span className="text-sm text-muted-foreground">Total invested</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.invested)}</span>
+            <span className="font-semibold text-foreground">{formatAmount(result.invested)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Interest earned</span>
-            <span className="font-semibold text-primary">{formatCurrency(result.returns)}</span>
+            <span className="font-semibold text-primary">{formatAmount(result.returns)}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">Maturity value</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.total)}</span>
+            <span className="text-xl font-bold text-primary">{formatAmount(result.total)}</span>
           </div>
         </div>
 
-        <Button 
-          className="w-full gap-2" 
+        <Button
+          className="w-full gap-2"
           size="lg"
           onClick={() => setSaveDialogOpen(true)}
         >

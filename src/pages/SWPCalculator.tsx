@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Save, RotateCcw, Calculator, Eye, EyeOff, Info } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import { calculateSWP, formatCurrency } from "@/lib/calculations";
+import { calculateSWP } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const SWPCalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
   const [investmentAmount, setInvestmentAmount] = useState(1000000);
   const [withdrawalPerMonth, setWithdrawalPerMonth] = useState(10000);
   const [expectedReturn, setExpectedReturn] = useState(12);
@@ -323,7 +325,7 @@ const SWPCalculator = () => {
           min={100000}
           max={1000000000}
           step={10000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -333,7 +335,7 @@ const SWPCalculator = () => {
           min={1000}
           max={1000000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -396,7 +398,7 @@ const SWPCalculator = () => {
                 Initial Investment
               </span>
               <span className="font-semibold text-foreground">
-                {formatCurrency(result.invested)}
+                {formatAmount(result.invested)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border">
@@ -404,7 +406,7 @@ const SWPCalculator = () => {
                 Total Investment
               </span>
               <span className="font-semibold text-foreground">
-                {formatCurrency(result.invested)}
+                {formatAmount(result.invested)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border">
@@ -412,7 +414,7 @@ const SWPCalculator = () => {
                 Total Withdrawn
               </span>
               <span className="font-semibold text-foreground">
-                {formatCurrency(result.totalWithdrawn)}
+                {formatAmount(result.totalWithdrawn)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border">
@@ -420,7 +422,7 @@ const SWPCalculator = () => {
                 Total Interest Earned
               </span>
               <span className="font-semibold text-foreground">
-                {formatCurrency(result.totalInterest)}
+                {formatAmount(result.totalInterest)}
               </span>
             </div>
             <div
@@ -432,7 +434,7 @@ const SWPCalculator = () => {
               <span
                 className={`text-xl font-bold ${result.finalBalance < 0 ? "text-destructive" : "text-primary"}`}
               >
-                {formatCurrency(result.finalBalance)}
+                {formatAmount(result.finalBalance)}
               </span>
             </div>
           </div>
@@ -444,7 +446,7 @@ const SWPCalculator = () => {
                   Inflation-Adjusted Final Value
                 </span>
                 <span className="font-semibold text-foreground">
-                  {formatCurrency(result.inflationAdjustedFinalValue)}
+                  {formatAmount(result.inflationAdjustedFinalValue)}
                 </span>
               </div>
             )}
@@ -464,7 +466,7 @@ const SWPCalculator = () => {
                   Sustainable Monthly Withdrawal
                 </span>
                 <span className="font-semibold text-foreground">
-                  {formatCurrency(result.sustainableWithdrawal)}
+                  {formatAmount(result.sustainableWithdrawal)}
                 </span>
               </div>
             )}
@@ -540,18 +542,18 @@ const SWPCalculator = () => {
                               {row.month}
                             </TableCell>
                             <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">
-                              {formatCurrency(row.startingBalance)}
+                              {formatAmount(row.startingBalance)}
                             </TableCell>
                             <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">
-                              +{formatCurrency(row.interestEarned)}
+                              +{formatAmount(row.interestEarned)}
                             </TableCell>
                             <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-red-600">
-                              -{formatCurrency(row.withdrawal)}
+                              -{formatAmount(row.withdrawal)}
                             </TableCell>
                             <TableCell
                               className={`text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold ${row.endingBalance < 0 ? "text-destructive" : ""}`}
                             >
-                              {formatCurrency(row.endingBalance)}
+                              {formatAmount(row.endingBalance)}
                             </TableCell>
                           </TableRow>
                         ))}

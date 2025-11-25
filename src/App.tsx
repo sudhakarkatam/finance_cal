@@ -35,6 +35,9 @@ import PercentageCalculator from "./pages/PercentageCalculator";
 import Settings from "./pages/Settings";
 import InflationCalculator from "./pages/InflationCalculator";
 import GSTCalculator from "./pages/GSTCalculator";
+import NPSCalculator from "./pages/NPSCalculator";
+import RentVsBuyCalculator from "./pages/RentVsBuyCalculator";
+import GlobalTaxCalculator from "./pages/GlobalTaxCalculator";
 
 const queryClient = new QueryClient();
 
@@ -274,6 +277,30 @@ const App = () => (
             element={
               <CalculatorLayout>
                 <IncomeTaxCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/global-tax"
+            element={
+              <CalculatorLayout>
+                <GlobalTaxCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/nps"
+            element={
+              <CalculatorLayout>
+                <NPSCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/rent-vs-buy"
+            element={
+              <CalculatorLayout>
+                <RentVsBuyCalculator />
               </CalculatorLayout>
             }
           />

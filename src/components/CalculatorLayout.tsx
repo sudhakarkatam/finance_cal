@@ -15,11 +15,13 @@ import {
   Settings,
   Flag,
   Percent,
+  Globe,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useSafeArea } from "@/hooks/use-safe-area";
+import { SettingsDialog } from "@/components/SettingsDialog";
 
 interface CalculatorLayoutProps {
   children: ReactNode;
@@ -73,6 +75,9 @@ const CalculatorLayout = ({
     { path: "/percentage", icon: Percent, label: "Percentage Cal" },
     // Hidden calculators - routes still accessible via direct URL
     { path: "/income-tax", icon: Receipt, label: "Income Tax" },
+    // { path: "/global-tax", icon: Globe, label: "Global Tax" },
+    { path: "/nps", icon: Briefcase, label: "NPS Calculator" },
+    { path: "/rent-vs-buy", icon: Home, label: "Rent vs Buy" },
     // { path: "/german-tax", icon: Flag, label: "Germany Tax" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
@@ -163,7 +168,8 @@ const CalculatorLayout = ({
             >
               <Menu className="w-5 h-5" />
             </Button>
-            <h1 className="text-lg font-bold">Financial Calculators</h1>
+            <h1 className="text-lg font-bold flex-1">Financial Calculators</h1>
+            <SettingsDialog />
           </header>
         )}
 

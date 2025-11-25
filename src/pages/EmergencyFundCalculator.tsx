@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, Shield, Calculator, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const EmergencyFundCalculator = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [monthlyExpenses, setMonthlyExpenses] = useState(50000);
   const [emergencyMonths, setEmergencyMonths] = useState(6);
   const [currentSavings, setCurrentSavings] = useState(100000);
@@ -222,7 +223,7 @@ const EmergencyFundCalculator = () => {
               min={1000}
               max={1000000}
               step={1000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="50000"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -253,7 +254,7 @@ const EmergencyFundCalculator = () => {
               min={0}
               max={10000000}
               step={1000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="100000"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -269,7 +270,7 @@ const EmergencyFundCalculator = () => {
               min={0}
               max={monthlyExpenses * 24}
               step={1000}
-              prefix="₹"
+              prefix={symbol}
               placeholder="0 (uses recommended amount)"
             />
             <p className="text-xs text-muted-foreground mt-1">

@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Save, RotateCcw, Repeat, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const RDCalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
   const [monthlyDeposit, setMonthlyDeposit] = useState(5000);
   const [interestRate, setInterestRate] = useState(6.5);
   const [tenure, setTenure] = useState(1); // in years
@@ -196,8 +197,8 @@ const RDCalculator = () => {
               </DialogContent>
             </Dialog>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -214,7 +215,7 @@ const RDCalculator = () => {
           min={100}
           max={100000}
           step={100}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -244,26 +245,26 @@ const RDCalculator = () => {
 
         <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
           <p className="text-xs text-primary-foreground/80 mb-1">Maturity Amount</p>
-          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.maturityAmount)}</p>
+          <p className="text-3xl font-bold text-primary-foreground">{formatAmount(result.maturityAmount)}</p>
         </div>
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
             <span className="text-sm text-muted-foreground">Total invested</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.invested)}</span>
+            <span className="font-semibold text-foreground">{formatAmount(result.invested)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Interest earned</span>
-            <span className="font-semibold text-primary">{formatCurrency(result.interest)}</span>
+            <span className="font-semibold text-primary">{formatAmount(result.interest)}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">Maturity value</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.maturityAmount)}</span>
+            <span className="text-xl font-bold text-primary">{formatAmount(result.maturityAmount)}</span>
           </div>
         </div>
 
-        <Button 
-          className="w-full gap-2" 
+        <Button
+          className="w-full gap-2"
           size="lg"
           onClick={() => setSaveDialogOpen(true)}
         >

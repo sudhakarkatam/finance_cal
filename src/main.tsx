@@ -23,6 +23,7 @@ ${event.error?.stack || "No stack trace"}
 
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { CurrencyProvider } from "./context/CurrencyContext";
 import "./index.css";
 
 // Function to update CSS variables with safe area insets
@@ -104,7 +105,11 @@ initializeApp()
     if (!root) {
       throw new Error("Root element not found");
     }
-    createRoot(root).render(<App />);
+    createRoot(root).render(
+      <CurrencyProvider>
+        <App />
+      </CurrencyProvider>
+    );
   })
   .catch((error) => {
     console.error("App initialization failed:", error);

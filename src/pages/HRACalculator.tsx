@@ -1,20 +1,37 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Calculator, Home, IndianRupee, Info } from 'lucide-react';
+import { Save, RotateCcw, Home, Info } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { calculateHRA, formatCurrency } from '@/lib/calculations';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { calculateHRA } from '@/lib/calculations';
+import { useCurrency } from '@/hooks/useCurrency';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const HRACalculator = () => {
+  const { formatAmount, symbol } = useCurrency();
+
+  // State variables
   const [basicSalary, setBasicSalary] = useState(50000);
   const [dearnessAllowance, setDearnessAllowance] = useState(10000);
   const [hraReceived, setHraReceived] = useState(20000);
   const [monthlyRent, setMonthlyRent] = useState(25000);
-  const [cityType, setCityType] = useState('metro');
+  const [cityType, setCityType] = useState<'metro' | 'non-metro'>('metro');
+
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
@@ -216,7 +233,7 @@ const HRACalculator = () => {
             min={0}
             max={10000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -226,7 +243,7 @@ const HRACalculator = () => {
             min={0}
             max={5000000}
             step={500}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -236,7 +253,7 @@ const HRACalculator = () => {
             min={0}
             max={5000000}
             step={500}
-            prefix="₹"
+            prefix={symbol}
           />
 
           <CalculatorInput
@@ -246,13 +263,13 @@ const HRACalculator = () => {
             min={0}
             max={10000000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
         </div>
 
         <div className="bg-card p-4 rounded-lg border">
           <Label className="text-sm font-medium text-foreground mb-3 block">City of Residence</Label>
-          <Select value={cityType} onValueChange={setCityType}>
+          <Select value={cityType} onValueChange={(value: 'metro' | 'non-metro') => setCityType(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select city type" />
             </SelectTrigger>
@@ -276,19 +293,19 @@ const HRACalculator = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center py-2 border-b border-blue-200">
               <span className="text-blue-700">Annual Basic Salary:</span>
-              <span className="font-semibold text-blue-800">{formatCurrency(result.annualBasicSalary)}</span>
+              <span className="font-semibold text-blue-800">{formatAmount(result.annualBasicSalary)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-blue-200">
               <span className="text-blue-700">Annual Dearness Allowance:</span>
-              <span className="font-semibold text-blue-800">{formatCurrency(result.annualDearnessAllowance)}</span>
+              <span className="font-semibold text-blue-800">{formatAmount(result.annualDearnessAllowance)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-blue-200">
               <span className="text-blue-700">Annual HRA Received:</span>
-              <span className="font-semibold text-blue-800">{formatCurrency(result.annualHRAReceived)}</span>
+              <span className="font-semibold text-blue-800">{formatAmount(result.annualHRAReceived)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-blue-200">
               <span className="text-blue-700">Annual Rent Paid:</span>
-              <span className="font-semibold text-blue-800">{formatCurrency(result.annualRent)}</span>
+              <span className="font-semibold text-blue-800">{formatAmount(result.annualRent)}</span>
             </div>
           </div>
         </div>
@@ -297,15 +314,15 @@ const HRACalculator = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 text-center">
             <p className="text-xs text-orange-700 mb-1">Actual HRA Received</p>
-            <p className="text-lg font-bold text-orange-800">{formatCurrency(result.actualHRA)}</p>
+            <p className="text-lg font-bold text-orange-800">{formatAmount(result.actualHRA)}</p>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
             <p className="text-xs text-purple-700 mb-1">Rent - 10% of Basic</p>
-            <p className="text-lg font-bold text-purple-800">{formatCurrency(result.rentMinus10PercentBasic)}</p>
+            <p className="text-lg font-bold text-purple-800">{formatAmount(result.rentMinus10PercentBasic)}</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
             <p className="text-xs text-green-700 mb-1">{cityType === 'metro' ? '50% of Salary' : '40% of Salary'}</p>
-            <p className="text-lg font-bold text-green-800">{formatCurrency(result.metroNonMetroLimit)}</p>
+            <p className="text-lg font-bold text-green-800">{formatAmount(result.metroNonMetroLimit)}</p>
           </div>
         </div>
 
@@ -313,13 +330,13 @@ const HRACalculator = () => {
         <div className="space-y-3">
           <div className="bg-gradient-to-r from-green-500 to-green-600 p-5 rounded-xl text-center shadow-md">
             <p className="text-xs text-green-100 mb-1">HRA Exemption (Tax-Free)</p>
-            <p className="text-2xl font-bold text-green-50">{formatCurrency(result.hraExemption)}</p>
+            <p className="text-2xl font-bold text-green-50">{formatAmount(result.hraExemption)}</p>
           </div>
 
           {result.taxableHRA > 0 && (
             <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-xl text-center shadow-md">
               <p className="text-xs text-red-100 mb-1">Taxable HRA</p>
-              <p className="text-xl font-bold text-red-50">{formatCurrency(result.taxableHRA)}</p>
+              <p className="text-xl font-bold text-red-50">{formatAmount(result.taxableHRA)}</p>
             </div>
           )}
         </div>
@@ -331,19 +348,19 @@ const HRACalculator = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
               <div className="bg-white/70 p-3 rounded-lg border border-emerald-100">
                 <p className="text-xs text-emerald-600 mb-1">5% Tax Slab</p>
-                <p className="text-sm font-bold text-emerald-800">{formatCurrency(Math.round(result.hraExemption * 0.05))}</p>
+                <p className="text-sm font-bold text-emerald-800">{formatAmount(Math.round(result.hraExemption * 0.05))}</p>
               </div>
               <div className="bg-white/70 p-3 rounded-lg border border-emerald-100">
                 <p className="text-xs text-emerald-600 mb-1">20% Tax Slab</p>
-                <p className="text-sm font-bold text-emerald-800">{formatCurrency(Math.round(result.hraExemption * 0.2))}</p>
+                <p className="text-sm font-bold text-emerald-800">{formatAmount(Math.round(result.hraExemption * 0.2))}</p>
               </div>
               <div className="bg-white/70 p-3 rounded-lg border border-emerald-100">
                 <p className="text-xs text-emerald-600 mb-1">30% Tax Slab</p>
-                <p className="text-sm font-bold text-emerald-800">{formatCurrency(Math.round(result.hraExemption * 0.3))}</p>
+                <p className="text-sm font-bold text-emerald-800">{formatAmount(Math.round(result.hraExemption * 0.3))}</p>
               </div>
               <div className="bg-white/70 p-3 rounded-lg border border-emerald-100">
                 <p className="text-xs text-emerald-600 mb-1">Max Savings</p>
-                <p className="text-sm font-bold text-emerald-800">{formatCurrency(Math.round(result.hraExemption * 0.3))}</p>
+                <p className="text-sm font-bold text-emerald-800">{formatAmount(Math.round(result.hraExemption * 0.3))}</p>
               </div>
             </div>
           </div>

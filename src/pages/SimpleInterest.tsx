@@ -6,11 +6,13 @@ import CalculatorInput from "@/components/ui/CalculatorInput";
 import DateRangeInput from "@/components/ui/DateRangeInput";
 import ResultChart from "@/components/ui/ResultChart";
 import SaveDialog from "@/components/SaveDialog";
-import { calculateSimpleInterest, formatCurrency } from "@/lib/calculations";
+import { calculateSimpleInterest } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import { differenceInDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const SimpleInterest = () => {
+  const { formatAmount, symbol } = useCurrency();
   const [principal, setPrincipal] = useState(100000);
   const [rate, setRate] = useState(6);
   const [startDate, setStartDate] = useState<Date>();
@@ -41,18 +43,18 @@ const SimpleInterest = () => {
     let years = end.getFullYear() - start.getFullYear();
     let months = end.getMonth() - start.getMonth();
     let days = end.getDate() - start.getDate();
-    
+
     if (days < 0) {
       months--;
       const lastDayOfPrevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
       days += lastDayOfPrevMonth.getDate();
     }
-    
+
     if (months < 0) {
       years--;
       months += 12;
     }
-    
+
     return { years, months, days };
   };
 
@@ -233,7 +235,7 @@ const SimpleInterest = () => {
           min={1000}
           max={10000000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -273,7 +275,7 @@ const SimpleInterest = () => {
               Principal amount
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.principal)}
+              {formatAmount(result.principal)}
             </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
@@ -281,7 +283,7 @@ const SimpleInterest = () => {
               Total interest
             </span>
             <span className="font-semibold text-primary">
-              {formatCurrency(result.interest)}
+              {formatAmount(result.interest)}
             </span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
@@ -289,7 +291,7 @@ const SimpleInterest = () => {
               Total amount
             </span>
             <span className="text-xl font-bold text-primary">
-              {formatCurrency(result.total)}
+              {formatAmount(result.total)}
             </span>
           </div>
         </div>

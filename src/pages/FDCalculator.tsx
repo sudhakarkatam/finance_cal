@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
-import { formatCurrency } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const FDCalculator = () => {
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [depositAmount, setDepositAmount] = useState(100000);
   const [interestRate, setInterestRate] = useState(7);
   const [tenure, setTenure] = useState(1); // in years
@@ -241,8 +242,8 @@ const FDCalculator = () => {
               </DialogContent>
             </Dialog>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleReset}
             className="gap-2"
@@ -259,7 +260,7 @@ const FDCalculator = () => {
           min={1000}
           max={10000000}
           step={1000}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -337,8 +338,8 @@ const FDCalculator = () => {
           </div>
         )}
 
-        <Button 
-          className="w-full gap-2" 
+        <Button
+          className="w-full gap-2"
           size="lg"
           onClick={() => setSaveDialogOpen(true)}
         >

@@ -10,12 +10,13 @@ import {
   calculateStepUpMutualFund,
   calculateInflationAdjustedSIP,
   calculateStepUpSIPWithComparison,
-  formatCurrency,
 } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const MutualFund = () => {
+  const { formatAmount, symbol } = useCurrency();
   // Basic SIP inputs
   const [monthlyInvestment, setMonthlyInvestment] = useState(100000);
   const [expectedReturn, setExpectedReturn] = useState(12);
@@ -154,7 +155,7 @@ const MutualFund = () => {
           min={0}
           max={10000000}
           step={500}
-          prefix="₹"
+          prefix={symbol}
         />
 
         <CalculatorInput
@@ -286,13 +287,13 @@ const MutualFund = () => {
                 Total Invested
               </p>
               <p className="text-base font-bold text-foreground">
-                {formatCurrency(result.invested)}
+                {formatAmount(result.invested)}
               </p>
             </div>
             <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
               <p className="text-xs text-muted-foreground mb-1">Returns</p>
               <p className="text-base font-bold text-primary">
-                {formatCurrency(result.returns)}
+                {formatAmount(result.returns)}
               </p>
             </div>
           </div>
@@ -303,7 +304,7 @@ const MutualFund = () => {
                 {inflationEnabled ? "Inflation-Adjusted Value" : "Total Value"}
               </p>
               <p className="text-2xl font-bold text-primary-foreground">
-                {formatCurrency(result.total)}
+                {formatAmount(result.total)}
               </p>
             </div>
 
@@ -313,7 +314,7 @@ const MutualFund = () => {
                   Normal Value (without inflation)
                 </p>
                 <p className="text-xl font-bold text-green-50">
-                  {formatCurrency(result.normalTotal)}
+                  {formatAmount(result.normalTotal)}
                 </p>
               </div>
             )}
@@ -329,13 +330,13 @@ const MutualFund = () => {
                 <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
                   <p className="text-xs text-blue-600 mb-1">Without Step-Up</p>
                   <p className="text-lg font-bold text-blue-800">
-                    {formatCurrency(comparisonResult.withoutStepUp.total)}
+                    {formatAmount(comparisonResult.withoutStepUp.total)}
                   </p>
                 </div>
                 <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
                   <p className="text-xs text-green-600 mb-1">With Step-Up</p>
                   <p className="text-lg font-bold text-green-800">
-                    {formatCurrency(comparisonResult.withStepUp.total)}
+                    {formatAmount(comparisonResult.withStepUp.total)}
                   </p>
                 </div>
                 <div className="bg-gradient-to-r from-green-100 to-emerald-100 p-3 rounded-lg text-center border border-green-200">
@@ -344,7 +345,7 @@ const MutualFund = () => {
                     +{comparisonResult.percentageDifference}%
                   </p>
                   <p className="text-sm font-semibold text-green-700">
-                    {formatCurrency(comparisonResult.difference)}
+                    {formatAmount(comparisonResult.difference)}
                   </p>
                 </div>
               </div>

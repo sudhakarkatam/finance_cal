@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import { formatCurrency } from "@/lib/calculations";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import ResultChart from "@/components/ui/ResultChart";
 
 const RetirementPlanner = () => {
+  const { formatAmount, symbol } = useCurrency();
   // Basic inputs
   const [currentAge, setCurrentAge] = useState(30);
   const [retirementAge, setRetirementAge] = useState(60);
@@ -194,9 +195,9 @@ const RetirementPlanner = () => {
       totalContributions: Math.round(futureContributions),
       totalReturns: Math.round(
         corpusAtRetirement -
-          futureContributions -
-          futureSavings +
-          currentSavings,
+        futureContributions -
+        futureSavings +
+        currentSavings,
       ),
       shortfall: Math.round(shortfall),
       requiredMonthlyContribution: Math.round(
@@ -334,7 +335,7 @@ const RetirementPlanner = () => {
             min={0}
             max={100000000}
             step={100000}
-            prefix="₹"
+            prefix={symbol}
             placeholder="500000"
           />
 
@@ -345,7 +346,7 @@ const RetirementPlanner = () => {
             min={0}
             max={500000}
             step={1000}
-            prefix="₹"
+            prefix={symbol}
           />
         </div>
 
@@ -392,7 +393,7 @@ const RetirementPlanner = () => {
               min={10000}
               max={1000000}
               step={10000}
-              prefix="₹"
+              prefix={symbol}
             />
           </div>
 
@@ -416,7 +417,7 @@ const RetirementPlanner = () => {
                 min={0}
                 max={lifestyleExpenses}
                 step={5000}
-                prefix="₹"
+                prefix={symbol}
               />
             )}
           </div>
@@ -485,10 +486,10 @@ const RetirementPlanner = () => {
                         <TableCell>{row.year}</TableCell>
                         <TableCell>{row.age}</TableCell>
                         <TableCell>
-                          {formatCurrency(row.contributionsThisYear)}
+                          {formatAmount(row.contributionsThisYear)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(row.portfolioValue)}
+                          {formatAmount(row.portfolioValue)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -510,7 +511,7 @@ const RetirementPlanner = () => {
             Projected Corpus at Retirement
           </p>
           <p className="text-3xl font-bold text-primary-foreground">
-            {formatCurrency(result.corpusAtRetirement)}
+            {formatAmount(result.corpusAtRetirement)}
           </p>
         </div>
 
@@ -520,13 +521,13 @@ const RetirementPlanner = () => {
               Total contributions
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.totalContributions)}
+              {formatAmount(result.totalContributions)}
             </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
             <span className="text-sm text-muted-foreground">Total returns</span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.totalReturns)}
+              {formatAmount(result.totalReturns)}
             </span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
@@ -534,14 +535,14 @@ const RetirementPlanner = () => {
               Required corpus
             </span>
             <span className="font-semibold text-foreground">
-              {formatCurrency(result.requiredCorpus)}
+              {formatAmount(result.requiredCorpus)}
             </span>
           </div>
           {result.shortfall > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Shortfall</span>
               <span className="font-semibold text-red-600">
-                {formatCurrency(result.shortfall)}
+                {formatAmount(result.shortfall)}
               </span>
             </div>
           )}
@@ -552,7 +553,7 @@ const RetirementPlanner = () => {
                 : "Required monthly contribution"}
             </span>
             <span className="text-xl font-bold text-primary">
-              {formatCurrency(result.requiredMonthlyContribution)}
+              {formatAmount(result.requiredMonthlyContribution)}
             </span>
           </div>
           {result.isAchievable && result.excessContribution > 0 && (
@@ -562,13 +563,13 @@ const RetirementPlanner = () => {
                   You can reduce your contribution by
                 </span>
                 <span className="font-semibold text-green-800">
-                  {formatCurrency(result.excessContribution)}/month
+                  {formatAmount(result.excessContribution)}/month
                 </span>
               </div>
               <p className="text-xs text-green-600 mt-1">
                 Your current contribution of{" "}
-                {formatCurrency(monthlyContribution)} is{" "}
-                {formatCurrency(
+                {formatAmount(monthlyContribution)} is{" "}
+                {formatAmount(
                   monthlyContribution - result.requiredMonthlyContribution,
                 )}{" "}
                 more than needed
@@ -582,9 +583,9 @@ const RetirementPlanner = () => {
             <Alert>
               <AlertDescription className="text-green-800">
                 🎉 Excellent! Your current monthly contribution of{" "}
-                {formatCurrency(monthlyContribution)} exceeds the requirement.
-                You can reduce it by {formatCurrency(result.excessContribution)}{" "}
-                to {formatCurrency(result.requiredMonthlyContribution)} per
+                {formatAmount(monthlyContribution)} exceeds the requirement.
+                You can reduce it by {formatAmount(result.excessContribution)}{" "}
+                to {formatAmount(result.requiredMonthlyContribution)} per
                 month while still achieving your retirement goal comfortably.
               </AlertDescription>
             </Alert>
@@ -592,7 +593,7 @@ const RetirementPlanner = () => {
             <Alert>
               <AlertDescription className="text-green-800">
                 🎉 Perfect! With your current monthly contribution of{" "}
-                {formatCurrency(monthlyContribution)}, you will achieve your
+                {formatAmount(monthlyContribution)}, you will achieve your
                 retirement goal exactly as planned.
               </AlertDescription>
             </Alert>
@@ -601,7 +602,7 @@ const RetirementPlanner = () => {
           <Alert>
             <AlertDescription className="text-orange-800">
               To achieve your retirement goal, you need to contribute{" "}
-              {formatCurrency(result.requiredMonthlyContribution)} per month.
+              {formatAmount(result.requiredMonthlyContribution)} per month.
               Consider increasing your monthly contribution or extending your
               working years.
             </AlertDescription>
