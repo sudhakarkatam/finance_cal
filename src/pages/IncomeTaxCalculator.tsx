@@ -107,6 +107,7 @@ const IncomeTaxCalculator = () => {
   const [section80U, setSection80U] = useState(0);
   const [otherDeductionsNew, setOtherDeductionsNew] = useState(0);
   const [otherDeductionsOld, setOtherDeductionsOld] = useState(0);
+  const [section80GG, setSection80GG] = useState(0);
 
   // UI State
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -167,7 +168,7 @@ const IncomeTaxCalculator = () => {
       section80EEA,
       section80U,
       otherDeductionsNew,
-      otherDeductionsOld,
+      otherDeductionsOld: otherDeductionsOld + section80GG,
     });
   }, [
     financialYear,
@@ -205,6 +206,7 @@ const IncomeTaxCalculator = () => {
     section80U,
     otherDeductionsNew,
     otherDeductionsOld,
+    section80GG,
   ]);
 
 
@@ -244,6 +246,7 @@ const IncomeTaxCalculator = () => {
     setSection80U(0);
     setOtherDeductionsNew(0);
     setOtherDeductionsOld(0);
+    setSection80GG(0);
   };
 
   // Info Icon Component
@@ -1039,6 +1042,14 @@ const IncomeTaxCalculator = () => {
                           <InfoIcon fieldName="otherDeductionsOld" />
                         </div>
                         <CalculatorInput label="" value={otherDeductionsOld} onChange={setOtherDeductionsOld} prefix="₹" />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Label>Section 80GG (Rent Paid)</Label>
+                          <InfoIcon fieldName="section80GG" />
+                        </div>
+                        <CalculatorInput label="" value={section80GG} onChange={setSection80GG} prefix="₹" />
                       </div>
                     </div>
                   </div>
