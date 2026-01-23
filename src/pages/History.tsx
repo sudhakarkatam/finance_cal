@@ -92,7 +92,7 @@ const History = () => {
     const k = key.toLowerCase();
 
     // Currency
-    if (['amount', 'price', 'cost', 'salary', 'income', 'expense', 'value', 'total', 'profit', 'interest', 'tax', 'returns', 'invested', 'maturity'].some(term => k.includes(term))) {
+    if (['amount', 'price', 'cost', 'salary', 'income', 'expense', 'value', 'total', 'profit', 'interest', 'tax', 'returns', 'invested', 'maturity', 'toll', 'food'].some(term => k.includes(term))) {
       return formatAmount(value);
     }
 
