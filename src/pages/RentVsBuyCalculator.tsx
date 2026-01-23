@@ -17,16 +17,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend
-} from "recharts";
+
 
 const RentVsBuyCalculator = () => {
     const { formatAmount, symbol } = useCurrency();
@@ -181,10 +172,15 @@ const RentVsBuyCalculator = () => {
             betterOption,
             totalRentPaid,
             totalEmiPaid,
+            totalMaintenance, // Exporting for UI
+            totalPropertyTax, // Exporting for UI
             finalPropertyValue: currentPropertyValue,
             chartData,
             initialBuyingCost,
-            initialRentingCost
+            initialRentingCost,
+            // Total Cash Spent (Outflow)
+            totalSpentBuying: initialBuyingCost + totalEmiPaid + totalMaintenance + totalPropertyTax + (homeInsurance * (months / 12)),
+            totalSpentRenting: initialRentingCost + totalRentPaid + (renterInsurance * months)
         };
     }, [propertyPrice, downPaymentPercent, loanInterest, loanTenure, appreciationRate, maintenanceRate, propertyTaxRate, homeInsurance, buyingClosingCosts, sellingCosts, monthlyRent, rentInflation, securityDeposit, brokerage, renterInsurance, investmentReturn]);
 
@@ -458,17 +454,7 @@ const RentVsBuyCalculator = () => {
                 </Button>
             </Card>
 
-            <Card className="p-6 bg-primary/5 border-primary/20">
-                <div className="text-center space-y-2">
-                    <h3 className="text-lg font-medium">Verdict after {loanTenure} years</h3>
-                    <p className="text-3xl font-bold text-primary">
-                        {result.betterOption} is better
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        by approximately {formatAmount(result.difference)} in Net Worth
-                    </p>
-                </div>
-            </Card>
+
 
             <div className="grid md:grid-cols-2 gap-4">
                 <Card className="p-6 space-y-4">
@@ -512,47 +498,92 @@ const RentVsBuyCalculator = () => {
                 </Card>
             </div>
 
-            <Card className="p-6 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Net Worth Projection</h3>
-                <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={result.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorBuy" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="colorRent" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <XAxis dataKey="year" label={{ value: 'Years', position: 'insideBottomRight', offset: -5 }} />
-                            <YAxis tickFormatter={(value) => `${value / 100000}L`} />
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <Tooltip
-                                formatter={(value: number) => formatAmount(value)}
-                                labelFormatter={(label) => `Year ${label}`}
-                            />
-                            <Legend />
-                            <Area
-                                type="monotone"
-                                dataKey="Buying"
-                                stroke="#16a34a"
-                                fillOpacity={1}
-                                fill="url(#colorBuy)"
-                                name="Buying Net Worth"
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="Renting"
-                                stroke="#2563eb"
-                                fillOpacity={1}
-                                fill="url(#colorRent)"
-                                name="Renting Net Worth"
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
+            {/* Cash Flow Analysis - New Section for Clarity */}
+            <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Cash Outflow Analysis (Money Spent)</h3>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <span className="font-medium text-muted-foreground">Total Paid in Rent</span>
+                            <span className="font-bold">{formatAmount(result.totalRentPaid)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>+ Security & Brokerage</span>
+                            <span>{formatAmount(result.initialRentingCost)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t mt-2">
+                            <span className="font-bold text-blue-700">Total Spent (Renting)</span>
+                            <span className="font-bold text-xl text-blue-700">{formatAmount(result.totalSpentRenting)}</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <span className="font-medium text-muted-foreground">Total Paid in EMIs</span>
+                            <span className="font-bold">{formatAmount(result.totalEmiPaid)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>+ Down Payment & Closing</span>
+                            <span>{formatAmount(result.initialBuyingCost)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>+ Maintenance & Tax</span>
+                            <span>{formatAmount(result.totalMaintenance + result.totalPropertyTax)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t mt-2">
+                            <span className="font-bold text-green-700">Total Spent (Buying)</span>
+                            <span className="font-bold text-xl text-green-700">{formatAmount(result.totalSpentBuying)}</span>
+                        </div>
+                    </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 text-center bg-muted p-2 rounded">
+                    * "Total Spent" is the amount that left your pocket. Net Worth is what you have left (Property Value or Investments).
+                </p>
+            </Card>
+
+            {/* Final Verdict & Asset Comparison */}
+            <Card className="p-6 bg-primary/5 border-primary/20">
+                <div className="text-center space-y-4">
+                    <div>
+                        <h3 className="text-lg font-medium mb-1">Financial Verdict after {loanTenure} years</h3>
+                        <p className="text-3xl font-bold text-primary">
+                            {result.betterOption} wins by {formatAmount(result.difference)}
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mt-6 text-left">
+                        <div className={`p-4 rounded-lg border-2 ${result.betterOption === 'Buying' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900' : 'bg-muted border-transparent'}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Home className="w-5 h-5 text-green-700" />
+                                <h4 className="font-bold text-green-800 dark:text-green-400">If you Buy...</h4>
+                            </div>
+                            <p className="text-sm font-semibold mb-1">
+                                You own a Property worth <span className="text-base">{formatAmount(result.finalPropertyValue)}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                The loan is fully paid off. This is a physical asset you live in or sell.
+                            </p>
+                            <div className="mt-2 text-xs font-medium text-green-700 bg-green-100 dark:bg-green-900/40 p-1.5 rounded inline-block">
+                                Net Worth: {formatAmount(result.buyingNetWorth)}
+                            </div>
+                        </div>
+
+                        <div className={`p-4 rounded-lg border-2 ${result.betterOption === 'Renting' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-900' : 'bg-muted border-transparent'}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="w-5 h-5 text-blue-700" />
+                                <h4 className="font-bold text-blue-800 dark:text-blue-400">If you Rent...</h4>
+                            </div>
+                            <p className="text-sm font-semibold mb-1">
+                                You have Investments worth <span className="text-base">{formatAmount(result.rentingNetWorth)}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                You do NOT own the house. Instead, you have liquid cash/investments generated from savings.
+                            </p>
+                            <div className="mt-2 text-xs font-medium text-blue-700 bg-blue-100 dark:bg-blue-900/40 p-1.5 rounded inline-block">
+                                Net Worth: {formatAmount(result.rentingNetWorth)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </Card>
 
@@ -563,7 +594,11 @@ const RentVsBuyCalculator = () => {
                 inputs={{ propertyPrice, monthlyRent, loanTenure, investmentReturn }}
                 results={{
                     buyingNetWorth: result.buyingNetWorth,
-                    rentingNetWorth: result.rentingNetWorth
+                    rentingNetWorth: result.rentingNetWorth,
+                    totalRentPaid: result.totalRentPaid,
+                    totalEmiPaid: result.totalEmiPaid,
+                    totalSpentBuying: result.totalSpentBuying,
+                    totalSpentRenting: result.totalSpentRenting
                 }}
             />
         </div>
