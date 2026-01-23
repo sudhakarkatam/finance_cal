@@ -42,7 +42,9 @@ interface SaveDialogProps {
   | "nps"
   | "rent-vs-buy"
   | "global-tax"
-  | "epf";
+  | "epf"
+  | "time-cost"
+  | "trip-cost";
   inputs: Record<string, number | string>;
   results: Record<string, number>;
 }

@@ -38,6 +38,8 @@ import GSTCalculator from "./pages/GSTCalculator";
 import NPSCalculator from "./pages/NPSCalculator";
 import RentVsBuyCalculator from "./pages/RentVsBuyCalculator";
 import GlobalTaxCalculator from "./pages/GlobalTaxCalculator";
+import TimeCostCalculator from "./pages/TimeCostCalculator";
+import TripCostCalculator from "./pages/TripCostCalculator";
 
 const queryClient = new QueryClient();
 
@@ -312,11 +314,28 @@ const App = () => (
               </CalculatorLayout>
             }
           />
+
           <Route
             path="/settings"
             element={
               <CalculatorLayout>
                 <Settings />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/time-cost"
+            element={
+              <CalculatorLayout>
+                <TimeCostCalculator />
+              </CalculatorLayout>
+            }
+          />
+          <Route
+            path="/trip-cost"
+            element={
+              <CalculatorLayout>
+                <TripCostCalculator />
               </CalculatorLayout>
             }
           />

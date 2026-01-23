@@ -40,6 +40,7 @@ import {
   GraduationCap as GraduationCapIcon,
   Shield,
   Globe,
+  Clock,
 } from "lucide-react";
 
 interface CalculatorCard {
@@ -227,7 +228,24 @@ const Home = () => {
       available: true,
       color: "blue",
     },
+    {
+      title: "Time-Cost ",
+      icon: Clock,
+      path: "/time-cost",
+      description: "Is it worth it?",
+      available: true,
+      color: "red",
+    },
+    {
+      title: "Trip Cost",
+      icon: Car,
+      path: "/trip-cost",
+      description: "Real trip cost",
+      available: true,
+      color: "blue",
+    },
   ];
+
 
   const handleCardClick = (card: CalculatorCard) => {
     if (card.available) {
