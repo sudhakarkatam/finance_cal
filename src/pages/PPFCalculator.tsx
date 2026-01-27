@@ -6,6 +6,7 @@ import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 
 const PPFCalculator = () => {
@@ -223,6 +224,7 @@ const PPFCalculator = () => {
               </DialogContent>
             </Dialog>
           </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -233,6 +235,13 @@ const PPFCalculator = () => {
             Reset
           </Button>
         </div>
+
+        <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-xs ml-2">
+            This calculator is designed for Indian financial rules (Rupees ₹).
+          </AlertDescription>
+        </Alert>
 
         <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
           <p className="text-sm text-blue-800 dark:text-blue-200">

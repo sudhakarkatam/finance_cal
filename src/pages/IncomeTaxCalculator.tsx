@@ -707,6 +707,13 @@ const IncomeTaxCalculator = () => {
         </div>
       </div>
 
+      <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+        <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+        <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-xs ml-2">
+          This calculator is designed for Indian financial rules (Rupees ₹).
+        </AlertDescription>
+      </Alert>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Inputs */}
         <div className="lg:col-span-5 space-y-6">

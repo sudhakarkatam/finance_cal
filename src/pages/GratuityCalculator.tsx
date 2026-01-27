@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
@@ -268,6 +269,13 @@ const GratuityCalculator = () => {
             Reset
           </Button>
         </div>
+
+        <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-xs ml-2">
+            This calculator is designed for Indian financial rules (Rupees ₹).
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">

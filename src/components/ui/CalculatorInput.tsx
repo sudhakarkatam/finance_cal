@@ -47,17 +47,40 @@ const CalculatorInput = ({
     return new Intl.NumberFormat(locale).format(num);
   };
 
-  // Helper function to parse number from comma-separated string
+  // Helper function to parse number from formatted string
   const parseNumberFromString = (str: string): number => {
-    // Remove commas and parse as number
-    const numStr = str.replace(/,/g, '');
-    return Number(numStr);
+    if (!str) return 0;
+
+    // Check if locale uses comma as decimal separator (differs from standard JS Number parsing)
+    // A simple heuristic: if formatted 1.1 comes out as "1,1", then comma is decimal.
+    const isCommaDecimal = new Intl.NumberFormat(locale).format(1.1).includes(',');
+
+    let cleanStr = str;
+    if (isCommaDecimal) {
+      // Remove thousands separator (dots) and replace decimal comma with dot
+      cleanStr = str.replace(/\./g, '').replace(/,/g, '.');
+    } else {
+      // Remove thousands separator (commas)
+      cleanStr = str.replace(/,/g, '');
+    }
+
+    return Number(cleanStr);
   };
 
-  // Update display value when prop value changes
+  // Update display value when prop value changes, but avoid overriding user input while typing
+  // if the parsed values match.
   useEffect(() => {
-    setDisplayValue(formatNumberWithCommas(value));
-  }, [value]);
+    const currentParsed = parseNumberFromString(displayValue);
+    // If the prop value matches what we currently have (parsed), don't reformat yet. 
+    // This allows typing "1000" without it instantly becoming "1,000" until blur or significant change.
+    // However, if the prop value is completely different (external update), we MUST update.
+
+    // Exact equality check might fail for floats, so use small epsilon or just loose check?
+    // Actually, simply checking if (value === currentParsed) is enough for most cases.
+    if (value !== currentParsed) {
+      setDisplayValue(formatNumberWithCommas(value));
+    }
+  }, [value, locale]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -68,16 +91,50 @@ const CalculatorInput = ({
       return;
     }
 
-    // Allow partial numbers while typing (including decimals for interest rates)
-    // Check if it's a decimal number or whole number with commas
-    if (/^\d*\.?\d*$/.test(inputValue.replace(/,/g, ''))) {
-      setDisplayValue(inputValue);
+    // Determine allowed characters based on locale
+    const isCommaDecimal = new Intl.NumberFormat(locale).format(1.1).includes(',');
+    const validRegex = isCommaDecimal
+      ? /^[\d.]*(,[\d]*)?$/  // Euro style: allows digits, dots (thousands) and one comma
+      : /^[\d,]*(\.[\d]*)?$/; // US/IN style: allows digits, commas (thousands) and one dot
 
-      // Only update parent state if we have a valid number
-      const numValue = parseNumberFromString(inputValue);
-      if (!isNaN(numValue) && numValue >= 0) {
-        onChange(numValue);
-      }
+    // However, for typing convenience, we usually just want to validate that it COULD be a number
+    // Simplest approach for "controlled" input that doesn't fight the user:
+    // Just allow digits, dots, and commas during typing, but validate the parsed number.
+
+    // Let's rely on the parsing logic to check validity.
+    // But we need to prevent invalid multiple separators
+
+    // Simple check:
+    if (isCommaDecimal) {
+      // Can't have more than one comma
+      if ((inputValue.match(/,/g) || []).length > 1) return;
+      // Allowed chars: digits, dot, comma
+      if (!/^[\d.,]*$/.test(inputValue)) return;
+    } else {
+      // Can't have more than one dot
+      if ((inputValue.match(/\./g) || []).length > 1) return;
+      // Allowed chars: digits, dot, comma
+      if (!/^[\d.,]*$/.test(inputValue)) return;
+    }
+
+    setDisplayValue(inputValue);
+
+    // Only update parent state if we have a valid number
+    const numValue = parseNumberFromString(inputValue);
+    if (!isNaN(numValue) && numValue >= 0) {
+      // Debounce or just update? Updating immediately can cause re-formatting if parent passes back value.
+      // The parent usually passes back 'value'. If we call onChange, parent updates 'value', which triggers useEffect -> setDisplayValue(formatted).
+      // This 'round trip' reformats the user's input while they are typing, which is annoying (cursor jumps, partially typed stuff changes).
+
+      // Fix: Don't update parent if the parsed value is the same as current prop value?
+      // Or better: The useEffect [value] dependency causes the reformat.
+      // We should ONLY reformatted if the *prop* value changes externally, OR on Blur.
+      // But if we don't update parent, the calculation results won't update live.
+
+      // Compromise: Update parent always, BUT check in useEffect if we need to update displayValue.
+      // If the 'value' prop matches the parsed current 'displayValue', don't overwrite 'displayValue'.
+
+      onChange(numValue);
     }
   };
 

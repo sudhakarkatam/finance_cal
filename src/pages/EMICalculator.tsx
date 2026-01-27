@@ -442,9 +442,9 @@ const EMICalculator = () => {
             label="Loan amount"
             value={loanAmount}
             onChange={setLoanAmount}
-            min={10000}
-            max={50000000}
-            step={100000}
+            min={100}
+            max={1000000000}
+            step={100}
             prefix={symbol}
             placeholder="1000000"
           />
@@ -551,9 +551,9 @@ const EMICalculator = () => {
                 label="Prepayment amount"
                 value={prepaymentAmount}
                 onChange={setPrepaymentAmount}
-                min={0}
+                min={100}
                 max={calculateRemainingBalance(result, monthsCompleted)}
-                step={10000}
+                step={100}
                 prefix={symbol}
                 placeholder="100000"
               />

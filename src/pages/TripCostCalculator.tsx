@@ -5,11 +5,12 @@ import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car, Bike, Users, Route, RotateCcw, Info, Fan, MapPin } from 'lucide-react';
+import { Car, Bike, Users, Route, RotateCcw, Info, Fan, MapPin, Bed, User, Coffee, Calendar, CreditCard } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save } from 'lucide-react';
 import SaveDialog from '@/components/SaveDialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface VehicleType {
     id: string;
@@ -146,8 +147,17 @@ const POPULAR_ROAD_TRIPS = [
 // Extract unique cities
 const ALL_CITIES = Array.from(new Set(CITY_CONNECTIONS.flatMap(r => [r.from, r.to]))).sort();
 
+// Default Costs per Currency
+const CURRENCY_DEFAULTS: any = {
+    INR: { fuel: { petrol: 102, diesel: 90, cng: 85, electric: 10 }, allowance: 500, hotel: 3000, misc: 2000, rental: 2500, wear: 3 },
+    USD: { fuel: { petrol: 1.2, diesel: 1.1, cng: 1.0, electric: 0.2 }, allowance: 50, hotel: 120, misc: 100, rental: 80, wear: 0.15 },
+    EUR: { fuel: { petrol: 1.8, diesel: 1.7, cng: 1.5, electric: 0.3 }, allowance: 40, hotel: 100, misc: 80, rental: 70, wear: 0.12 },
+    GBP: { fuel: { petrol: 1.5, diesel: 1.6, cng: 1.4, electric: 0.25 }, allowance: 45, hotel: 110, misc: 90, rental: 75, wear: 0.13 },
+    JPY: { fuel: { petrol: 170, diesel: 150, cng: 140, electric: 20 }, allowance: 5000, hotel: 10000, misc: 5000, rental: 8000, wear: 5 },
+};
+
 const TripCostCalculator = () => {
-    const { symbol, formatAmount } = useCurrency();
+    const { code, symbol, formatAmount } = useCurrency(); // destructure code directly
 
     // Basic Inputs
     const [vehicleId, setVehicleId] = useState<string>('hatchback');
@@ -162,13 +172,44 @@ const TripCostCalculator = () => {
     const [fuelType, setFuelType] = useState<'petrol' | 'diesel' | 'cng' | 'electric'>('petrol');
 
     // Advanced Costs
-    const [tolls, setTolls] = useState(0); // Separated Tolls
-    const [foodCost, setFoodCost] = useState(0); // Added Food Cost
+    const [tolls, setTolls] = useState(0);
+    const [foodCost, setFoodCost] = useState(0);
     const [wearAndTear, setWearAndTear] = useState(3.0);
     const [includeWearAndTear, setIncludeWearAndTear] = useState(false);
     const [includeDepreciation, setIncludeDepreciation] = useState(false);
     const [depreciationRate, setDepreciationRate] = useState(4.0);
     const [showSave, setShowSave] = useState(false);
+
+    // New Optional Fields
+    const [driverDailyAllowance, setDriverDailyAllowance] = useState(0);
+    const [tripDays, setTripDays] = useState(1);
+    const [hotelCostPerNight, setHotelCostPerNight] = useState(0);
+    const [nightsStay, setNightsStay] = useState(0);
+    const [miscExpenses, setMiscExpenses] = useState(0);
+
+    // Rental Logic
+    const [isRental, setIsRental] = useState(false);
+    const [rentalCostPerDay, setRentalCostPerDay] = useState(0);
+
+    // Handle Currency Change
+    useEffect(() => {
+        const defaults = CURRENCY_DEFAULTS[code] || CURRENCY_DEFAULTS['INR'];
+
+        // Update limits/prices if using defaults
+        setFuelPrice(defaults.fuel[fuelType]);
+
+        // Update vehicle-specific wear/dep only if not custom (approximating by scaling INR values if needed, 
+        // but for now relying on the defaults map for generic 'wear' and scaling logic would be complex.
+        // Let's just update the prices we control).
+
+        // Note: Vehicle-specific constants (mileage, etc.) are physically consistent, but monetary values (wear cost) need conversion.
+        // For simplicity, I'm setting a default 'wear' in the map, but really this should be vehicle specific.
+        // I will just scale the current wear/dep based on a rough PPP comparison if I had it, OR:
+        // Updating 'wearAndTear' state isn't enough, I also need to update vehicle definition defaults?
+        // Let's just leave wear/dep for manual adjustment or basic defaults for now to avoid overengineering.
+
+        // But we MUST update fuel price as that's critical.
+    }, [code, fuelType]);
 
     // Update defaults when vehicle changes
     useEffect(() => {
@@ -176,17 +217,29 @@ const TripCostCalculator = () => {
         if (v) {
             setMileage(v.defaultMileage);
 
-            setWearAndTear(v.defaultWear);
-            setDepreciationRate(v.defaultDep);
+            // Need to get currency aware default wear/dep
+            // This is tricky as VEHICLE_TYPES has hardcoded INR values.
+            // Let's attempt a simple conversion for wear/dep based on fuel price ratio? 
+            // Or just use the hardcoded ones if INR, and scale down if others.
+
+            const defaults = CURRENCY_DEFAULTS[code] || CURRENCY_DEFAULTS['INR'];
+            const factor = defaults.fuel.petrol / 102; // Crude scaling factor based on petrol price
+
+            setWearAndTear(Number((v.defaultWear * factor).toFixed(2)));
+            setDepreciationRate(Number((v.defaultDep * factor).toFixed(2)));
+
             setFuelType(v.defaultFuel as any);
-            setFuelPrice(FUEL_RATES[v.defaultFuel]);
+            setFuelPrice(defaults.fuel[v.defaultFuel]);
         }
-    }, [vehicleId]);
+    }, [vehicleId, code]);
 
     // Update price when fuel type changes manually
-    useEffect(() => {
-        setFuelPrice(FUEL_RATES[fuelType]);
-    }, [fuelType]);
+    // Effect removed as it is handled in the main currency/vehicle effect above to prevent loops
+    // But we still need to support manual fuel type switching updating the price:
+
+    // We can add a specialized handler for fuel type changes or just modify the Select onChange logic.
+    // For now, let's keep a simplified effect that relies on the defaults.
+
 
     const results = useMemo(() => {
         const totalDistance = isRoundTrip ? distance * 2 : distance;
@@ -196,31 +249,48 @@ const TripCostCalculator = () => {
         const fuelNeeded = totalDistance / effectiveMileage;
         const fuelCost = fuelNeeded * fuelPrice;
 
-        // Wear & Tear
-        const maintenanceCost = includeWearAndTear ? (totalDistance * wearAndTear) : 0;
+        // Rental vs Own Vehicle Logic
+        let maintenanceCost = 0;
+        let depCost = 0;
+        let rentalCost = 0;
 
-        // Depreciation
-        const depCost = includeDepreciation ? (totalDistance * depreciationRate) : 0;
+        if (isRental) {
+            // If rental, we don't care about wear/dep usually, but we pay rental fees
+            // Assuming tripDays for rental calculation
+            rentalCost = rentalCostPerDay * tripDays;
+        } else {
+            // Own Vehicle
+            maintenanceCost = includeWearAndTear ? (totalDistance * wearAndTear) : 0;
+            depCost = includeDepreciation ? (totalDistance * depreciationRate) : 0;
+        }
+
+        // Extra Costs
+        const totalDriverCost = driverDailyAllowance * tripDays;
+        const totalHotelCost = hotelCostPerNight * nightsStay;
 
         // Totals
-        const runningCost = fuelCost + maintenanceCost + tolls + foodCost;
-        const totalTrueCost = runningCost + depCost;
+        const runningCost = fuelCost + maintenanceCost + tolls + foodCost + totalDriverCost + totalHotelCost + miscExpenses + rentalCost;
+        const totalTrueCost = runningCost + depCost; // Dep is only for own vehicle
 
-        // Split (Cash Cost is usually what friends split: Fuel + Tolls + Food)
-        const cashCost = fuelCost + tolls + foodCost;
+        // Cash Cost (Out of pocket for the trip) - usually includes everything except depreciation
+        const cashCost = runningCost;
 
         return {
             totalDistance,
             fuelCost,
             maintenanceCost,
             depCost,
+            rentalCost,
+            totalDriverCost,
+            totalHotelCost,
+            miscExpenses,
             mileage,
-            runningCost,
-            totalTrueCost,
+            runningCost, // This is effectively the "Cash Cost" or "Trip Budget"
+            totalTrueCost, // Includes hidden depreciation
             cashCost,
             fuelNeeded
         };
-    }, [distance, isRoundTrip, mileage, fuelPrice, tolls, foodCost, wearAndTear, includeDepreciation, depreciationRate, isAcOn]);
+    }, [distance, isRoundTrip, mileage, fuelPrice, tolls, foodCost, wearAndTear, includeDepreciation, depreciationRate, isAcOn, isRental, rentalCostPerDay, tripDays, driverDailyAllowance, hotelCostPerNight, nightsStay, miscExpenses]);
 
     const handleReset = () => {
         setVehicleId('hatchback');
@@ -234,6 +304,15 @@ const TripCostCalculator = () => {
         setIsAcOn(false);
         setStartCity('');
         setEndCity('');
+
+        // Reset New Fields
+        setDriverDailyAllowance(0);
+        setTripDays(1);
+        setHotelCostPerNight(0);
+        setNightsStay(0);
+        setMiscExpenses(0);
+        setIsRental(false);
+        setRentalCostPerDay(0);
     };
 
     return (
@@ -280,6 +359,25 @@ const TripCostCalculator = () => {
                                     </div>
                                 ))}
                             </div>
+
+                            <div className="flex items-center justify-between pb-2 border-b mb-4">
+                                <div className="space-y-0.5">
+                                    <Label>Rental Vehicle?</Label>
+                                    <p className="text-xs text-muted-foreground">Rent from Zoomcar/Revv/Taxi?</p>
+                                </div>
+                                <Switch checked={isRental} onCheckedChange={setIsRental} />
+                            </div>
+
+                            {isRental && (
+                                <div className="animate-in fade-in slide-in-from-top-2 pt-0 pb-4 border-b mb-4">
+                                    <CalculatorInput
+                                        label="Rental Cost / Day"
+                                        value={rentalCostPerDay}
+                                        onChange={setRentalCostPerDay}
+                                        prefix={symbol}
+                                    />
+                                </div>
+                            )}
 
                             <div className="flex items-center justify-between pb-2">
                                 <Label>Round Trip?</Label>
@@ -414,15 +512,19 @@ const TripCostCalculator = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Fuel Type</Label>
-                                    <Select value={fuelType} onValueChange={(v: any) => setFuelType(v)}>
+                                    <Select value={fuelType} onValueChange={(v: any) => {
+                                        setFuelType(v);
+                                        const defaults = CURRENCY_DEFAULTS[code] || CURRENCY_DEFAULTS['INR'];
+                                        setFuelPrice(defaults.fuel[v]);
+                                    }}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="petrol">Petrol (₹{FUEL_RATES.petrol})</SelectItem>
-                                            <SelectItem value="diesel">Diesel (₹{FUEL_RATES.diesel})</SelectItem>
-                                            <SelectItem value="cng">CNG (₹{FUEL_RATES.cng})</SelectItem>
-                                            <SelectItem value="electric">Electric (₹{FUEL_RATES.electric})</SelectItem>
+                                            <SelectItem value="petrol">Petrol</SelectItem>
+                                            <SelectItem value="diesel">Diesel</SelectItem>
+                                            <SelectItem value="cng">CNG</SelectItem>
+                                            <SelectItem value="electric">Electric</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -439,66 +541,129 @@ const TripCostCalculator = () => {
                                 onChange={setMileage}
                             />
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-4 pt-2">
                                 <CalculatorInput
-                                    label="Tolls & Parking"
-                                    value={tolls}
-                                    onChange={setTolls}
-                                    prefix={symbol}
+                                    label="Trip Duration (Days)"
+                                    value={tripDays}
+                                    onChange={setTripDays}
+                                    min={1}
                                 />
-                                <CalculatorInput
-                                    label="Food & Dining"
-                                    value={foodCost}
-                                    onChange={setFoodCost}
-                                    prefix={symbol}
-                                />
+
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t">
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label>Include Depreciation?</Label>
-                                        <p className="text-xs text-muted-foreground">Cost of owning the car per km</p>
-                                    </div>
-                                    <Switch checked={includeDepreciation} onCheckedChange={setIncludeDepreciation} />
-                                </div>
-
-                                {includeDepreciation && (
-                                    <CalculatorInput
-                                        label="Depreciation Rate (₹/km)"
-                                        value={depreciationRate}
-                                        onChange={setDepreciationRate}
-                                        prefix={symbol}
-                                    />
-                                )}
-
-                                <div className="flex items-center justify-between pt-2">
-                                    <div className="space-y-0.5">
-                                        <Label>Include Wear & Tear?</Label>
-                                        <p className="text-xs text-muted-foreground">Tires, oil, service costs</p>
-                                    </div>
-                                    <Switch checked={includeWearAndTear} onCheckedChange={setIncludeWearAndTear} />
-                                </div>
-
-                                {includeWearAndTear && (
-                                    <div className="pt-2 animate-in fade-in slide-in-from-top-2">
-                                        <Label className="mb-2 block text-sm">Wear & Tear Rate (₹/km)</Label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex-1">
-                                                <CalculatorInput
-                                                    label=""
-                                                    value={wearAndTear}
-                                                    onChange={setWearAndTear}
-                                                    prefix={symbol}
-                                                />
-                                            </div>
-                                            <span className="text-xs text-muted-foreground w-1/2">
-                                                Default for {VEHICLE_TYPES.find(v => v.id === vehicleId)?.name}
-                                            </span>
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="hospitality">
+                                    <AccordionTrigger className="text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Bed className="w-4 h-4 text-blue-500" />
+                                            Stay & Driver
                                         </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="space-y-4 pt-2">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <CalculatorInput
+                                                label="Hotel Cost / Night"
+                                                value={hotelCostPerNight}
+                                                onChange={setHotelCostPerNight}
+                                                prefix={symbol}
+                                            />
+                                            <CalculatorInput
+                                                label="Nights Stay"
+                                                value={nightsStay}
+                                                onChange={setNightsStay}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <CalculatorInput
+                                                label="Driver Allowance / Day"
+                                                value={driverDailyAllowance}
+                                                onChange={setDriverDailyAllowance}
+                                                prefix={symbol}
+                                            />
+                                            {/* Could add Driver Food etc here if needed, but keeping simple */}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                                <AccordionItem value="misc">
+                                    <AccordionTrigger className="text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Coffee className="w-4 h-4 text-orange-500" />
+                                            Food & Extras
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="space-y-4 pt-2">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <CalculatorInput
+                                                label="Tolls & Parking"
+                                                value={tolls}
+                                                onChange={setTolls}
+                                                prefix={symbol}
+                                            />
+                                            <CalculatorInput
+                                                label="Food & Dining"
+                                                value={foodCost}
+                                                onChange={setFoodCost}
+                                                prefix={symbol}
+                                            />
+                                        </div>
+                                        <CalculatorInput
+                                            label="Misc / Buffer"
+                                            value={miscExpenses}
+                                            onChange={setMiscExpenses}
+                                            prefix={symbol}
+                                            tooltip="Entry tickets, tips, emergency cash"
+                                        />
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+
+                            {!isRental && (
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label>Include Depreciation?</Label>
+                                            <p className="text-xs text-muted-foreground">Cost of owning the car per km</p>
+                                        </div>
+                                        <Switch checked={includeDepreciation} onCheckedChange={setIncludeDepreciation} />
                                     </div>
-                                )}
-                            </div>
+
+                                    {includeDepreciation && (
+                                        <CalculatorInput
+                                            label="Depreciation Rate (₹/km)"
+                                            value={depreciationRate}
+                                            onChange={setDepreciationRate}
+                                            prefix={symbol}
+                                        />
+                                    )}
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        <div className="space-y-0.5">
+                                            <Label>Include Wear & Tear?</Label>
+                                            <p className="text-xs text-muted-foreground">Tires, oil, service costs</p>
+                                        </div>
+                                        <Switch checked={includeWearAndTear} onCheckedChange={setIncludeWearAndTear} />
+                                    </div>
+
+                                    {includeWearAndTear && (
+                                        <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                                            <Label className="mb-2 block text-sm">Wear & Tear Rate (₹/km)</Label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex-1">
+                                                    <CalculatorInput
+                                                        label=""
+                                                        value={wearAndTear}
+                                                        onChange={setWearAndTear}
+                                                        prefix={symbol}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-muted-foreground w-1/2">
+                                                    Default for {VEHICLE_TYPES.find(v => v.id === vehicleId)?.name}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -530,15 +695,52 @@ const TripCostCalculator = () => {
                                     <span className="text-muted-foreground">Fuel Cost ({results.fuelNeeded.toFixed(1)} L)</span>
                                     <span className="font-medium">{formatAmount(Math.round(results.fuelCost))}</span>
                                 </div>
+
+                                {isRental && (
+                                    <div className="flex justify-between text-blue-600">
+                                        <span className="">Rental Charges</span>
+                                        <span className="font-medium">{formatAmount(Math.round(results.rentalCost))}</span>
+                                    </div>
+                                )}
+
+                                {!isRental && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Wear & Maintenance</span>
+                                        <span className="font-medium">{formatAmount(Math.round(results.maintenanceCost))}</span>
+                                    </div>
+                                )}
+
+                                {(results.totalDriverCost > 0) && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Driver Charges</span>
+                                        <span className="font-medium">{formatAmount(Math.round(results.totalDriverCost))}</span>
+                                    </div>
+                                )}
+
+                                {(results.totalHotelCost > 0) && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Hotel / Stay</span>
+                                        <span className="font-medium">{formatAmount(Math.round(results.totalHotelCost))}</span>
+                                    </div>
+                                )}
+
+                                {(results.miscExpenses > 0) && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Misc Expenses</span>
+                                        <span className="font-medium">{formatAmount(results.miscExpenses)}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Wear & Maintenance</span>
-                                    <span className="font-medium">{formatAmount(Math.round(results.maintenanceCost))}</span>
+                                    <span className="text-muted-foreground">Tolls & Parking</span>
+                                    <span className="font-medium">{formatAmount(tolls)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Tolls & Extras</span>
-                                    <span className="font-medium">{formatAmount(results.cashCost - results.fuelCost)}</span>
+                                    <span className="text-muted-foreground">Food & Dining</span>
+                                    <span className="font-medium">{formatAmount(foodCost)}</span>
                                 </div>
-                                {includeDepreciation && (
+
+                                {(!isRental && includeDepreciation) && (
                                     <div className="flex justify-between text-yellow-600 dark:text-yellow-400">
                                         <span className="">Depreciation (Hidden Cost)</span>
                                         <span className="font-medium">{formatAmount(Math.round(results.depCost))}</span>

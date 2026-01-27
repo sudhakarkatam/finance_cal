@@ -253,6 +253,8 @@ const FDCalculator = () => {
           </Button>
         </div>
 
+
+
         <CalculatorInput
           label="Deposit amount"
           value={depositAmount}

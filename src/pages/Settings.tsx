@@ -20,7 +20,6 @@ import {
   ArrowLeft,
   Palette,
   Info,
-  FileText,
   Moon,
   Sun,
   Monitor,
@@ -28,6 +27,7 @@ import {
   ChevronUp,
   Sparkles,
   Globe,
+  Rocket,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,7 +37,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<Theme>("system");
   const [aboutExpanded, setAboutExpanded] = useState(false);
-  const [releaseNotesExpanded, setReleaseNotesExpanded] = useState(false);
+  const [nextUpdatesExpanded, setNextUpdatesExpanded] = useState(false);
   const [comingSoonExpanded, setComingSoonExpanded] = useState(false);
 
   // Load theme from localStorage on component mount
@@ -210,11 +210,11 @@ const Settings = () => {
         </Collapsible>
       </Card>
 
-      {/* Release Notes */}
+      {/* Next Updates */}
       <Card className="p-6 space-y-4">
         <Collapsible
-          open={releaseNotesExpanded}
-          onOpenChange={setReleaseNotesExpanded}
+          open={nextUpdatesExpanded}
+          onOpenChange={setNextUpdatesExpanded}
         >
           <CollapsibleTrigger asChild>
             <Button
@@ -222,13 +222,13 @@ const Settings = () => {
               className="flex items-center justify-between w-full p-0 h-auto"
             >
               <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-primary" />
+                <Rocket className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold text-foreground">
-                  Release Notes
+                  Next Updates
                 </h2>
-                <Badge variant="secondary">v1.3.6</Badge>
+                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">Coming Soon</Badge>
               </div>
-              {releaseNotesExpanded ? (
+              {nextUpdatesExpanded ? (
                 <ChevronUp className="w-4 h-4" />
               ) : (
                 <ChevronDown className="w-4 h-4" />
@@ -236,226 +236,34 @@ const Settings = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
-            {/* Version 1.3.6 - Latest */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">Version 1.3.6</h3>
-                <Badge variant="default">Latest</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">January 2025</p>
-
-              <div className="space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    ✨ New Features
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>
-                      💼✨ New EPF Calculator — estimate your retirement corpus
-                      with salary growth projections
-                    </li>
-                    <li>
-                      📖💡 Info dialogs added to all calculators — tap the ℹ️ icon
-                      for formulas, examples, and tips
-                    </li>
-                    <li>
-                      🔙🏠 Improved navigation — back button returns to Home
-                      instead of closing the app
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Version 1.0.3 */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">Version 1.0.3</h3>
-              </div>
-              <p className="text-xs text-muted-foreground">December 2025</p>
-
-              <div className="space-y-3">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    🐛 Critical Fixes
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>• Fixed blank screen issue after app updates</li>
-                    <li>• Resolved service worker cache conflicts</li>
-                    <li>• Improved WebView cache management</li>
-                    <li>• Enhanced app stability and reliability</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    🌟 Previous Updates (v1.0.2)
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>
-                      • Added 5 new currencies: Singapore Dollar (SGD), New
-                      Zealand Dollar (NZD), Swiss Franc (CHF), Chinese Yuan
-                      (CNY), and Mexican Peso (MXN)
-                    </li>
-                    <li>
-                      • Updated all exchange rates to November 2025 values
-                    </li>
-                    <li>
-                      • Complete redesign of Currency Calculator with modern
-                      gradient UI
-                    </li>
-                    <li>• Now supports 13 major international currencies</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    🔧 Android 15 Improvements
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>
-                      • Fixed edge-to-edge display for modern Android devices
-                    </li>
-                    <li>
-                      • Resolved bottom navigation overlay on devices with
-                      3-button navigation
-                    </li>
-                    <li>
-                      • Enhanced full-screen experience across all Android
-                      versions (6.0 - 15+)
-                    </li>
-                    <li>
-                      • Better support for notched devices and punch-hole
-                      cameras
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    🎨 UI/UX Enhancements
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>
-                      • Refreshed Currency Calculator with cleaner, more
-                      intuitive layout
-                    </li>
-                    <li>
-                      • Improved currency selection with better visual hierarchy
-                    </li>
-                    <li>
-                      • Enhanced responsive design for tablets and large screens
-                    </li>
-                    <li>
-                      • Smoother animations and transitions throughout the app
-                    </li>
-                    <li>
-                      • Fixed content scrolling to prevent bottom tab overlay
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">
-                    🐛 Bug Fixes
-                  </h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>
-                      • Fixed navigation bar covering bottom tabs on some
-                      devices
-                    </li>
-                    <li>
-                      • Resolved hamburger menu appearing on calculator pages
-                    </li>
-                    <li>
-                      • Fixed app name display to show "Financial Calculator"
-                      correctly
-                    </li>
-                    <li>• Improved app stability and reduced memory usage</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Version 1.0.2 */}
-            <div>
-              <h3 className="font-semibold text-foreground">Version 1.0.2</h3>
-              <p className="text-xs text-muted-foreground mb-2">
-                November 2025
+              <p className="text-sm text-muted-foreground">
+                We are working on these exciting new tools for you:
               </p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                <li>• Added 5 new currencies (SGD, NZD, CHF, CNY, MXN)</li>
-                <li>• Updated exchange rates to November 2025</li>
-                <li>• Redesigned Currency Calculator UI</li>
-                <li>• Fixed edge-to-edge display issues</li>
-                <li>• Improved Android 15 compatibility</li>
-              </ul>
-            </div>
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-full">
+                    <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-foreground">Capital Gains Calculator</h4>
+                    <p className="text-xs text-muted-foreground">Calculate LTCG & STCG on your investments</p>
+                  </div>
+                </div>
 
-            <Separator />
-
-            {/* Version 1.0.1 */}
-            <div>
-              <h3 className="font-semibold text-foreground">Version 1.0.1</h3>
-              <p className="text-xs text-muted-foreground mb-2">October 2025</p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                <li>• Performance improvements and bug fixes</li>
-                <li>• Enhanced calculation accuracy</li>
-                <li>• Improved app stability</li>
-              </ul>
-            </div>
-
-            <Separator />
-
-            {/* Version 1.0.0 */}
-            <div>
-              <h3 className="font-semibold text-foreground">Version 1.0.0</h3>
-              <p className="text-xs text-muted-foreground mb-2">
-                Initial Release
-              </p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                <li>• Comprehensive financial calculator suite</li>
-                <li>• Theme support (Light, Dark, System)</li>
-                <li>• Calculation history and save feature</li>
-                <li>• Offline functionality</li>
-                <li>• Material Design interface</li>
-              </ul>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Privacy Policy
-              </h3>
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>
-                  We respect your privacy and are committed to protecting your
-                  personal information. This app is designed to work completely
-                  offline and does not collect, store, or transmit any personal
-                  data.
-                </p>
-                <p>
-                  <strong>Data Storage:</strong> All calculations are performed
-                  locally on your device. Your financial data is stored only on
-                  your device and is not shared with any third parties.
-                </p>
-                <p>
-                  <strong>No Tracking:</strong> We do not use analytics,
-                  tracking, or advertising services. Your usage patterns and
-                  personal information remain completely private.
-                </p>
-                <p>
-                  <strong>Local Storage:</strong> The app may store your
-                  calculation history locally on your device for your
-                  convenience. This data is accessible only to you and can be
-                  cleared at any time.
-                </p>
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                    <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-foreground">Gold Buying Calculator</h4>
+                    <p className="text-xs text-muted-foreground">Calculate gold price with making charges & GST</p>
+                  </div>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Stay tuned for these updates in the next version!
+              </p>
             </div>
           </CollapsibleContent>
         </Collapsible>
