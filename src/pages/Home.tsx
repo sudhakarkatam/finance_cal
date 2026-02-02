@@ -244,6 +244,14 @@ const Home = () => {
       available: true,
       color: "blue",
     },
+    {
+      title: "Gold Calculator",
+      icon: Coins,
+      path: "/gold-calculator",
+      description: "Jewelry price & loan",
+      available: true,
+      color: "yellow",
+    },
   ];
 
 

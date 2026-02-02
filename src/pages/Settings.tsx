@@ -251,15 +251,7 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-full">
-                    <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">Gold Buying Calculator</h4>
-                    <p className="text-xs text-muted-foreground">Calculate gold price with making charges & GST</p>
-                  </div>
-                </div>
+
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Stay tuned for these updates in the next version!

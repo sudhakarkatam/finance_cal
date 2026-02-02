@@ -40,6 +40,7 @@ import RentVsBuyCalculator from "./pages/RentVsBuyCalculator";
 import GlobalTaxCalculator from "./pages/GlobalTaxCalculator";
 import TimeCostCalculator from "./pages/TimeCostCalculator";
 import TripCostCalculator from "./pages/TripCostCalculator";
+import GoldCalculator from "./pages/GoldCalculator";
 
 const queryClient = new QueryClient();
 
@@ -336,6 +337,16 @@ const App = () => (
             element={
               <CalculatorLayout>
                 <TripCostCalculator />
+              </CalculatorLayout>
+            }
+          />
+
+
+          <Route
+            path="/gold-calculator"
+            element={
+              <CalculatorLayout>
+                <GoldCalculator />
               </CalculatorLayout>
             }
           />
