@@ -4,143 +4,248 @@ import { Button } from "@/components/ui/button";
 import {
   Save,
   RotateCcw,
-  Calculator,
   ArrowRightLeft,
-  Settings,
-  TrendingUp,
-  Info,
+  RefreshCw,
+  Search,
+  Check,
+  ChevronDown,
+  Coins,
+  Globe,
+  Building2,
+  Percent,
+  Sparkles,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
-interface Currency {
+interface CurrencyInfo {
   code: string;
   name: string;
   symbol: string;
-  rate: number; // Rate per 1 INR
+  flag: string;
 }
 
-// Default currency configuration with November 2025 rates
-const createDefaultCurrencies = (): Record<string, Currency> => ({
-  INR: { code: "INR", name: "Indian Rupee", symbol: "₹", rate: 1 },
-  USD: { code: "USD", name: "US Dollar", symbol: "$", rate: 0.01128 }, // 1 USD = ₹88.67 INR (Nov 2025)
-  EUR: { code: "EUR", name: "Euro", symbol: "€", rate: 0.00975 }, // 1 EUR = ₹102.58 INR (Nov 2025)
-  GBP: { code: "GBP", name: "British Pound", symbol: "£", rate: 0.00857 }, // 1 GBP = ₹116.67 INR (Nov 2025)
-  JPY: { code: "JPY", name: "Japanese Yen", symbol: "¥", rate: 1.7241 }, // 1 JPY = ₹0.58 INR (Nov 2025)
-  KWD: { code: "KWD", name: "Kuwaiti Dinar", symbol: "KD", rate: 0.00346 }, // 1 KWD = ₹288.91 INR (Nov 2025)
-  CAD: { code: "CAD", name: "Canadian Dollar", symbol: "C$", rate: 0.01585 }, // 1 CAD = ₹63.11 INR (Nov 2025)
-  AUD: { code: "AUD", name: "Australian Dollar", symbol: "A$", rate: 0.01722 }, // 1 AUD = ₹58.09 INR (Nov 2025)
-  SGD: { code: "SGD", name: "Singapore Dollar", symbol: "S$", rate: 0.0147 }, // 1 SGD = ₹68.05 INR (Nov 2025)
-  NZD: {
-    code: "NZD",
-    name: "New Zealand Dollar",
-    symbol: "NZ$",
-    rate: 0.01988,
-  }, // 1 NZD = ₹50.31 INR (Nov 2025)
-  CHF: { code: "CHF", name: "Swiss Franc", symbol: "Fr", rate: 0.00911 }, // 1 CHF = ₹109.80 INR (Nov 2025)
-  CNY: {
-    code: "CNY",
-    name: "Chinese Yuan Renminbi",
-    symbol: "¥",
-    rate: 0.08026,
-  }, // 1 CNY = ₹12.46 INR (Nov 2025)
-  MXN: { code: "MXN", name: "Mexican Peso", symbol: "$", rate: 0.2092 }, // 1 MXN = ₹4.78 INR (Nov 2025)
-});
+// Dictionary of world currencies with symbols and country flags
+const ALL_CURRENCIES: Record<string, CurrencyInfo> = {
+  USD: { code: "USD", name: "US Dollar", symbol: "$", flag: "🇺🇸" },
+  INR: { code: "INR", name: "Indian Rupee", symbol: "₹", flag: "🇮🇳" },
+  EUR: { code: "EUR", name: "Euro", symbol: "€", flag: "🇪🇺" },
+  GBP: { code: "GBP", name: "British Pound", symbol: "£", flag: "🇬🇧" },
+  AED: { code: "AED", name: "Emirati Dirham", symbol: "AED", flag: "🇦🇪" },
+  SAR: { code: "SAR", name: "Saudi Riyal", symbol: "SAR", flag: "🇸🇦" },
+  CAD: { code: "CAD", name: "Canadian Dollar", symbol: "C$", flag: "🇨🇦" },
+  AUD: { code: "AUD", name: "Australian Dollar", symbol: "A$", flag: "🇦🇺" },
+  SGD: { code: "SGD", name: "Singapore Dollar", symbol: "S$", flag: "🇸🇬" },
+  JPY: { code: "JPY", name: "Japanese Yen", symbol: "¥", flag: "🇯🇵" },
+  KWD: { code: "KWD", name: "Kuwaiti Dinar", symbol: "KD", flag: "🇰🇼" },
+  CHF: { code: "CHF", name: "Swiss Franc", symbol: "Fr", flag: "🇨🇭" },
+  CNY: { code: "CNY", name: "Chinese Yuan", symbol: "¥", flag: "🇨🇳" },
+  THB: { code: "THB", name: "Thai Baht", symbol: "฿", flag: "🇹🇭" },
+  MYR: { code: "MYR", name: "Malaysian Ringgit", symbol: "RM", flag: "🇲🇾" },
+  QAR: { code: "QAR", name: "Qatari Riyal", symbol: "QR", flag: "🇶🇦" },
+  OMR: { code: "OMR", name: "Omani Rial", symbol: "OMR", flag: "🇴🇲" },
+  BHD: { code: "BHD", name: "Bahraini Dinar", symbol: "BD", flag: "🇧🇭" },
+  NZD: { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$", flag: "🇳🇿" },
+  HKD: { code: "HKD", name: "Hong Kong Dollar", symbol: "HK$", flag: "🇭🇰" },
+  KRW: { code: "KRW", name: "South Korean Won", symbol: "₩", flag: "🇰🇷" },
+  IDR: { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp", flag: "🇮🇩" },
+  VND: { code: "VND", name: "Vietnamese Dong", symbol: "₫", flag: "🇻🇳" },
+  ZAR: { code: "ZAR", name: "South African Rand", symbol: "R", flag: "🇿🇦" },
+  BRL: { code: "BRL", name: "Brazilian Real", symbol: "R$", flag: "🇧🇷" },
+  RUB: { code: "RUB", name: "Russian Ruble", symbol: "₽", flag: "🇷🇺" },
+  MXN: { code: "MXN", name: "Mexican Peso", symbol: "$", flag: "🇲🇽" },
+  EGP: { code: "EGP", name: "Egyptian Pound", symbol: "E£", flag: "🇪🇬" },
+  TRY: { code: "TRY", name: "Turkish Lira", symbol: "₺", flag: "🇹🇷" },
+  LKR: { code: "LKR", name: "Sri Lankan Rupee", symbol: "Rs", flag: "🇱🇰" },
+  NPR: { code: "NPR", name: "Nepalese Rupee", symbol: "NRs", flag: "🇳🇵" },
+  BDT: { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", flag: "🇧🇩" },
+  PKR: { code: "PKR", name: "Pakistani Rupee", symbol: "Rs", flag: "🇵🇰" },
+  PHP: { code: "PHP", name: "Philippine Peso", symbol: "₱", flag: "🇵🇭" },
+};
+
+// Fallback rates relative to 1 USD
+const DEFAULT_USD_RATES: Record<string, number> = {
+  USD: 1,
+  INR: 88.67,
+  EUR: 0.92,
+  GBP: 0.79,
+  AED: 3.67,
+  SAR: 3.75,
+  CAD: 1.38,
+  AUD: 1.52,
+  SGD: 1.34,
+  JPY: 154.5,
+  KWD: 0.31,
+  CHF: 0.88,
+  CNY: 7.24,
+  THB: 34.5,
+  MYR: 4.42,
+  QAR: 3.64,
+  OMR: 0.385,
+  BHD: 0.376,
+  NZD: 1.68,
+  HKD: 7.78,
+  KRW: 1390.0,
+  IDR: 15900.0,
+  VND: 25400.0,
+  ZAR: 18.2,
+  BRL: 5.75,
+  RUB: 98.5,
+  MXN: 20.2,
+  EGP: 49.5,
+  TRY: 34.8,
+  LKR: 292.0,
+  NPR: 135.5,
+  BDT: 119.5,
+  PKR: 278.5,
+  PHP: 58.8,
+};
+
+type PresetType = "bank" | "airport" | "wise" | "custom";
 
 const CurrencyCalculator = () => {
-  // Currency configuration with default offline rates (users can modify)
-  const [currencies, setCurrencies] = useState<Record<string, Currency>>(
-    createDefaultCurrencies(),
-  );
+  const { toast } = useToast();
 
-  const [fromCurrency, setFromCurrency] = useState("INR");
-  const [toCurrency, setToCurrency] = useState("USD");
-  const [amount, setAmount] = useState(1000);
+  // Rates
+  const [rates, setRates] = useState<Record<string, number>>(DEFAULT_USD_RATES);
+  const [isFetching, setIsFetching] = useState(false);
+
+  // Conversion Inputs
+  const [fromCurrency, setFromCurrency] = useState("USD");
+  const [toCurrency, setToCurrency] = useState("INR");
+  const [amount, setAmount] = useState<number>(1000);
+
+  // Fee Calculator Block State
+  const [includeFees, setIncludeFees] = useState(false);
+  const [activePreset, setActivePreset] = useState<PresetType>("bank");
+  const [feePercentage, setFeePercentage] = useState<number>(2.0);
+  const [fixedFee, setFixedFee] = useState<number>(5);
+
+  // Dialog & Search States
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [ratesDialogOpen, setRatesDialogOpen] = useState(false);
-  const [selectedCurrencyForRate, setSelectedCurrencyForRate] = useState("");
-  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [currencySearchOpen, setCurrencySearchOpen] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Save rates to localStorage
-  const saveRatesToStorage = (rates: Record<string, Currency>) => {
+  // Fetch Live Rates with offline detection & cache bypass
+  const fetchLiveRates = async (showToast = false) => {
+    setIsFetching(true);
     try {
-      localStorage.setItem("currencyCalculator_rates", JSON.stringify(rates));
-    } catch (error) {
-      console.warn("Failed to save currency rates:", error);
-    }
-  };
+      // 1. Check if device has active network connection
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("Device is offline");
+      }
 
-  // Load rates from localStorage
-  const loadRatesFromStorage = (): Record<string, Currency> => {
-    try {
-      const saved = localStorage.getItem("currencyCalculator_rates");
-      if (saved) {
-        const parsedRates = JSON.parse(saved);
-        // Merge with defaults to ensure all currencies exist
-        return { ...createDefaultCurrencies(), ...parsedRates };
+      // 2. Fetch with cache bypass to prevent Service Worker returning stale 200 OK
+      const response = await fetch("https://open.er-api.com/v6/latest/USD", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) throw new Error("API network response error");
+
+      const data = await response.json();
+      if (data && data.rates) {
+        const fetchedRates = { ...DEFAULT_USD_RATES, ...data.rates };
+        setRates(fetchedRates);
+        localStorage.setItem("currency_rates_cache", JSON.stringify(fetchedRates));
+
+        if (showToast) {
+          toast({
+            title: "Rates Updated",
+            description: "Fetched latest market exchange rates.",
+          });
+        }
       }
     } catch (error) {
-      console.warn("Failed to load saved currency rates:", error);
+      console.warn("Using cached exchange rates:", error);
+      loadCachedRates();
+      if (showToast) {
+        toast({
+          title: "Offline Mode",
+          description: "Unable to reach live rates. Using saved offline rates.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsFetching(false);
     }
-    return createDefaultCurrencies();
   };
 
-  // Load saved rates on component mount
+  const loadCachedRates = () => {
+    try {
+      const cached = localStorage.getItem("currency_rates_cache");
+      if (cached) {
+        setRates({ ...DEFAULT_USD_RATES, ...JSON.parse(cached) });
+      }
+    } catch (e) {
+      console.warn("Error loading cached rates:", e);
+    }
+  };
+
   useEffect(() => {
-    const savedRates = loadRatesFromStorage();
-    setCurrencies(savedRates);
+    loadCachedRates();
+    fetchLiveRates(false);
   }, []);
 
-  // Update exchange rate for a specific currency
-  const updateExchangeRate = (currencyCode: string, newRate: number) => {
-    if (currencyCode === "INR") return;
-
-    // If user enters 85.63 for USD, it means 1 USD = 85.63 INR
-    // So 1 INR = 1/85.63 USD = 0.01168 USD
-    const convertedRate = 1 / newRate;
-
-    setCurrencies((prev) => {
-      const updated = {
-        ...prev,
-        [currencyCode]: { ...prev[currencyCode], rate: convertedRate },
-      };
-      saveRatesToStorage(updated);
-      return updated;
-    });
+  // Handle Preset Button Click
+  const handlePresetSelect = (preset: PresetType) => {
+    setActivePreset(preset);
+    if (preset === "bank") {
+      setFeePercentage(2.0);
+      setFixedFee(5);
+    } else if (preset === "airport") {
+      setFeePercentage(4.5);
+      setFixedFee(10);
+    } else if (preset === "wise") {
+      setFeePercentage(0.5);
+      setFixedFee(1.5);
+    }
   };
 
-  // Calculate conversion
+  // Math
   const conversionResult = useMemo(() => {
-    const fromRate = currencies[fromCurrency]?.rate || 1;
-    const toRate = currencies[toCurrency]?.rate || 1;
+    const fromUsdRate = rates[fromCurrency] || 1;
+    const toUsdRate = rates[toCurrency] || 1;
 
-    // Convert: amount in fromCurrency → INR → toCurrency
-    const amountInINR = fromCurrency === "INR" ? amount : amount / fromRate;
-    const convertedAmount =
-      toCurrency === "INR" ? amountInINR : amountInINR * toRate;
+    // Direct mid-market exchange rate
+    const midMarketRate = toUsdRate / fromUsdRate;
+
+    // Gross converted (Mid-market)
+    const grossAmount = amount * midMarketRate;
+
+    // Fee calculations
+    let totalFeeDeductionInFromCurrency = 0;
+    let totalFeeDeductionInToCurrency = 0;
+
+    if (includeFees) {
+      const percentageDeduction = (amount * (feePercentage || 0)) / 100;
+      totalFeeDeductionInFromCurrency = percentageDeduction + (fixedFee || 0);
+      totalFeeDeductionInToCurrency = totalFeeDeductionInFromCurrency * midMarketRate;
+    }
+
+    const netAmount = Math.max(0, grossAmount - totalFeeDeductionInToCurrency);
+    const effectiveExchangeRate = amount > 0 ? netAmount / amount : midMarketRate;
 
     return {
-      amount: Math.round(convertedAmount * 100) / 100,
-      fromRate,
-      toRate,
-      exchangeRate: toRate / fromRate,
+      midMarketRate,
+      grossAmount,
+      totalFeeDeductionInFromCurrency,
+      totalFeeDeductionInToCurrency,
+      netAmount,
+      effectiveExchangeRate,
     };
-  }, [amount, fromCurrency, toCurrency, currencies]);
+  }, [amount, fromCurrency, toCurrency, rates, includeFees, feePercentage, fixedFee]);
 
   const handleSwapCurrencies = () => {
     const temp = fromCurrency;
@@ -149,234 +254,184 @@ const CurrencyCalculator = () => {
   };
 
   const handleReset = () => {
-    setFromCurrency("INR");
-    setToCurrency("USD");
+    setFromCurrency("USD");
+    setToCurrency("INR");
     setAmount(1000);
-    // Reset to default rates and clear localStorage
-    setCurrencies(createDefaultCurrencies());
-    try {
-      localStorage.removeItem("currencyCalculator_rates");
-    } catch (error) {
-      console.warn("Failed to clear saved currency rates:", error);
-    }
+    setIncludeFees(false);
+    setActivePreset("bank");
+    setFeePercentage(2.0);
+    setFixedFee(5);
   };
+
+  // Filtered currency list for search modal
+  const filteredCurrencies = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    return Object.values(ALL_CURRENCIES).filter(
+      (c) =>
+        c.code.toLowerCase().includes(query) ||
+        c.name.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const selectCurrency = (code: string) => {
+    if (searchTarget === "from") setFromCurrency(code);
+    else setToCurrency(code);
+    setCurrencySearchOpen(false);
+    setSearchQuery("");
+  };
+
+  // Priority targets for Quick Comparison Grid
+  const quickMatrixTargets = useMemo(() => {
+    const defaultList = ["INR", "USD", "EUR", "GBP", "AED", "CAD", "AUD", "SGD", "JPY"];
+    return defaultList.filter((code) => code !== fromCurrency).slice(0, 6);
+  }, [fromCurrency]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto pt-2">
-      {/* Header Card */}
-      <Card className="p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-md">
+      {/* Sleek Header */}
+      <Card className="p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-primary" />
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">
+              <h2 className="text-lg font-bold text-foreground">
                 Currency Converter
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Live exchange rates for 13 major currencies
+              <p className="text-xs text-muted-foreground">
+                Live Mid-Market Exchange Rates
               </p>
             </div>
-            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setInfoDialogOpen(true)}
-                >
-                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>About Currency Converter & Calculation</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 text-sm">
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">What is Currency Converter?</h3>
-                    <p className="text-muted-foreground">
-                      Currency converter is a tool that calculates the equivalent value of one currency in terms of another currency using current exchange rates. It helps you understand currency values for travel, international transactions, or investment purposes.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Supported Currencies</h3>
-                    <p className="text-muted-foreground mb-2">
-                      This calculator supports 13 major world currencies including INR, USD, EUR, GBP, JPY, KWD, CAD, AUD, SGD, NZD, CHF, CNY, and MXN.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>Exchange rates are approximate and may vary by bank/service provider</li>
-                      <li>Rates include base rates updated periodically</li>
-                      <li>You can customize rates for your specific needs</li>
-                      <li>Rates are saved in your browser for convenience</li>
-                      <li>For accurate rates, check with your bank or currency service provider</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
-                    <p className="text-muted-foreground">
-                      The Currency Converter helps you convert between different currencies, view and customize exchange rates, and save your preferred rates for future use. Select source and target currencies, enter amount, and get instant conversion results.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
-                    <div className="space-y-3 text-muted-foreground">
-                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Travel Currency Conversion</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Planning Europe trip, need €5,000, current rate 1 EUR = ₹102.58<br />
-                          <strong>Calculation:</strong> €5,000 × ₹102.58 = ₹5,12,900<br />
-                          <strong>Budget Planning:</strong> Need approximately ₹5.13 lakhs for travel expenses<br />
-                          <strong>Tip:</strong> Check rates before travel, rates fluctuate daily<br />
-                          <strong>Strategy:</strong> Exchange in batches if rate is volatile - don't convert all at once
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: International Transfer</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Sending ₹10,00,000 to USA, rate 1 USD = ₹88.67<br />
-                          <strong>Calculation:</strong> ₹10,00,000 ÷ ₹88.67 = $11,278<br />
-                          <strong>Bank Charges:</strong> Typically ₹500-2000 + 1-2% markup on rate<br />
-                          <strong>Actual Receipt:</strong> Approximately $11,100-11,150 (after charges)<br />
-                          <strong>Planning:</strong> Factor in bank fees - rates shown are mid-market rates<br />
-                          <strong>Tip:</strong> Compare transfer services (Wise, Remitly) for better rates
-                        </p>
-                      </div>
-
-                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Investment Conversion</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Investing $50,000 in US stocks, rate 1 USD = ₹88.67<br />
-                          <strong>INR Required:</strong> $50,000 × ₹88.67 = ₹44,33,500<br />
-                          <strong>Stock Gains:</strong> If stock appreciates 20%, value = $60,000<br />
-                          <strong>Convert Back:</strong> If rate becomes ₹90, $60,000 = ₹54,00,000<br />
-                          <strong>Total Gain:</strong> ₹9,66,500 (stock gain + currency gain)<br />
-                          <strong>Risk:</strong> Currency fluctuation affects returns - USD appreciation helps
-                        </p>
-                      </div>
-
-                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Multiple Currency Comparison</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> ₹10,00,000 to convert, comparing destinations<br />
-                          <strong>USD:</strong> ₹10L ÷ ₹88.67 = $11,278<br />
-                          <strong>EUR:</strong> ₹10L ÷ ₹102.58 = €9,749<br />
-                          <strong>GBP:</strong> ₹10L ÷ ₹116.67 = £8,571<br />
-                          <strong>SGD:</strong> ₹10L ÷ ₹68.05 = S$14,695<br />
-                          <strong>Planning:</strong> Different currencies have different purchasing power<br />
-                          <strong>Strategy:</strong> Check local costs before converting - cheaper destination may need less
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
-                      <li>Exchange rates change daily - check latest rates before major conversions</li>
-                      <li>Banks add markup (1-3%) to rates - use currency converters for mid-market rates</li>
-                      <li>For large amounts, negotiate rates with banks or use specialized services</li>
-                      <li>Customize rates in calculator for specific bank/service provider rates</li>
-                      <li>Save your preferred rates in calculator for quick access during travel or transactions</li>
-                    </ul>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            className="gap-2 hidden sm:flex"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchLiveRates(true)}
+              disabled={isFetching}
+              className="gap-1.5 text-xs h-8"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="h-8 text-xs gap-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset
+            </Button>
+          </div>
         </div>
       </Card>
 
-      {/* Main Conversion Card */}
-      <Card className="p-6 space-y-6 shadow-lg">
-        {/* From Currency */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">From</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Select value={fromCurrency} onValueChange={setFromCurrency}>
-              <SelectTrigger className="h-12 text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(currencies).map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{currency.symbol}</span>
-                      <span>{currency.code}</span>
-                      <span className="text-muted-foreground">
-                        - {currency.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <CalculatorInput
-              label=""
-              value={amount}
-              onChange={setAmount}
-              min={0.01}
-              max={10000000}
-              step={0.01}
-              prefix={currencies[fromCurrency]?.symbol}
-            />
+      {/* Main Converter Card */}
+      <Card className="p-5 space-y-5 shadow-lg border-border">
+        {/* From Currency Block */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            You Send
+          </Label>
+
+          <div className="flex items-center gap-2 p-1.5 rounded-xl border-2 border-border bg-card focus-within:border-primary/60 transition-all shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setSearchTarget("from");
+                setCurrencySearchOpen(true);
+              }}
+              className="h-11 gap-2 px-3 hover:bg-muted font-bold text-sm rounded-lg shrink-0 border-r border-border rounded-r-none"
+            >
+              <span className="text-xl">{ALL_CURRENCIES[fromCurrency]?.flag}</span>
+              <span className="text-foreground font-extrabold">{fromCurrency}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </Button>
+
+            <div className="flex-1 pr-2">
+              <CalculatorInput
+                label=""
+                value={amount}
+                onChange={setAmount}
+                min={0.01}
+                max={100000000}
+                step={1}
+                prefix={ALL_CURRENCIES[fromCurrency]?.symbol || "$"}
+              />
+            </div>
+          </div>
+
+          {/* Quick Amount Preset Chips */}
+          <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+            <span className="text-[11px] font-medium text-muted-foreground mr-1">
+              Quick:
+            </span>
+            {[100, 500, 1000, 5000, 10000].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setAmount(val)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                  amount === val
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-card border-border/70 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
+                }`}
+              >
+                {ALL_CURRENCIES[fromCurrency]?.symbol}
+                {val.toLocaleString()}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Swap Button */}
-        <div className="flex justify-center">
+        {/* Swap Button Divider */}
+        <div className="flex justify-center -my-2 z-10">
           <Button
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={handleSwapCurrencies}
-            className="gap-2 rounded-full px-6 hover:bg-primary hover:text-primary-foreground transition-all"
+            className="gap-2 rounded-full px-4 h-9 shadow-md bg-card hover:bg-primary hover:text-primary-foreground border-2 border-border transition-all"
           >
-            <ArrowRightLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Swap</span>
+            <ArrowRightLeft className="w-4 h-4" />
+            <span className="text-xs font-semibold">Swap</span>
           </Button>
         </div>
 
-        {/* To Currency */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">To</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Select value={toCurrency} onValueChange={setToCurrency}>
-              <SelectTrigger className="h-12 text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(currencies).map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{currency.symbol}</span>
-                      <span>{currency.code}</span>
-                      <span className="text-muted-foreground">
-                        - {currency.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="h-12 p-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20 flex items-center justify-center">
-              <span className="text-xl font-bold text-primary">
-                {currencies[toCurrency]?.symbol}{" "}
-                {conversionResult.amount.toLocaleString(undefined, {
+        {/* To Currency Block */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Recipient Gets
+          </Label>
+
+          <div className="flex items-center gap-2 p-1.5 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 shadow-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setSearchTarget("to");
+                setCurrencySearchOpen(true);
+              }}
+              className="h-11 gap-2 px-3 hover:bg-emerald-500/10 font-bold text-sm rounded-lg shrink-0 border-r border-emerald-500/20 rounded-r-none"
+            >
+              <span className="text-xl">{ALL_CURRENCIES[toCurrency]?.flag}</span>
+              <span className="text-foreground font-extrabold">{toCurrency}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </Button>
+
+            <div className="flex-1 px-3 py-1 text-right">
+              <span className="text-xs text-muted-foreground block font-medium">
+                {includeFees ? "Net Payout" : "Total Value"}
+              </span>
+              <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
+                {(includeFees
+                  ? conversionResult.netAmount
+                  : conversionResult.grossAmount
+                ).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -385,198 +440,290 @@ const CurrencyCalculator = () => {
           </div>
         </div>
 
-        {/* Exchange Rate Display */}
-        <div className="bg-muted/50 p-4 rounded-lg border border-border">
-          <div className="flex items-center justify-center gap-2 text-center">
-            <Calculator className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">
-              1 {currencies[fromCurrency]?.code} ={" "}
-              {conversionResult.exchangeRate.toFixed(6)}{" "}
-              {currencies[toCurrency]?.code}
-            </p>
+        {/* Mid-Market Exchange Rate Line */}
+        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-foreground font-semibold">
+            <Coins className="w-4 h-4 text-primary" />
+            <span>
+              1 {fromCurrency} = {conversionResult.midMarketRate.toFixed(4)}{" "}
+              {toCurrency}
+            </span>
           </div>
-          {fromCurrency !== "INR" && toCurrency === "INR" && (
-            <p className="text-xs text-muted-foreground text-center mt-1">
-              (1 {currencies[fromCurrency]?.code} = ₹
-              {(1 / currencies[fromCurrency].rate).toFixed(2)} INR)
-            </p>
+          <span className="text-[11px] text-muted-foreground">Mid-Market Rate</span>
+        </div>
+
+        {/* ------------------------------------------------------------------------ */}
+        {/* 🏦 BANK & EXCHANGE FEES BLOCK (PRESET BUTTONS + EDITABLE INPUTS) */}
+        {/* ------------------------------------------------------------------------ */}
+        <div className="border border-border/80 rounded-xl p-4 space-y-4 bg-card shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-amber-500" />
+              <Label htmlFor="fee-switch" className="text-xs font-bold text-foreground cursor-pointer">
+                Include Bank / Exchange Fees
+              </Label>
+            </div>
+
+            <Switch
+              id="fee-switch"
+              checked={includeFees}
+              onCheckedChange={setIncludeFees}
+            />
+          </div>
+
+          {includeFees && (
+            <div className="space-y-4 pt-3 border-t border-border/60">
+              {/* 4 Interactive Fee Presets */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: "bank", label: "🏦 Bank Wire", sub: "2.0% + $5" },
+                  { id: "airport", label: "✈️ Airport Forex", sub: "4.5% + $10" },
+                  { id: "wise", label: "⚡ Online (Wise)", sub: "0.5% + $1.5" },
+                  { id: "custom", label: "⚙️ Custom Fee", sub: "Edit Below" },
+                ].map((preset) => (
+                  <Button
+                    key={preset.id}
+                    type="button"
+                    variant={activePreset === preset.id ? "default" : "outline"}
+                    onClick={() => handlePresetSelect(preset.id as PresetType)}
+                    className="flex flex-col items-center justify-center h-14 p-1.5 text-center transition-all"
+                  >
+                    <span className="text-xs font-bold">{preset.label}</span>
+                    <span className="text-[10px] opacity-80 font-normal mt-0.5">
+                      {preset.sub}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+
+              {/* Editable Input Boxes for Markup % and Fixed Fee */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground font-medium">
+                    Exchange Markup / FX Spread (%)
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={feePercentage}
+                      onChange={(e) => {
+                        setActivePreset("custom");
+                        setFeePercentage(parseFloat(e.target.value) || 0);
+                      }}
+                      step={0.1}
+                      min={0}
+                      max={20}
+                      className="pr-8 text-sm font-semibold"
+                    />
+                    <Percent className="w-3.5 h-3.5 absolute right-3 top-3 text-muted-foreground" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground font-medium">
+                    Fixed Fee ({ALL_CURRENCIES[fromCurrency]?.symbol || "$"})
+                  </Label>
+                  <Input
+                    type="number"
+                    value={fixedFee}
+                    onChange={(e) => {
+                      setActivePreset("custom");
+                      setFixedFee(parseFloat(e.target.value) || 0);
+                    }}
+                    step={1}
+                    min={0}
+                    className="text-sm font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Fee Breakdown Summary Box */}
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg space-y-1.5 text-xs">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Gross Mid-Market Amount:</span>
+                  <span className="font-semibold text-foreground">
+                    {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
+                    {conversionResult.grossAmount.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-amber-700 dark:text-amber-400 font-medium">
+                  <span>Total Fees & Spread Deduction:</span>
+                  <span>
+                    - {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
+                    {conversionResult.totalFeeDeductionInToCurrency.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    ({ALL_CURRENCIES[fromCurrency]?.symbol}{conversionResult.totalFeeDeductionInFromCurrency.toFixed(2)})
+                  </span>
+                </div>
+
+                <div className="flex justify-between pt-1.5 border-t border-amber-500/30 font-bold text-sm text-foreground">
+                  <span>Actual Net Payout Received:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
+                    {conversionResult.netAmount.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <Dialog open={ratesDialogOpen} onOpenChange={setRatesDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="flex-1 gap-2">
-                <Settings className="w-4 h-4" />
-                Customize Rates
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Set Custom Exchange Rate</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currency-select">Select Currency</Label>
-                  <Select
-                    value={selectedCurrencyForRate}
-                    onValueChange={setSelectedCurrencyForRate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(currencies)
-                        .filter((c) => c.code !== "INR")
-                        .map((currency) => (
-                          <SelectItem key={currency.code} value={currency.code}>
-                            {currency.symbol} {currency.code} - {currency.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedCurrencyForRate && (
-                  <div className="space-y-2">
-                    <Label htmlFor="rate-input">
-                      1 {currencies[selectedCurrencyForRate]?.code} = ? INR
-                    </Label>
-                    <CalculatorInput
-                      label=""
-                      value={
-                        currencies[selectedCurrencyForRate]?.rate
-                          ? Math.round(
-                              (1 / currencies[selectedCurrencyForRate].rate) *
-                                100,
-                            ) / 100
-                          : 0
-                      }
-                      onChange={(value) => {
-                        if (
-                          typeof value === "number" &&
-                          !isNaN(value) &&
-                          value > 0
-                        ) {
-                          updateExchangeRate(selectedCurrencyForRate, value);
-                        }
-                      }}
-                      min={0.01}
-                      max={10000}
-                      step={0.01}
-                      placeholder="Enter value in INR"
-                      prefix="₹"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Current: 1 {currencies[selectedCurrencyForRate]?.code} = ₹
-                      {(1 / currencies[selectedCurrencyForRate].rate).toFixed(
-                        2,
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
-                  <p className="text-xs text-blue-800 dark:text-blue-200">
-                    <strong>Note:</strong> Enter how much 1 unit of foreign
-                    currency equals in INR. Example: If 1 USD = ₹85.63, enter
-                    85.63. Your custom rates will be saved.
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedCurrencyForRate("");
-                      setRatesDialogOpen(false);
-                    }}
-                    className="flex-1"
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setSelectedCurrencyForRate("");
-                    }}
-                    className="flex-1"
-                    disabled={!selectedCurrencyForRate}
-                  >
-                    Update Rate
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Button
-            className="flex-1 gap-2"
-            size="lg"
-            onClick={() => setSaveDialogOpen(true)}
-          >
-            <Save className="w-4 h-4" />
-            Save
-          </Button>
-        </div>
+        {/* Save Button */}
+        <Button
+          className="w-full gap-2 text-base font-semibold"
+          size="lg"
+          onClick={() => setSaveDialogOpen(true)}
+        >
+          <Save className="w-4 h-4" />
+          Save Calculation
+        </Button>
       </Card>
 
-      {/* Available Currencies Info Card */}
-      <Card className="p-5 space-y-3 bg-muted/30 shadow-md">
-        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-primary" />
-          Available Currencies (November 2025 Rates)
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Object.values(currencies)
-            .filter((c) => c.code !== "INR")
-            .map((currency) => (
+      {/* ------------------------------------------------------------------------ */}
+      {/* DYNAMIC MULTI-CURRENCY COMPARISON MATRIX */}
+      {/* ------------------------------------------------------------------------ */}
+      <Card className="p-5 space-y-3 bg-card shadow-md border-border">
+        <div>
+          <h3 className="text-sm font-bold text-foreground">
+            Equivalent of {ALL_CURRENCIES[fromCurrency]?.symbol}
+            {amount.toLocaleString()} {fromCurrency} in Top Currencies
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Tap any currency to quickly convert
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+          {quickMatrixTargets.map((targetCode) => {
+            const targetInfo = ALL_CURRENCIES[targetCode] || {
+              symbol: targetCode,
+              name: targetCode,
+              flag: "🌐",
+            };
+            const fromUsd = rates[fromCurrency] || 1;
+            const toUsd = rates[targetCode] || 1;
+            const rate = toUsd / fromUsd;
+            const convertedVal = amount * rate;
+
+            return (
               <div
-                key={currency.code}
-                className="flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors"
+                key={targetCode}
+                onClick={() => setToCurrency(targetCode)}
+                className="p-3.5 rounded-xl border border-border/80 bg-muted/20 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all space-y-1.5"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-primary">
-                    {currency.symbol}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {currency.code}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {currency.name}
-                    </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{targetInfo.flag}</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      {targetInfo.name}
+                    </span>
                   </div>
+                  <span className="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
+                    {targetCode}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-foreground">
-                    ₹{(1 / currency.rate).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    per 1 {currency.code}
-                  </p>
-                </div>
+
+                <p className="text-base font-bold text-foreground truncate">
+                  {targetInfo.symbol}{" "}
+                  {convertedVal.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+
+                <p className="text-[11px] text-muted-foreground">
+                  1 {fromCurrency} = {rate.toFixed(4)} {targetCode}
+                </p>
               </div>
-            ))}
+            );
+          })}
         </div>
-        <p className="text-xs text-muted-foreground text-center pt-2">
-          Rates updated for November 2025. Tap "Customize Rates" to set your own
-          exchange rates.
-        </p>
       </Card>
 
+      {/* ------------------------------------------------------------------------ */}
+      {/* 🔍 SEARCH CURRENCY MODAL DIALOG */}
+      {/* ------------------------------------------------------------------------ */}
+      <Dialog open={currencySearchOpen} onOpenChange={setCurrencySearchOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-4">
+          <DialogHeader className="pb-2">
+            <DialogTitle>
+              Select {searchTarget === "from" ? "Source" : "Target"} Currency
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Search Input */}
+          <div className="relative mb-3">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+            <Input
+              placeholder="Search by currency name or code (e.g. AED, Euro, USD)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 text-sm"
+              autoFocus
+            />
+          </div>
+
+          {/* Currency List */}
+          <div className="flex-1 overflow-y-auto space-y-1 pr-1 max-h-[50vh]">
+            {filteredCurrencies.map((c) => {
+              const isSelected =
+                (searchTarget === "from" && fromCurrency === c.code) ||
+                (searchTarget === "to" && toCurrency === c.code);
+
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => selectCurrency(c.code)}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-colors ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{c.flag}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{c.code}</span>
+                        <span className="text-xs opacity-80">({c.symbol})</span>
+                      </div>
+                      <p className="text-xs opacity-75">{c.name}</p>
+                    </div>
+                  </div>
+
+                  {isSelected && <Check className="w-4 h-4" />}
+                </button>
+              );
+            })}
+
+            {filteredCurrencies.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No currency matching "{searchQuery}" found.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Dialog */}
       <SaveDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="fd"
         inputs={{
           amount,
-          fromCurrency: `${currencies[fromCurrency]?.symbol} ${fromCurrency}`,
-          toCurrency: `${currencies[toCurrency]?.symbol} ${toCurrency}`,
-          exchangeRate: conversionResult.exchangeRate,
+          fromCurrency: `${ALL_CURRENCIES[fromCurrency]?.symbol || ""} ${fromCurrency}`,
+          toCurrency: `${ALL_CURRENCIES[toCurrency]?.symbol || ""} ${toCurrency}`,
+          midMarketRate: conversionResult.midMarketRate,
         }}
         results={{
-          convertedAmount: conversionResult.amount,
+          netAmountReceived: conversionResult.netAmount,
         }}
       />
     </div>
