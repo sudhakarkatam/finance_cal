@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, TrendingUp, Info } from 'lucide-react';
+import { Save, RotateCcw, TrendingUp, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -13,6 +14,7 @@ const CAGRCalculator = () => {
   const [endingValue, setEndingValue] = useState(15000);
   const [years, setYears] = useState(3);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const calculateCAGR = () => {
@@ -309,14 +311,26 @@ const CAGRCalculator = () => {
           </p>
         </div>
 
-        <Button
-          className="w-full gap-2 h-12 text-base font-semibold"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-5 h-5" />
-          Save Calculation
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -332,6 +346,22 @@ const CAGRCalculator = () => {
           endingValue: result.endingValue,
           years: result.years
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="CAGR Growth Report"
+        inputs={[
+          { label: "Beginning Value", value: formatCurrency(beginningValue) },
+          { label: "Ending Value", value: formatCurrency(endingValue) },
+          { label: "Time Period", value: `${years} Years` },
+        ]}
+        results={[
+          { label: "Total Growth Amount", value: formatCurrency(result.totalGrowth) },
+          { label: "Absolute Return", value: `${result.absoluteReturn}%` },
+          { label: "Compounded Annual Rate (CAGR)", value: `${result.cagr.toFixed(2)}%`, isHighlight: true },
+        ]}
       />
     </div>
   );

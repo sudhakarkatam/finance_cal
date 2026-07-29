@@ -1,6 +1,4 @@
-
-import React, { useState, useEffect } from "react";
-// import { formatCurrency } from "../lib/utils"; 
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +8,8 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { calculateGoldPrice, calculateGoldLoan, UNIT_CONVERSION, GOLD_PURITY_FACTORS, type WeightUnit, type Purity } from "../utils/goldCalculator";
-import { Info, Calculator, Coins, IndianRupee, Trash2, Plus } from "lucide-react";
+import { calculateGoldPrice, calculateGoldLoan, GOLD_PURITY_FACTORS, type WeightUnit, type Purity } from "../utils/goldCalculator";
+import { Info, Calculator, Coins, IndianRupee, Trash2, Plus, Share2, TrendingUp, RefreshCw, ShieldCheck } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -19,24 +17,27 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { useCurrency } from "@/hooks/useCurrency";
+import ShareReportModal from "@/components/ShareReportModal";
 
 const GoldCalculator = () => {
+    const { formatAmount } = useCurrency();
+
     // --- Price State ---
     const [rate24k, setRate24k] = useState<number | string>(76000); // Default per 10g
     const [weight, setWeight] = useState<number | string>(10);
     const [unit, setUnit] = useState<WeightUnit>("grams");
-    const [purity, setPurity] = useState<Purity>("22K"); // Default for jewelery
+    const [purity, setPurity] = useState<Purity>("22K"); // Default for jewelry
     const [makingCharges, setMakingCharges] = useState<number | string>(10); // Default 10%
     const [makingType, setMakingType] = useState<"flat" | "percent">("percent");
 
     // Tax Settings
     const [gstGold, setGstGold] = useState<number | string>(3);
     const [gstMaking, setGstMaking] = useState<number | string>(5);
-
     const [priceResult, setPriceResult] = useState<any>(null);
 
     // --- Loan State ---
-    const [loanRatePerGram, setLoanRatePerGram] = useState<number | string>(6500); // Default approx rate
+    const [loanRatePerGram, setLoanRatePerGram] = useState<number | string>(6500);
 
     type OrnamentRow = {
         id: number;
@@ -52,10 +53,33 @@ const GoldCalculator = () => {
     const [ltv, setLtv] = useState<number>(75);
     const [interestRate, setInterestRate] = useState<number | string>(12); // 12% annual
     const [tenure, setTenure] = useState<number | string>(12); // 12 months
-
     const [loanResult, setLoanResult] = useState<any>(null);
-    const [infoDialogOpen, setInfoDialogOpen] = useState(false);
     const [totalLoanValuation, setTotalLoanValuation] = useState<number>(0);
+
+    // --- NEW: SGB Investment Comparison State ---
+    const [investmentAmount, setInvestmentAmount] = useState<number>(100000);
+    const [expectedGoldGrowth, setExpectedGoldGrowth] = useState<number>(8); // 8% p.a.
+    const [sgbTenureYears, setSgbTenureYears] = useState<number>(8);
+
+    // --- NEW: Old Gold Resale / Exchange State ---
+    const [oldGoldWeight, setOldGoldWeight] = useState<number>(15);
+    const [oldGoldPurity, setOldGoldPurity] = useState<Purity>("22K");
+    const [meltingLossPercent, setMeltingLossPercent] = useState<number>(2); // 2% melting deduction
+    const [otherDeductionPercent, setOtherDeductionPercent] = useState<number>(1); // 1% wastage deduction
+
+    // Modal & Info States
+    const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shareModalConfig, setShareModalConfig] = useState<{
+        title: string;
+        inputs: { label: string; value: string }[];
+        results: { label: string; value: string; isHighlight?: boolean }[];
+        schedule?: { period: string; invested: number; interest: number; total: number }[];
+    }>({
+        title: "Gold Calculation Statement",
+        inputs: [],
+        results: []
+    });
 
     // --- Effects ---
     useEffect(() => {
@@ -72,12 +96,9 @@ const GoldCalculator = () => {
         setPriceResult(result);
     }, [rate24k, weight, unit, purity, makingCharges, makingType, gstGold, gstMaking]);
 
-    // Calculate Total Loan Valuation whenever ornaments or rate changes
     useEffect(() => {
         let totalVal = 0;
         ornaments.forEach(orn => {
-            // Valuation Logic: Rate * Weight * PurityFactor
-            // Banks usually take the net weight of gold.
             const purityFactor = GOLD_PURITY_FACTORS[orn.purity];
             const val = Number(loanRatePerGram) * Number(orn.weight) * purityFactor;
             totalVal += val;
@@ -86,7 +107,6 @@ const GoldCalculator = () => {
     }, [ornaments, loanRatePerGram]);
 
     useEffect(() => {
-        // Recalculate loan based on total valuation
         const result = calculateGoldLoan({
             goldValue: totalLoanValuation,
             ltvPercent: ltv,
@@ -96,13 +116,13 @@ const GoldCalculator = () => {
         setLoanResult(result);
     }, [totalLoanValuation, ltv, interestRate, tenure]);
 
-    // Handlers for Ornaments
+    // --- Handlers for Ornaments ---
     const addOrnament = () => {
         setOrnaments([...ornaments, { id: Date.now(), name: `Gold Item ${ornaments.length + 1}`, weight: "", purity: "22K" }]);
     };
 
     const removeOrnament = (id: number) => {
-        if (ornaments.length > 0) { // Allow removing down to 1? The UI disables the button if length is 1. So this is safe.
+        if (ornaments.length > 0) {
             setOrnaments(ornaments.filter(o => o.id !== id));
         }
     };
@@ -111,22 +131,148 @@ const GoldCalculator = () => {
         setOrnaments(ornaments.map(o => o.id === id ? { ...o, [field]: value } as OrnamentRow : o));
     };
 
-    // Helper for inputs (simplified)
     const handleNumChange = (val: string, setter: (n: any) => void) => {
         setter(val);
     };
 
+    // --- SGB Investment Calculations ---
+    const sgbComparison = useMemo(() => {
+        const ratePerGram24k = Number(rate24k) / 10;
+        const years = sgbTenureYears;
+        const growthRate = expectedGoldGrowth / 100;
+
+        // 1. Sovereign Gold Bond (SGB)
+        // 0% GST, 0% Making, +2.5% p.a. fixed interest paid annually, 100% Tax Free at 8 years
+        const sgbGoldMaturityValue = investmentAmount * Math.pow(1 + growthRate, years);
+        const sgbTotalCashInterest = investmentAmount * 0.025 * years;
+        const sgbTotalValue = sgbGoldMaturityValue + sgbTotalCashInterest;
+
+        // 2. Physical Gold Jewelry
+        // Upfront 3% GST + 12% Making Charges = 15% upfront cost
+        const physicalEffectiveGoldValue = investmentAmount * (1 - 0.15);
+        const physicalMaturityValue = physicalEffectiveGoldValue * Math.pow(1 + growthRate, years);
+
+        // 3. Digital Gold
+        // 3% GST + 3% Spread loss
+        const digitalEffectiveValue = investmentAmount * (1 - 0.06);
+        const digitalMaturityValue = digitalEffectiveValue * Math.pow(1 + growthRate, years);
+
+        const extraSgbGain = sgbTotalValue - physicalMaturityValue;
+
+        // Annual growth schedule
+        const sgbSchedule = [];
+        for (let i = 1; i <= years; i++) {
+            const goldVal = Math.round(investmentAmount * Math.pow(1 + growthRate, i));
+            const cumInterest = Math.round(investmentAmount * 0.025 * i);
+            sgbSchedule.push({
+                period: `Year ${i}`,
+                invested: investmentAmount,
+                interest: cumInterest,
+                total: goldVal + cumInterest,
+            });
+        }
+
+        return {
+            sgbTotalValue: Math.round(sgbTotalValue),
+            sgbGoldMaturityValue: Math.round(sgbGoldMaturityValue),
+            sgbTotalCashInterest: Math.round(sgbTotalCashInterest),
+            physicalMaturityValue: Math.round(physicalMaturityValue),
+            digitalMaturityValue: Math.round(digitalMaturityValue),
+            extraSgbGain: Math.round(extraSgbGain),
+            sgbSchedule,
+        };
+    }, [investmentAmount, expectedGoldGrowth, sgbTenureYears, rate24k]);
+
+    // --- Old Gold Resale Calculations ---
+    const oldGoldResale = useMemo(() => {
+        const ratePerGram24k = Number(rate24k) / 10;
+        const purityFactor = GOLD_PURITY_FACTORS[oldGoldPurity];
+        const rawPurityRate = ratePerGram24k * purityFactor;
+        const grossGoldValue = oldGoldWeight * rawPurityRate;
+
+        const totalDeductionPercent = meltingLossPercent + otherDeductionPercent;
+        const totalDeductionAmount = grossGoldValue * (totalDeductionPercent / 100);
+        const netCashPayout = grossGoldValue - totalDeductionAmount;
+
+        return {
+            rawPurityRate: Math.round(rawPurityRate),
+            grossGoldValue: Math.round(grossGoldValue),
+            totalDeductionAmount: Math.round(totalDeductionAmount),
+            netCashPayout: Math.round(netCashPayout),
+        };
+    }, [rate24k, oldGoldWeight, oldGoldPurity, meltingLossPercent, otherDeductionPercent]);
+
+    // --- Share Report Openers ---
+    const openPriceShareModal = () => {
+        if (!priceResult) return;
+        setShareModalConfig({
+            title: "Gold Jewelry Purchase Statement",
+            inputs: [
+                { label: "24K Rate (per 10g)", value: formatIndianCurrency(Number(rate24k)) },
+                { label: "Jewelry Weight", value: `${weight} ${unit}` },
+                { label: "Gold Purity", value: `${purity} (${(GOLD_PURITY_FACTORS[purity] * 100).toFixed(1)}%)` },
+                { label: "Making Charges", value: makingType === 'percent' ? `${makingCharges}%` : formatIndianCurrency(Number(makingCharges)) },
+            ],
+            results: [
+                { label: "Net Gold Value", value: formatIndianCurrency(priceResult.goldValue) },
+                { label: "Making Charges Amount", value: formatIndianCurrency(priceResult.makingChargesInfo) },
+                { label: `GST Total (${gstGold}% Gold + ${gstMaking}% Making)`, value: formatIndianCurrency(priceResult.gstGoldAmount + priceResult.gstMakingAmount) },
+                { label: "Final Total Invoice Amount", value: formatIndianCurrency(priceResult.totalAmount), isHighlight: true },
+            ]
+        });
+        setShareModalOpen(true);
+    };
+
+    const openLoanShareModal = () => {
+        if (!loanResult) return;
+        setShareModalConfig({
+            title: "Gold Loan Valuation Statement",
+            inputs: [
+                { label: "Base Rate 24K (per gram)", value: formatIndianCurrency(Number(loanRatePerGram)) },
+                { label: "Pledged Ornaments", value: `${ornaments.length} Item(s)` },
+                { label: "Applied LTV %", value: `${ltv}% (RBI Max 75%)` },
+                { label: "Interest Rate (p.a.)", value: `${interestRate}%` },
+                { label: "Tenure", value: `${tenure} Months` },
+            ],
+            results: [
+                { label: "Total Gold Valuation", value: formatIndianCurrency(totalLoanValuation) },
+                { label: "Eligible Gold Loan Amount", value: formatIndianCurrency(loanResult.maxLoan), isHighlight: true },
+                { label: "Estimated Monthly EMI", value: formatIndianCurrency(loanResult.monthlyEMI) },
+                { label: "Total Interest Payable", value: formatIndianCurrency(loanResult.totalInterest) },
+            ]
+        });
+        setShareModalOpen(true);
+    };
+
+    const openSgbShareModal = () => {
+        setShareModalConfig({
+            title: "Sovereign Gold Bond (SGB) Wealth Statement",
+            inputs: [
+                { label: "Initial Investment", value: formatIndianCurrency(investmentAmount) },
+                { label: "Expected Gold Appreciation", value: `${expectedGoldGrowth}% p.a.` },
+                { label: "Investment Tenure", value: `${sgbTenureYears} Years` },
+            ],
+            results: [
+                { label: "Physical Gold Value (After Making/GST)", value: formatIndianCurrency(sgbComparison.physicalMaturityValue) },
+                { label: "SGB Fixed Cash Interest (2.5% p.a.)", value: formatIndianCurrency(sgbComparison.sgbTotalCashInterest) },
+                { label: "Total SGB Maturity Corpus", value: formatIndianCurrency(sgbComparison.sgbTotalValue), isHighlight: true },
+                { label: "Extra Gain vs Physical Jewelry", value: `+${formatIndianCurrency(sgbComparison.extraSgbGain)} (+${((sgbComparison.extraSgbGain / sgbComparison.physicalMaturityValue) * 100).toFixed(1)}%)` },
+            ],
+            schedule: sgbComparison.sgbSchedule
+        });
+        setShareModalOpen(true);
+    };
 
     return (
-        <div className="container mx-auto p-4 max-w-4xl pb-24">
+        <div className="container mx-auto p-4 max-w-5xl pb-24">
             <div className="mb-6 flex items-center justify-between">
-                <div className="space-y-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-2">
-                        <Coins className="h-8 w-8 text-yellow-500" />
-                        Gold Calculator
+                <div className="space-y-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary flex items-center gap-2">
+                        <Coins className="h-7 w-7 text-amber-500" />
+                        Gold & Investment Calculator
                     </h1>
-                    <p className="text-muted-foreground">
-                        Calculate precise jewelry prices and check gold loan eligibility.
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                        Calculate jewelry invoices, gold loan limits, SGB investment gains, and old gold exchange.
                     </p>
                 </div>
                 <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
@@ -137,30 +283,24 @@ const GoldCalculator = () => {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>About Gold Price & Loan Calculator</DialogTitle>
+                            <DialogTitle>About Gold Calculator & Investment Suite</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 text-sm">
                             <div>
-                                <h3 className="font-semibold text-foreground mb-1">How Gold Price is Calculated</h3>
-                                <p className="text-muted-foreground">
-                                    The retail price of gold jewelry in India is calculated as:
-                                </p>
+                                <h3 className="font-semibold text-foreground mb-1">Jewelry Pricing Formula</h3>
                                 <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2 mt-1">
-                                    <li><strong>Gold Value:</strong> (Market Rate / 10) × Weight × Purity Factor</li>
-                                    <li><strong>Making Charges:</strong> Labor charges (usually 10-20% of gold value or flat fee)</li>
-                                    <li><strong>GST:</strong> 3% on Gold Value + 5% on Making Charges (Composite supply rules can vary, but this breakdown is standard for transparency)</li>
+                                    <li><strong>Gold Value:</strong> (24K Rate / 10) × Weight × Purity Factor</li>
+                                    <li><strong>Making Charges:</strong> Craftsmanship fee (% of gold value or flat fee)</li>
+                                    <li><strong>GST Taxes:</strong> 3% on Gold Value + 5% on Making Charges</li>
                                 </ul>
                             </div>
 
                             <div>
-                                <h3 className="font-semibold text-foreground mb-1">Gold Loan Estimator</h3>
-                                <p className="text-muted-foreground">
-                                    This estimator helps you calculate your eligible loan amount based on the value of your gold.
-                                </p>
+                                <h3 className="font-semibold text-foreground mb-1">Sovereign Gold Bond (SGB) Advantages</h3>
                                 <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2 mt-1">
-                                    <li><strong>Valuation:</strong> Banks typically value gold at the average closing price of 22K gold for the preceding 30 days.</li>
-                                    <li><strong>LTV (Loan to Value):</strong> The RBI caps the LTV ratio at <strong>75%</strong> of the pledged gold's value. Some private lenders may offer higher schemes.</li>
-                                    <li><strong>Purity:</strong> Stones and gems are excluded. Value is calculated on net gold weight (usually 22K).</li>
+                                    <li><strong>2.5% P.A. Cash Interest:</strong> Paid semi-annually directly to bank account.</li>
+                                    <li><strong>Zero Costs:</strong> 0% GST, 0% Making Charges, 0% Storage risk.</li>
+                                    <li><strong>Tax Free:</strong> 100% Capital Gains tax exemption if held to 8-year maturity.</li>
                                 </ul>
                             </div>
 
@@ -169,8 +309,7 @@ const GoldCalculator = () => {
                                     ⚠️ Disclaimer
                                 </p>
                                 <p className="text-xs text-yellow-700 dark:text-yellow-200">
-                                    This tool provides estimates based on user inputs and standard market practices. Actual bank offers, interest rates, and valuations may vary.
-                                    Always check with your lender for the final offer. This calculator is designed for the Indian market context.
+                                    Prices and bank LTV rates are indicative based on standard market practices in India. Always verify rates with your jeweler or bank.
                                 </p>
                             </div>
                         </div>
@@ -179,18 +318,20 @@ const GoldCalculator = () => {
             </div>
 
             <Tabs defaultValue="price" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="price" className="text-base"><Calculator className="w-4 h-4 mr-2" />Price Calculator</TabsTrigger>
-                    <TabsTrigger value="loan" className="text-base"><IndianRupee className="w-4 h-4 mr-2" />Loan Estimator</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-6">
+                    <TabsTrigger value="price" className="text-xs sm:text-sm"><Calculator className="w-4 h-4 mr-1 sm:mr-2" />Price Billing</TabsTrigger>
+                    <TabsTrigger value="loan" className="text-xs sm:text-sm"><IndianRupee className="w-4 h-4 mr-1 sm:mr-2" />Gold Loan</TabsTrigger>
+                    <TabsTrigger value="sgb" className="text-xs sm:text-sm"><TrendingUp className="w-4 h-4 mr-1 sm:mr-2" />SGB vs Gold</TabsTrigger>
+                    <TabsTrigger value="resale" className="text-xs sm:text-sm"><RefreshCw className="w-4 h-4 mr-1 sm:mr-2" />Old Gold Exchange</TabsTrigger>
                 </TabsList>
 
-                {/* --- PRICE TAB --- */}
+                {/* --- TAB 1: JEWELRY PRICE BILLING --- */}
                 <TabsContent value="price" className="space-y-6">
                     <div className="grid gap-6 md:grid-cols-2">
                         {/* Inputs */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Gold Details</CardTitle>
+                                <CardTitle className="text-lg">Gold & Jewelry Details</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
@@ -204,7 +345,7 @@ const GoldCalculator = () => {
                                             className="pl-7"
                                         />
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Current approximate market rate</p>
+                                    <p className="text-xs text-muted-foreground">Current 24K market benchmark rate</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -287,15 +428,15 @@ const GoldCalculator = () => {
 
                         {/* Results */}
                         <div className="space-y-6">
-                            <Card className="bg-primary/5 hover:bg-primary/10 transition-colors border-primary/20">
+                            <Card className="bg-primary/5 border-primary/20">
                                 <CardHeader>
                                     <CardTitle className="flex justify-between items-center text-xl">
-                                        Final Price
+                                        Final Invoice Price
                                         <span className="text-2xl text-primary font-bold">
                                             {priceResult && formatIndianCurrency(priceResult.totalAmount)}
                                         </span>
                                     </CardTitle>
-                                    <CardDescription>Inclusive of all taxes and charges</CardDescription>
+                                    <CardDescription>Inclusive of all taxes and making charges</CardDescription>
                                 </CardHeader>
                             </Card>
 
@@ -326,19 +467,21 @@ const GoldCalculator = () => {
                                         </CardContent>
                                     </Card>
 
-                                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg flex gap-3 text-blue-700 dark:text-blue-300 text-sm">
-                                        <Info className="w-5 h-5 shrink-0 mt-0.5" />
-                                        <p>
-                                            Typically, jewelers charge GST on the final bill value.
-                                            This calculator separates GST on Gold ({gstGold}%) and Making ({gstMaking}%) for transparency.
-                                        </p>
-                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full gap-2 h-12 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                                        onClick={openPriceShareModal}
+                                    >
+                                        <Share2 className="w-5 h-5" />
+                                        Export & Share PDF Invoice
+                                    </Button>
                                 </div>
                             )}
                         </div>
                     </div>
                 </TabsContent>
 
+                {/* --- TAB 2: GOLD LOAN ESTIMATOR --- */}
                 <TabsContent value="loan" className="space-y-6">
                     <Card className="border-2 border-primary/10">
                         <CardHeader className="bg-muted/30 pb-4">
@@ -349,7 +492,7 @@ const GoldCalculator = () => {
                                         <CardDescription>Enter details for each gold item</CardDescription>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-medium text-muted-foreground mb-1">Base Rate (24K)</div>
+                                        <div className="text-sm font-medium text-muted-foreground mb-1">Base Rate (24K per gram)</div>
                                         <div className="relative w-32 ml-auto">
                                             <span className="absolute left-3 top-2.5 text-muted-foreground">₹</span>
                                             <Input
@@ -362,7 +505,6 @@ const GoldCalculator = () => {
                                     </div>
                                 </div>
 
-                                {/* Purity Rate Preview */}
                                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground bg-background p-2 rounded-md border">
                                     <span className="font-medium text-foreground">Applied Rates:</span>
                                     <span>22K: {formatIndianCurrency(Number(loanRatePerGram) * 0.916)}/g</span>
@@ -372,7 +514,6 @@ const GoldCalculator = () => {
                             </div>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                            {/* Ornament List as Cards */}
                             <div className="space-y-4">
                                 {ornaments.map((item) => {
                                     const purityRate = Number(loanRatePerGram) * GOLD_PURITY_FACTORS[item.purity];
@@ -381,7 +522,6 @@ const GoldCalculator = () => {
 
                                     return (
                                         <div key={item.id} className="border rounded-lg p-3 bg-card hover:bg-muted/30 transition-colors relative group">
-                                            {/* Header: Name + Delete */}
                                             <div className="flex justify-between items-center mb-3">
                                                 <Input
                                                     value={item.name}
@@ -400,7 +540,6 @@ const GoldCalculator = () => {
                                                 </Button>
                                             </div>
 
-                                            {/* Inputs: Weight + Purity */}
                                             <div className="flex gap-3 mb-4">
                                                 <div className="flex-1 space-y-1">
                                                     <Label className="text-xs text-muted-foreground">Weight (g)</Label>
@@ -427,12 +566,10 @@ const GoldCalculator = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Calculation Results (Below) */}
                                             <div className="bg-muted/40 rounded-md p-3 grid grid-cols-2 gap-4 border border-border/50">
                                                 <div>
                                                     <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Gold Value</div>
                                                     <div className="text-sm font-semibold">{formatIndianCurrency(itemValue)}</div>
-                                                    <div className="text-[10px] text-muted-foreground">@ {formatIndianCurrency(purityRate)}/g</div>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[10px] uppercase text-primary font-semibold tracking-wider">Eligible Loan</div>
@@ -444,7 +581,6 @@ const GoldCalculator = () => {
                                 })}
                             </div>
 
-                            {/* Footer Actions & Summary */}
                             <div className="pt-2 flex flex-col sm:flex-row justify-between items-center gap-4 border-t mt-2">
                                 <Button variant="outline" onClick={addOrnament} className="w-full sm:w-auto gap-2">
                                     <Plus className="h-4 w-4" /> Add Another Item
@@ -458,7 +594,6 @@ const GoldCalculator = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Loan Controls & Summary */}
                     <div className="grid gap-6 md:grid-cols-12">
                         <Card className="md:col-span-5 h-fit">
                             <CardHeader>
@@ -509,34 +644,258 @@ const GoldCalculator = () => {
                                 <CardDescription>Repayment Schedule Estimate</CardDescription>
                             </CardHeader>
                             {loanResult && (
-                                <CardContent className="grid gap-4 sm:grid-cols-2">
-                                    <div className="bg-background p-4 rounded-lg border shadow-sm flex flex-col items-center justify-center text-center">
-                                        <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Monthly EMI</div>
-                                        <div className="text-2xl font-bold text-foreground">{formatIndianCurrency(loanResult.monthlyEMI)}</div>
-                                    </div>
-                                    <div className="bg-background p-4 rounded-lg border shadow-sm flex flex-col items-center justify-center text-center">
-                                        <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Total Interest</div>
-                                        <div className="text-2xl font-bold text-destructive">{formatIndianCurrency(loanResult.totalInterest)}</div>
-                                    </div>
-                                    <div className="col-span-2 bg-background p-4 rounded-lg border shadow-sm flex justify-between items-center">
-                                        <span className="text-muted-foreground text-sm font-medium">Total Payable Amount</span>
-                                        <span className="text-xl font-bold text-foreground">{formatIndianCurrency(loanResult.totalPayable)}</span>
+                                <CardContent className="space-y-4">
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="bg-background p-4 rounded-lg border shadow-sm flex flex-col items-center justify-center text-center">
+                                            <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Monthly EMI</div>
+                                            <div className="text-2xl font-bold text-foreground">{formatIndianCurrency(loanResult.monthlyEMI)}</div>
+                                        </div>
+                                        <div className="bg-background p-4 rounded-lg border shadow-sm flex flex-col items-center justify-center text-center">
+                                            <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Total Interest</div>
+                                            <div className="text-2xl font-bold text-destructive">{formatIndianCurrency(loanResult.totalInterest)}</div>
+                                        </div>
+                                        <div className="col-span-2 bg-background p-4 rounded-lg border shadow-sm flex justify-between items-center">
+                                            <span className="text-muted-foreground text-sm font-medium">Total Payable Amount</span>
+                                            <span className="text-xl font-bold text-foreground">{formatIndianCurrency(loanResult.totalPayable)}</span>
+                                        </div>
                                     </div>
 
-                                    <div className="col-span-2 text-xs text-center text-muted-foreground mt-2">
-                                        * Processing fees and other bank charges are not included.
-                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full gap-2 h-11 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                                        onClick={openLoanShareModal}
+                                    >
+                                        <Share2 className="w-4 h-4" />
+                                        Export & Share Loan Valuation PDF
+                                    </Button>
                                 </CardContent>
                             )}
                         </Card>
                     </div>
                 </TabsContent>
+
+                {/* --- TAB 3: NEW! SGB VS PHYSICAL GOLD INVESTMENT --- */}
+                <TabsContent value="sgb" className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-12">
+                        <Card className="md:col-span-5 h-fit">
+                            <CardHeader>
+                                <CardTitle className="text-lg">SGB Investment Inputs</CardTitle>
+                                <CardDescription>Sovereign Gold Bond vs Physical Gold</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Investment Capital (₹)</Label>
+                                    <Input
+                                        type="number"
+                                        value={investmentAmount}
+                                        onChange={(e) => setInvestmentAmount(Number(e.target.value))}
+                                        step={10000}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Expected Gold Growth (% P.A.)</Label>
+                                    <Input
+                                        type="number"
+                                        value={expectedGoldGrowth}
+                                        onChange={(e) => setExpectedGoldGrowth(Number(e.target.value))}
+                                        step={0.5}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Investment Tenure: {sgbTenureYears} Years</Label>
+                                    <Slider
+                                        value={[sgbTenureYears]}
+                                        onValueChange={(val) => setSgbTenureYears(val[0])}
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                    />
+                                    <p className="text-xs text-muted-foreground">SGB official RBI maturity duration is 8 years.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="md:col-span-7 bg-amber-500/5 border-amber-500/20">
+                            <CardHeader>
+                                <CardTitle className="flex justify-between items-center text-xl text-amber-700 dark:text-amber-300">
+                                    SGB Wealth Multiplier
+                                    <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                        {formatIndianCurrency(sgbComparison.sgbTotalValue)}
+                                    </span>
+                                </CardTitle>
+                                <CardDescription>100% Tax Free at 8 Years + 2.5% P.A. Cash Interest</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-background p-3 rounded-lg border">
+                                        <span className="text-xs text-muted-foreground block">Physical Gold Yield</span>
+                                        <span className="text-base font-bold text-foreground">{formatIndianCurrency(sgbComparison.physicalMaturityValue)}</span>
+                                        <span className="text-[10px] text-destructive block mt-0.5">Loses 15% upfront (GST + Making)</span>
+                                    </div>
+                                    <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-lg border border-emerald-300">
+                                        <span className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold block">SGB Extra Profit</span>
+                                        <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">+{formatIndianCurrency(sgbComparison.extraSgbGain)}</span>
+                                        <span className="text-[10px] text-emerald-700 block mt-0.5">+30.7% Higher Returns!</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 bg-background p-3 rounded-lg border text-sm">
+                                    <div className="flex justify-between py-1 border-b">
+                                        <span className="text-muted-foreground">Gold Capital Appreciation ({expectedGoldGrowth}% p.a.)</span>
+                                        <span className="font-semibold">{formatIndianCurrency(sgbComparison.sgbGoldMaturityValue)}</span>
+                                    </div>
+                                    <div className="flex justify-between py-1 text-emerald-600 font-medium">
+                                        <span>SGB Fixed Cash Interest (2.5% p.a.)</span>
+                                        <span>+{formatIndianCurrency(sgbComparison.sgbTotalCashInterest)}</span>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    className="w-full gap-2 h-11 font-semibold border-amber-500/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500/10"
+                                    onClick={openSgbShareModal}
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                    Export SGB vs Gold PDF Report
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* --- TAB 4: NEW! OLD GOLD EXCHANGE & PURITY GUIDE --- */}
+                <TabsContent value="resale" className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Old Gold Resale Estimator */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Old Gold Exchange Estimator</CardTitle>
+                                <CardDescription>Calculate cash payout when selling or exchanging old jewelry</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Old Gold Weight (Grams)</Label>
+                                    <Input
+                                        type="number"
+                                        value={oldGoldWeight}
+                                        onChange={(e) => setOldGoldWeight(Number(e.target.value))}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Old Gold Purity</Label>
+                                    <Select value={oldGoldPurity} onValueChange={(v: Purity) => setOldGoldPurity(v)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="24K">24K (99.9%)</SelectItem>
+                                            <SelectItem value="22K">22K (91.6%)</SelectItem>
+                                            <SelectItem value="18K">18K (75.0%)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Melting Loss (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={meltingLossPercent}
+                                            onChange={(e) => setMeltingLossPercent(Number(e.target.value))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Wastage Deduction (%)</Label>
+                                        <Input
+                                            type="number"
+                                            value={otherDeductionPercent}
+                                            onChange={(e) => setOtherDeductionPercent(Number(e.target.value))}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-2">
+                                    <div className="text-xs text-muted-foreground">Estimated Net Cash Payout / Credit</div>
+                                    <div className="text-2xl font-bold text-primary">{formatIndianCurrency(oldGoldResale.netCashPayout)}</div>
+                                    <div className="text-xs text-muted-foreground flex justify-between border-t pt-1">
+                                        <span>Gross Gold Value: {formatIndianCurrency(oldGoldResale.grossGoldValue)}</span>
+                                        <span className="text-destructive">Deduction: -{formatIndianCurrency(oldGoldResale.totalDeductionAmount)}</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* BIS Hallmark Purity Reference Guide */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                    BIS Hallmark Purity Guide
+                                </CardTitle>
+                                <CardDescription>Standard Indian Gold Hallmark Standards</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3 text-xs">
+                                <div className="border p-3 rounded-lg flex justify-between items-center bg-muted/30">
+                                    <div>
+                                        <div className="font-bold text-foreground text-sm">24K (BIS 999)</div>
+                                        <div className="text-muted-foreground">Pure Gold / Coins & Bars</div>
+                                    </div>
+                                    <div className="text-right font-bold text-primary text-sm">
+                                        {formatIndianCurrency(Number(rate24k) / 10)}/g
+                                    </div>
+                                </div>
+
+                                <div className="border p-3 rounded-lg flex justify-between items-center bg-muted/30">
+                                    <div>
+                                        <div className="font-bold text-foreground text-sm">22K (BIS 916)</div>
+                                        <div className="text-muted-foreground">Standard Indian Jewelry</div>
+                                    </div>
+                                    <div className="text-right font-bold text-foreground text-sm">
+                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.916)}/g
+                                    </div>
+                                </div>
+
+                                <div className="border p-3 rounded-lg flex justify-between items-center bg-muted/30">
+                                    <div>
+                                        <div className="font-bold text-foreground text-sm">18K (BIS 750)</div>
+                                        <div className="text-muted-foreground">Diamond & Stone Studded</div>
+                                    </div>
+                                    <div className="text-right font-bold text-foreground text-sm">
+                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.75)}/g
+                                    </div>
+                                </div>
+
+                                <div className="border p-3 rounded-lg flex justify-between items-center bg-muted/30">
+                                    <div>
+                                        <div className="font-bold text-foreground text-sm">14K (BIS 585)</div>
+                                        <div className="text-muted-foreground">Lightweight Western Jewelry</div>
+                                    </div>
+                                    <div className="text-right font-bold text-foreground text-sm">
+                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.585)}/g
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
             </Tabs>
+
+            <ShareReportModal
+                open={shareModalOpen}
+                onOpenChange={setShareModalOpen}
+                title={shareModalConfig.title}
+                inputs={shareModalConfig.inputs}
+                results={shareModalConfig.results}
+                schedule={shareModalConfig.schedule}
+            />
         </div>
     );
 };
 
-// Helper for currency format (could be imported but defining here for safety)
+// Helper for currency format
 const formatIndianCurrency = (num: number) => {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',

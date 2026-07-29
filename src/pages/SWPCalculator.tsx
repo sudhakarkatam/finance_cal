@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Calculator, Eye, EyeOff, Info } from "lucide-react";
+import { Save, RotateCcw, Calculator, Eye, EyeOff, Info, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
+import { ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import { calculateSWP } from "@/lib/calculations";
 import { useCurrency } from "@/hooks/useCurrency";
 import {
@@ -34,6 +36,7 @@ const SWPCalculator = () => {
   const [withdrawalStartsThisMonth, setWithdrawalStartsThisMonth] =
     useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showFullTable, setShowFullTable] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
@@ -564,6 +567,28 @@ const SWPCalculator = () => {
               </div>
             </DialogContent>
           </Dialog>
+
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -588,6 +613,31 @@ const SWPCalculator = () => {
           sustainableWithdrawal: result.sustainableWithdrawal,
           depletionMonth: result.depletionMonth || 0,
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Systematic Withdrawal Plan (SWP) Report"
+        inputs={[
+          { label: "Total Corpus Amount", value: formatAmount(investmentAmount) },
+          { label: "Monthly Withdrawal Amount", value: formatAmount(withdrawalPerMonth) },
+          { label: "Expected Portfolio Return (p.a)", value: `${expectedReturn}%` },
+          { label: "Withdrawal Duration", value: years ? `${years} Years` : "Indefinite" },
+          ...(inflationRate > 0 ? [{ label: "Annual Inflation Rate", value: `${inflationRate}%` }] : []),
+        ]}
+        results={[
+          { label: "Initial Investment", value: formatAmount(result.invested) },
+          { label: "Total Amount Withdrawn", value: formatAmount(result.totalWithdrawn) },
+          { label: "Total Interest Earned", value: formatAmount(result.totalInterest) },
+          { label: "Final Remaining Balance", value: formatAmount(result.finalBalance), isHighlight: true },
+        ]}
+        schedule={result?.schedule?.map((item: any) => ({
+          period: `Year ${item.year || item.period}`,
+          invested: Math.round(item.startingBalance || item.principal || 0),
+          interest: Math.round(item.interestEarned || item.interest || 0),
+          total: Math.round(item.endingBalance || item.balance || 0),
+        })) || []}
       />
     </div>
   );

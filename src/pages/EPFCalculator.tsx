@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Briefcase, Info } from 'lucide-react';
+import { Save, RotateCcw, Briefcase, Info, Calendar, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { calculateEPF } from '@/lib/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -26,7 +28,44 @@ const EPFCalculator = () => {
   const [salaryGrowth, setSalaryGrowth] = useState(5);
   const [interestRate, setInterestRate] = useState(8.25);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+
+  const epfSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const years = Math.max(1, retirementAge - currentAge);
+    let balance = currentBalance;
+    let totalEmpCont = 0;
+    let totalEmprCont = 0;
+    let currentSalary = basicSalary;
+    const monthlyRate = interestRate / (12 * 100);
+
+    for (let year = 1; year <= years; year++) {
+      const empCont = (employeeContribution / 100) * currentSalary;
+      const emprCont = (3.67 / 100) * currentSalary;
+      const monthlyTotal = empCont + emprCont;
+
+      for (let month = 1; month <= 12; month++) {
+        totalEmpCont += empCont;
+        totalEmprCont += emprCont;
+        balance += monthlyTotal;
+        const interest = balance * monthlyRate;
+        balance += interest;
+      }
+
+      const totalCont = totalEmpCont + totalEmprCont;
+      list.push({
+        period: `Age ${currentAge + year}`,
+        invested: Math.round(totalCont),
+        interest: Math.round(Math.max(0, balance - totalCont - currentBalance)),
+        total: Math.round(balance),
+      });
+
+      currentSalary *= (1 + salaryGrowth / 100);
+    }
+    return list;
+  }, [basicSalary, currentBalance, employeeContribution, currentAge, retirementAge, salaryGrowth, interestRate]);
 
   const result = useMemo(() => {
     return calculateEPF(
@@ -387,14 +426,37 @@ const EPFCalculator = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save Calculation
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual EPF Accumulation Schedule
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -418,6 +480,35 @@ const EPFCalculator = () => {
           maturityValue: result.maturityValue,
           yearsToRetirement: result.yearsToRetirement
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Employees' Provident Fund (EPF) Report"
+        inputs={[
+          { label: "Basic Monthly Salary", value: formatCurrency(basicSalary) },
+          { label: "Current EPF Balance", value: formatCurrency(currentBalance) },
+          { label: "Employee Contribution", value: `${employeeContribution}%` },
+          { label: "Employer EPF Share", value: `3.67%` },
+          { label: "Annual Salary Hike", value: `${salaryGrowth}%` },
+          { label: "EPF Interest Rate (p.a)", value: `${interestRate}%` },
+          { label: "Retirement Horizon", value: `${currentAge} to ${retirementAge} Years` },
+        ]}
+        results={[
+          { label: "Employee Share Deposited", value: formatCurrency(result.totalEmployeeContribution) },
+          { label: "Employer Share Deposited", value: formatCurrency(result.totalEmployerContribution) },
+          { label: "Total Interest Earned", value: formatCurrency(result.totalInterest) },
+          { label: "Final EPF Maturity Corpus", value: formatCurrency(result.maturityValue), isHighlight: true },
+        ]}
+        schedule={epfSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="EPF Accumulation Schedule"
+        schedule={epfSchedule}
       />
     </div>
   );

@@ -8,9 +8,11 @@ import {
   Users,
   PiggyBank,
   TrendingUp,
+  Share2,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import { useCurrency } from "@/hooks/useCurrency";
 import {
   Dialog,
@@ -53,6 +55,7 @@ const RetirementPlanner = () => {
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
 
@@ -609,14 +612,26 @@ const RetirementPlanner = () => {
           </Alert>
         )}
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -651,6 +666,27 @@ const RetirementPlanner = () => {
             yearsInRetirement: result.yearsInRetirement,
           } as Record<string, number>
         }
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Retirement Financial Independence Report"
+        inputs={[
+          { label: "Current Age / Retirement Age", value: `${currentAge} to ${retirementAge} Years` },
+          { label: "Target Life Expectancy", value: `${lifeExpectancy} Years` },
+          { label: "Current Monthly Expenses", value: formatAmount(lifestyleExpenses) },
+          { label: "Current Existing Savings", value: formatAmount(currentSavings) },
+          { label: "Monthly Savings Contribution", value: formatAmount(monthlyContribution) },
+          { label: "Accumulation Expected Return", value: `${expectedReturnAccumulation}%` },
+          { label: "Inflation Rate", value: `${inflationRate}%` },
+        ]}
+        results={[
+          { label: "Total Target Required Corpus", value: formatAmount(result.requiredCorpus) },
+          { label: "Projected Corpus at Age 60", value: formatAmount(result.corpusAtRetirement) },
+          { label: "Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
+          { label: "Goal Status", value: result.isAchievable ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
+        ]}
       />
     </div>
   );

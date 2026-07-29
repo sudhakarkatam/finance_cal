@@ -8,10 +8,14 @@ import {
   Calculator,
   TrendingUp as TrendingUpIcon,
   Info,
+  Share2,
+  Calendar,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import ResultChart from "@/components/ui/ResultChart";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
+import InvestmentScheduleDialog, { ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import {
   calculateSIP,
   calculateStepUpSIP,
@@ -45,6 +49,8 @@ const SIPCalculator = () => {
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
@@ -102,6 +108,37 @@ const SIPCalculator = () => {
     stepUpEnabled,
     stepUpPercentage,
   ]);
+
+  // Generate Year-by-Year Growth Schedule Table
+  const sipSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const monthlyRate = expectedReturn / 12 / 100;
+    const totalMonthsCount = Math.max(1, Math.round(totalYears * 12));
+
+    let currentInv = 0;
+    let currentAmount = 0;
+    let currentMonthlyInv = monthlyInvestment;
+
+    for (let m = 1; m <= totalMonthsCount; m++) {
+      if (stepUpEnabled && m > 1 && (m - 1) % 12 === 0) {
+        currentMonthlyInv = currentMonthlyInv * (1 + stepUpPercentage / 100);
+      }
+
+      currentInv += currentMonthlyInv;
+      currentAmount = (currentAmount + currentMonthlyInv) * (1 + monthlyRate);
+
+      if (m % 12 === 0 || m === totalMonthsCount) {
+        const yearNum = Math.ceil(m / 12);
+        list.push({
+          period: `Year ${yearNum}${m % 12 !== 0 ? ` (${m % 12}m)` : ""}`,
+          invested: Math.round(currentInv),
+          interest: Math.round(Math.max(0, currentAmount - currentInv)),
+          total: Math.round(currentAmount),
+        });
+      }
+    }
+    return list;
+  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
 
   const result = useMemo(() => {
     if (!inflationEnabled) return normalResult;
@@ -715,14 +752,37 @@ const SIPCalculator = () => {
           </div>
         )}
 
-        <Button
-          className="w-full gap-2 h-12 text-base font-semibold"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-5 h-5" />
-          Save Calculation
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -745,6 +805,49 @@ const SIPCalculator = () => {
           inflationAdjustedTotal: result.total,
           inflationRate: inflationEnabled ? inflationRate : 0,
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="SIP Investment Report"
+        inputs={[
+          { label: "Monthly Investment", value: formatCurrency(monthlyInvestment) },
+          { label: "Expected Return (p.a)", value: `${expectedReturn}%` },
+          { label: "Investment Duration", value: `${totalYears.toFixed(1)} Years` },
+          ...(stepUpEnabled ? [{ label: "Annual Step-Up", value: `${stepUpPercentage}%` }] : []),
+          ...(inflationEnabled ? [{ label: "Inflation Rate", value: `${inflationRate}%` }] : []),
+        ]}
+        results={[
+          { label: "Total Investment", value: formatCurrency(result.invested) },
+          { label: "Estimated Wealth Gain", value: formatCurrency(result.returns || (result.total - result.invested)) },
+          { label: "Total Maturity Value", value: formatCurrency(result.total), isHighlight: true },
+        ]}
+        analysis={[
+          ...(stepUpEnabled && comparisonResult ? [{
+            title: "📈 Step-Up SIP Benefit Analysis",
+            items: [
+              { label: "Without Step-Up", value: formatCurrency(comparisonResult.withoutStepUp.total) },
+              { label: "With Step-Up", value: formatCurrency(comparisonResult.withStepUp.total) },
+              { label: "Net Benefit Gain", value: `+${comparisonResult.percentageDifference}% (${formatCurrency(comparisonResult.difference)})`, isHighlight: true }
+            ]
+          }] : []),
+          ...(inflationEnabled && "normalTotal" in result ? [{
+            title: "🎈 Inflation Adjustment Analysis",
+            items: [
+              { label: "Normal Maturity (Without Inflation)", value: formatCurrency(result.normalTotal) },
+              { label: "Real Purchasing Power Maturity", value: formatCurrency(result.total), isHighlight: true }
+            ]
+          }] : [])
+        ]}
+        schedule={sipSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="SIP Growth Schedule"
+        schedule={sipSchedule}
       />
     </div>
   );

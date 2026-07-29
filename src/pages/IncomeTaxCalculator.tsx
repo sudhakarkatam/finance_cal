@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Info, Receipt, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Save, RotateCcw, Info, Receipt, ChevronDown, ChevronUp, AlertTriangle, Share2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { calculateIncomeTax } from '@/lib/calculations';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,6 +119,7 @@ const IncomeTaxCalculator = () => {
   const [incomeOpen, setIncomeOpen] = useState(true);
   const [deductionsOpen, setDeductionsOpen] = useState(false); // Collapsed by default
   const [capitalGainsOpen, setCapitalGainsOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Auto-calculate section 80TTA if interest income exists
   const auto80TTA = useMemo(() => {
@@ -1131,6 +1133,27 @@ const IncomeTaxCalculator = () => {
                 </div>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                <Button
+                  className="w-full gap-2 h-12 text-base font-semibold"
+                  size="lg"
+                  onClick={() => setSaveDialogOpen(true)}
+                >
+                  <Save className="w-5 h-5" />
+                  Save Calculation
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                  size="lg"
+                  onClick={() => setShareModalOpen(true)}
+                >
+                  <Share2 className="w-5 h-5" />
+                  Export & Share Report
+                </Button>
+              </div>
           </Card>
         </div>
       </div>
@@ -1251,6 +1274,41 @@ const IncomeTaxCalculator = () => {
           totalTaxNew: result.newRegime.totalTax,
           savings: result.oldRegime.totalTax - result.newRegime.totalTax
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Income Tax Calculation Statement"
+        inputs={[
+          { label: "Financial Year", value: financialYear },
+          { label: "Age Category", value: ageCategory === 'below60' ? 'Below 60 Years' : ageCategory === '60to80' ? 'Senior Citizen (60-80)' : 'Super Senior (80+)' },
+          { label: "Gross Salary", value: formatAmount(grossSalary) },
+          { label: "Other Income / Interest", value: formatAmount(interestIncome + rentalIncome) },
+          { label: "Section 80C Deductions", value: formatAmount(section80C) },
+          { label: "Section 80D Deductions", value: formatAmount(section80D) },
+        ]}
+        results={[
+          { label: "Old Regime Total Tax", value: formatAmount(result.oldRegime.totalTax) },
+          { label: "New Regime Total Tax", value: formatAmount(result.newRegime.totalTax), isHighlight: result.newRegime.totalTax <= result.oldRegime.totalTax },
+          { label: "Recommended Tax Regime", value: result.newRegime.totalTax <= result.oldRegime.totalTax ? "New Regime" : "Old Regime", isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "💡 Tax Regime Comparison Analysis",
+            items: [
+              { label: "Old Regime Tax Payable", value: formatAmount(result.oldRegime.totalTax) },
+              { label: "New Regime Tax Payable", value: formatAmount(result.newRegime.totalTax) },
+              {
+                label: "Recommended Choice Savings",
+                value: result.oldRegime.totalTax === result.newRegime.totalTax
+                  ? "Both Regimes Equal Tax"
+                  : `Save ${formatAmount(Math.abs(result.oldRegime.totalTax - result.newRegime.totalTax))} via ${result.newRegime.totalTax < result.oldRegime.totalTax ? "New Regime" : "Old Regime"}`,
+                isHighlight: true
+              }
+            ]
+          }
+        ]}
       />
     </div>
   );

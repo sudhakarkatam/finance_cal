@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Landmark, Info } from 'lucide-react';
+import { Save, RotateCcw, Landmark, Info, Calendar, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -22,10 +24,30 @@ const PPFCalculator = () => {
   const [yearlyInvestment, setYearlyInvestment] = useState(150000);
   const [years, setYears] = useState(15);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // PPF interest rate (fixed by government, using current rate)
   const ppfRate = 7.1;
+
+  const ppfSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const rate = ppfRate / 100;
+    let currentBalance = 0;
+
+    for (let y = 1; y <= years; y++) {
+      currentBalance = (currentBalance + yearlyInvestment) * (1 + rate);
+      const totalInvested = yearlyInvestment * y;
+      list.push({
+        period: `Year ${y}`,
+        invested: Math.round(totalInvested),
+        interest: Math.round(Math.max(0, currentBalance - totalInvested)),
+        total: Math.round(currentBalance),
+      });
+    }
+    return list;
+  }, [yearlyInvestment, years, ppfRate]);
 
   const calculatePPF = () => {
     let maturityAmount = 0;
@@ -306,14 +328,37 @@ const PPFCalculator = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -322,6 +367,31 @@ const PPFCalculator = () => {
         calculationType="ppf"
         inputs={{ yearlyInvestment, years, interestRate: ppfRate }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Public Provident Fund (PPF) Report"
+        inputs={[
+          { label: "Yearly Investment", value: formatAmount(yearlyInvestment) },
+          { label: "Interest Rate (p.a)", value: `${ppfRate}% (Govt Fixed)` },
+          { label: "PPF Duration", value: `${years} Years` },
+          { label: "Tax Status", value: "EEE (100% Tax Free)" },
+        ]}
+        results={[
+          { label: "Total Principal Invested", value: formatAmount(result.invested) },
+          { label: "Tax-Free Interest Earned", value: formatAmount(result.returns) },
+          { label: "Total Tax-Free Maturity", value: formatAmount(result.total), isHighlight: true },
+        ]}
+        schedule={ppfSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="PPF 15-Year Growth Schedule"
+        schedule={ppfSchedule}
       />
     </div>
   );

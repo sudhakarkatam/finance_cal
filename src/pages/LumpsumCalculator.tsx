@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Coins, Info } from 'lucide-react';
+import { Save, RotateCcw, Coins, Info, Calendar, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -15,9 +17,29 @@ const LumpsumCalculator = () => {
   const [years, setYears] = useState(10);
   const [months, setMonths] = useState(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const totalYears = years + (months / 12);
+
+  const lumpsumSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const rate = expectedReturn / 100;
+    const totalYearsVal = Math.max(1, Math.ceil(totalYears));
+
+    for (let y = 1; y <= totalYearsVal; y++) {
+      const timeVal = y > totalYears ? totalYears : y;
+      const fv = investment * Math.pow(1 + rate, timeVal);
+      list.push({
+        period: `Year ${y}`,
+        invested: investment,
+        interest: Math.round(Math.max(0, fv - investment)),
+        total: Math.round(fv),
+      });
+    }
+    return list;
+  }, [investment, expectedReturn, totalYears]);
 
   const calculateLumpsum = () => {
     const rate = expectedReturn / 100;
@@ -278,14 +300,37 @@ const LumpsumCalculator = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -294,6 +339,30 @@ const LumpsumCalculator = () => {
         calculationType="lumpsum"
         inputs={{ investment, expectedReturn, years, months }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Lumpsum Investment Report"
+        inputs={[
+          { label: "One-Time Investment", value: formatAmount(investment) },
+          { label: "Expected Return (p.a)", value: `${expectedReturn}%` },
+          { label: "Investment Duration", value: `${totalYears.toFixed(1)} Years` },
+        ]}
+        results={[
+          { label: "Invested Amount", value: formatAmount(result.invested) },
+          { label: "Estimated Returns", value: formatAmount(result.returns) },
+          { label: "Total Maturity Value", value: formatAmount(result.total), isHighlight: true },
+        ]}
+        schedule={lumpsumSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Lumpsum Investment Growth Schedule"
+        schedule={lumpsumSchedule}
       />
     </div>
   );

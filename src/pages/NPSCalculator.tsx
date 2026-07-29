@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Briefcase, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, RotateCcw, Briefcase, Info, ChevronDown, ChevronUp, Calendar, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
+import InvestmentScheduleDialog, { ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import {
     Dialog,
     DialogContent,
@@ -44,6 +46,8 @@ const NPSCalculator = () => {
     const [govtReturn, setGovtReturn] = useState(7);
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
     const result = useMemo(() => {
@@ -130,6 +134,35 @@ const NPSCalculator = () => {
             taxSaved80CCD2
         };
     }, [currentAge, retirementAge, monthlyContribution, employerContribution, stepUpRate, equityAllocation, corporateAllocation, govtAllocation, equityReturn, corporateReturn, govtReturn, isTier2]);
+
+    const npsSchedule = useMemo(() => {
+        const list: ScheduleRow[] = [];
+        const years = Math.max(1, retirementAge - currentAge);
+        const weightedReturn =
+            (equityAllocation * equityReturn +
+                corporateAllocation * corporateReturn +
+                govtAllocation * govtReturn) / 100;
+        const monthlyRate = weightedReturn / 12 / 100;
+
+        let totalCorpus = 0;
+        let totalInvested = 0;
+        let currentMonthlyContribution = monthlyContribution + employerContribution;
+
+        for (let i = 0; i < years; i++) {
+            for (let j = 0; j < 12; j++) {
+                totalCorpus = (totalCorpus + currentMonthlyContribution) * (1 + monthlyRate);
+                totalInvested += currentMonthlyContribution;
+            }
+            list.push({
+                period: `Age ${currentAge + i + 1}`,
+                invested: Math.round(totalInvested),
+                interest: Math.round(Math.max(0, totalCorpus - totalInvested)),
+                total: Math.round(totalCorpus),
+            });
+            currentMonthlyContribution *= (1 + stepUpRate / 100);
+        }
+        return list;
+    }, [currentAge, retirementAge, monthlyContribution, employerContribution, stepUpRate, equityAllocation, equityReturn, corporateAllocation, corporateReturn, govtAllocation, govtReturn]);
 
     const handleReset = () => {
         setCurrentAge(25);
@@ -418,6 +451,38 @@ const NPSCalculator = () => {
                 </Card>
             )}
 
+            <div className="space-y-3">
+                <Button
+                    variant="secondary"
+                    className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+                    onClick={() => setScheduleModalOpen(true)}
+                >
+                    <Calendar className="w-4 h-4 text-primary" />
+                    View Annual NPS Accumulation Schedule
+                </Button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button
+                        className="w-full gap-2 h-12 text-base font-semibold"
+                        size="lg"
+                        onClick={() => setSaveDialogOpen(true)}
+                    >
+                        <Save className="w-5 h-5" />
+                        Save Calculation
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                        size="lg"
+                        onClick={() => setShareModalOpen(true)}
+                    >
+                        <Share2 className="w-5 h-5" />
+                        Export & Share Report
+                    </Button>
+                </div>
+            </div>
+
             <SaveDialog
                 open={saveDialogOpen}
                 onOpenChange={setSaveDialogOpen}
@@ -428,6 +493,45 @@ const NPSCalculator = () => {
                     monthlyPension: result.estimatedPension,
                     totalTaxSaved: result.totalTaxSaved
                 }}
+            />
+
+            <ShareReportModal
+                open={shareModalOpen}
+                onOpenChange={setShareModalOpen}
+                title="National Pension System (NPS) Report"
+                inputs={[
+                    { label: "Current Age / Target Age", value: `${currentAge} to ${retirementAge} Years` },
+                    { label: "Monthly Contribution", value: formatAmount(monthlyContribution) },
+                    ...(employerContribution > 0 ? [{ label: "Employer Contribution", value: formatAmount(employerContribution) }] : []),
+                    ...(stepUpRate > 0 ? [{ label: "Annual Step-Up", value: `${stepUpRate}%` }] : []),
+                    { label: "Portfolio Expected Return", value: `${result.weightedReturn.toFixed(1)}%` },
+                    { label: "NPS Account Tier", value: isTier2 ? "Tier 2 (Investment)" : "Tier 1 (Tax Saving)" },
+                ]}
+                results={[
+                    { label: "Total Invested Capital", value: formatAmount(result.totalInvested) },
+                    { label: "Total Wealth Gain", value: formatAmount(result.totalInterest) },
+                    { label: "60% Tax-Free Lumpsum at 60", value: formatAmount(result.lumpSum) },
+                    { label: "Estimated Monthly Pension", value: formatAmount(result.estimatedPension), isHighlight: true },
+                    { label: "Total Accumulated Corpus", value: formatAmount(result.totalCorpus), isHighlight: true },
+                ]}
+                analysis={[
+                    ...(!isTier2 ? [{
+                        title: "💡 NPS Tax Savings Benefit (Sec 80CCD)",
+                        items: [
+                            { label: "80CCD(1) & 80CCD(1B) Self Tax Savings", value: formatAmount(Math.min(monthlyContribution * 12, 200000) * 0.312) },
+                            ...(employerContribution > 0 ? [{ label: "80CCD(2) Employer Tax Savings", value: formatAmount(result.taxSaved80CCD2) }] : []),
+                            { label: "Total Annual Tax Saved", value: formatAmount(result.totalTaxSaved), isHighlight: true }
+                        ]
+                    }] : [])
+                ]}
+                schedule={npsSchedule}
+            />
+
+            <InvestmentScheduleDialog
+                open={scheduleModalOpen}
+                onOpenChange={setScheduleModalOpen}
+                title="NPS Accumulation Schedule"
+                schedule={npsSchedule}
             />
         </div>
     );

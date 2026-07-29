@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, RotateCcw, Info } from 'lucide-react';
+import { Save, RotateCcw, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import DateRangeInput from '@/components/ui/DateRangeInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { calculateCompoundInterest, calculateCompoundInterestFromMonthlyRupees, calculateCompoundInterestFromMonthlyRupeesWithDays } from '@/lib/calculations';
 import { differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,6 +27,7 @@ const CompoundInterest = () => {
   const [manualDays, setManualDays] = useState(0);
   const [frequency, setFrequency] = useState('1');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // Convert date range to years, months, days for consistent calculation
@@ -186,6 +188,25 @@ const CompoundInterest = () => {
     { value: '4', label: 'Quarterly' },
     { value: '12', label: 'Monthly' },
   ];
+
+  const compoundSchedule = useMemo(() => {
+    const years = Math.max(1, Math.ceil(getTimeInYears()));
+    const n = Number(frequency) || 1;
+    const r = annualRate / 100;
+    const rows = [];
+
+    for (let i = 1; i <= years; i++) {
+      const amount = principal * Math.pow(1 + r / n, n * i);
+      const interestEarned = amount - principal;
+      rows.push({
+        period: `Year ${i}`,
+        invested: Math.round(principal),
+        interest: Math.round(interestEarned),
+        total: Math.round(amount),
+      });
+    }
+    return rows;
+  }, [principal, annualRate, frequency, manualYears, manualMonths, manualDays, startDate, endDate]);
 
   const handleReset = () => {
     setPrincipal(100000);
@@ -467,14 +488,26 @@ const CompoundInterest = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -490,6 +523,25 @@ const CompoundInterest = () => {
           frequency: Number(frequency)
         }}
         results={result}
+        schedule={compoundSchedule}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Compound Interest Calculation Statement"
+        inputs={[
+          { label: "Principal Investment", value: formatCurrency(principal) },
+          { label: "Interest Rate", value: interestRateType === 'rupee-per-month' ? `₹${rate}/month (${annualRate.toFixed(1)}% p.a.)` : `${rate}% p.a.` },
+          { label: "Compounding Frequency", value: frequency === '1' ? 'Annually' : frequency === '2' ? 'Semi-Annually' : frequency === '4' ? 'Quarterly' : 'Monthly' },
+          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${manualYears}y ${manualMonths}m ${manualDays}d)` },
+        ]}
+        results={[
+          { label: "Principal Amount", value: formatCurrency(result.principal) },
+          { label: "Total Compound Interest Earned", value: formatCurrency(result.interest) },
+          { label: "Final Maturity Corpus", value: formatCurrency(result.total), isHighlight: true },
+        ]}
+        schedule={compoundSchedule}
       />
     </div>
   );

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, PiggyBank, Info } from 'lucide-react';
+import { Save, RotateCcw, PiggyBank, Info, Calendar, Share2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -16,7 +18,31 @@ const FDCalculator = () => {
   const [tenure, setTenure] = useState(1); // in years
   const [frequency, setFrequency] = useState('4'); // Quarterly
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+
+  const fdSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const principal = depositAmount;
+    const rate = interestRate / 100;
+    const compoundingFreq = Number(frequency);
+    const totalYearsVal = Math.max(1, Math.ceil(tenure));
+
+    for (let y = 1; y <= totalYearsVal; y++) {
+      const timeVal = y > tenure ? tenure : y;
+      const mat = principal * Math.pow(1 + rate / compoundingFreq, compoundingFreq * timeVal);
+      const interestEarned = mat - principal;
+
+      list.push({
+        period: `Year ${y}`,
+        invested: principal,
+        interest: Math.round(interestEarned),
+        total: Math.round(mat),
+      });
+    }
+    return list;
+  }, [depositAmount, interestRate, tenure, frequency]);
 
   const calculateFD = () => {
     const principal = depositAmount; // P
@@ -340,14 +366,37 @@ const FDCalculator = () => {
           </div>
         )}
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -356,6 +405,32 @@ const FDCalculator = () => {
         calculationType="fd"
         inputs={{ depositAmount, interestRate, tenure, frequency: Number(frequency) }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Fixed Deposit Return Report"
+        inputs={[
+          { label: "Deposit Amount", value: formatCurrency(depositAmount) },
+          { label: "Interest Rate (p.a)", value: `${interestRate}%` },
+          { label: "FD Tenure", value: `${tenure} Years` },
+          { label: "Compounding Frequency", value: frequencyOptions.find(f => f.value === frequency)?.label || "Quarterly" },
+        ]}
+        results={[
+          { label: "Principal Deposit", value: formatCurrency(result.principal) },
+          { label: "Total Interest Earned", value: formatCurrency(result.interest) },
+          ...(result.tds > 0 ? [{ label: "TDS Deduction", value: `-${formatCurrency(result.tds)}` }] : []),
+          { label: "Total Maturity Value", value: formatCurrency(result.maturityAmount), isHighlight: true },
+        ]}
+        schedule={fdSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Fixed Deposit Growth Schedule"
+        schedule={fdSchedule}
       />
     </div>
   );

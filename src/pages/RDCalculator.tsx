@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Repeat, Info } from 'lucide-react';
+import { Save, RotateCcw, Repeat, Info, Calendar, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -13,7 +15,35 @@ const RDCalculator = () => {
   const [interestRate, setInterestRate] = useState(6.5);
   const [tenure, setTenure] = useState(1); // in years
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+
+  const rdSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const P = monthlyDeposit;
+    const r = (interestRate / 100) / 12;
+    const totalMonthsCount = Math.max(1, Math.round(tenure * 12));
+
+    let currentInv = 0;
+    let currentAmount = 0;
+
+    for (let m = 1; m <= totalMonthsCount; m++) {
+      currentInv += P;
+      currentAmount = (currentAmount + P) * (1 + r);
+
+      if (m % 12 === 0 || m === totalMonthsCount) {
+        const yearNum = Math.ceil(m / 12);
+        list.push({
+          period: `Year ${yearNum}${m % 12 !== 0 ? ` (${m % 12}m)` : ""}`,
+          invested: Math.round(currentInv),
+          interest: Math.round(Math.max(0, currentAmount - currentInv)),
+          total: Math.round(currentAmount),
+        });
+      }
+    }
+    return list;
+  }, [monthlyDeposit, interestRate, tenure]);
 
   const calculateRD = () => {
     const P = monthlyDeposit; // Monthly RD installment
@@ -263,14 +293,37 @@ const RDCalculator = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -279,6 +332,30 @@ const RDCalculator = () => {
         calculationType="rd"
         inputs={{ monthlyDeposit, interestRate, tenure }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Recurring Deposit Report"
+        inputs={[
+          { label: "Monthly Deposit", value: formatAmount(monthlyDeposit) },
+          { label: "Interest Rate (p.a)", value: `${interestRate}%` },
+          { label: "RD Tenure", value: `${tenure} Years` },
+        ]}
+        results={[
+          { label: "Total Invested", value: formatAmount(result.invested) },
+          { label: "Interest Earned", value: formatAmount(result.interest) },
+          { label: "Total Maturity Value", value: formatAmount(result.maturityAmount), isHighlight: true },
+        ]}
+        schedule={rdSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Recurring Deposit Growth Schedule"
+        schedule={rdSchedule}
       />
     </div>
   );
