@@ -35,6 +35,19 @@
             name="twitter:image"
             content="https://lovable.dev/opengraph-image-p98pqg.png"
         />
+        <script>
+            (function() {
+                try {
+                    var savedTheme = localStorage.getItem("app-theme") || "system";
+                    var isDark = savedTheme === "dark" || (savedTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                    if (isDark) {
+                        document.documentElement.classList.add("dark");
+                    } else {
+                        document.documentElement.classList.remove("dark");
+                    }
+                } catch (e) {}
+            })();
+        </script>
     </head>
 
     <body>

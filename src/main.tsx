@@ -47,6 +47,22 @@ const updateSafeAreaInsets = () => {
   root.style.setProperty("--sai-right", safeAreaRight);
 };
 
+// Ensure dark mode or system theme is applied on app startup
+const applyInitialTheme = () => {
+  try {
+    const savedTheme = localStorage.getItem("app-theme") || "system";
+    const isDark =
+      savedTheme === "dark" ||
+      (savedTheme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", isDark);
+  } catch (e) {
+    console.error("Failed to load initial theme:", e);
+  }
+};
+
+applyInitialTheme();
+
 // Initialize Capacitor and safe area handling
 const initializeApp = async () => {
   try {

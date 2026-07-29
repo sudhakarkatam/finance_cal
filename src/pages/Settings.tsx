@@ -168,9 +168,9 @@ const Settings = () => {
               <h3 className="font-semibold text-foreground">
                 Financial Calculator
               </h3>
-              <p className="text-sm text-muted-foreground">Version 1.3.6</p>
+              <p className="text-sm text-muted-foreground">Version 1.5.1</p>
               <Badge variant="outline" className="mt-2">
-                Build 6
+                Build 12
               </Badge>
             </div>
 

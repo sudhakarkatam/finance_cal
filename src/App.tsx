@@ -41,6 +41,7 @@ import GlobalTaxCalculator from "./pages/GlobalTaxCalculator";
 import TimeCostCalculator from "./pages/TimeCostCalculator";
 import TripCostCalculator from "./pages/TripCostCalculator";
 import GoldCalculator from "./pages/GoldCalculator";
+import ReviewPage from "./pages/ReviewPage";
 
 const queryClient = new QueryClient();
 
@@ -316,6 +317,14 @@ const App = () => (
             }
           />
 
+          <Route
+            path="/review"
+            element={
+              <CalculatorLayout>
+                <ReviewPage />
+              </CalculatorLayout>
+            }
+          />
           <Route
             path="/settings"
             element={

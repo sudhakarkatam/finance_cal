@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import {
   Home,
   Calculator,
@@ -16,12 +16,16 @@ import {
   Flag,
   Percent,
   Globe,
+  Star,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useSafeArea } from "@/hooks/use-safe-area";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+import { useToast } from "@/hooks/use-toast";
 
 interface CalculatorLayoutProps {
   children: ReactNode;
@@ -37,6 +41,54 @@ const CalculatorLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const safeAreaInsets = useSafeArea();
   const isHomePage = location.pathname === "/" || location.pathname === "/home";
+  const mainRef = useRef<HTMLElement>(null);
+  const { toast } = useToast();
+  const lastBackPressRef = useRef<number>(0);
+
+  // Reset scroll position to top whenever route/page changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Native Android hardware back button listener (Double-press on Home to Exit)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listenerHandler: any;
+
+    const setupAndroidBackButton = async () => {
+      listenerHandler = await CapacitorApp.addListener(
+        "backButton",
+        () => {
+          if (!isHomePage) {
+            navigate("/");
+          } else {
+            const now = Date.now();
+            if (now - lastBackPressRef.current < 2000) {
+              CapacitorApp.exitApp();
+            } else {
+              lastBackPressRef.current = now;
+              toast({
+                description: "Press back again to exit",
+                duration: 2000,
+              });
+            }
+          }
+        }
+      );
+    };
+
+    setupAndroidBackButton();
+
+    return () => {
+      if (listenerHandler && listenerHandler.remove) {
+        listenerHandler.remove();
+      }
+    };
+  }, [isHomePage, navigate, toast]);
 
   // Handle back button navigation
   useEffect(() => {
@@ -79,6 +131,7 @@ const CalculatorLayout = ({
     { path: "/nps", icon: Briefcase, label: "NPS Calculator" },
     { path: "/rent-vs-buy", icon: Home, label: "Rent vs Buy" },
     // { path: "/german-tax", icon: Flag, label: "Germany Tax" },
+    { path: "/review", icon: Star, label: "Rate & Review" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
@@ -175,6 +228,7 @@ const CalculatorLayout = ({
 
         {/* Main content area with proper scrolling and padding */}
         <main
+          ref={mainRef}
           className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-4"
           style={{
             paddingBottom: `${totalBottomHeight + 16}px`, // Extra 16px for breathing room
