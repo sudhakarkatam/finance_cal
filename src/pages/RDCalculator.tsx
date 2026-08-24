@@ -348,6 +348,8 @@ const RDCalculator = () => {
           { label: "Interest Earned", value: formatAmount(result.interest) },
           { label: "Total Maturity Value", value: formatAmount(result.maturityAmount), isHighlight: true },
         ]}
+        scheduleTitle="Recurring Deposit Growth Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Total Deposited", interest: "Interest Accumulated", balance: "Maturity Balance" }}
         schedule={rdSchedule}
       />
 

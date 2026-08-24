@@ -113,13 +113,16 @@ const EMICalculator = () => {
     const baseResult = calculateEMI();
     const monthlyRate = interestRate / (12 * 100);
 
-    // Calculate the actual remaining balance based on months completed
-    const currentPrincipal = calculateRemainingBalance(baseResult, monthsCompleted);
+    // Calculate the actual remaining balance based on override or months completed
+    const currentPrincipal = (remainingLoanAmount && remainingLoanAmount > 0)
+      ? remainingLoanAmount
+      : calculateRemainingBalance(baseResult, monthsCompleted);
 
     // Handle zero prepayment amount
-    if (prepaymentAmount <= 0) {
+    if (!prepaymentAmount || prepaymentAmount <= 0) {
       return {
         ...baseResult,
+        principal: currentPrincipal,
         interestSaved: 0,
         prepaymentAmount: 0,
         prepaymentCharges: 0
@@ -248,9 +251,11 @@ const EMICalculator = () => {
     let balance = result.principal;
     const monthlyRate = interestRate / (12 * 100);
 
-    // For prepayment scenarios, use the correct starting balance
-    if (prepaymentEnabled && monthsCompleted > 0 && 'principal' in result) {
-      balance = calculateRemainingBalance(result, monthsCompleted);
+    // For prepayment scenarios, use the correct starting balance (override balance or calculated)
+    if (prepaymentEnabled && 'principal' in result) {
+      balance = (remainingLoanAmount && remainingLoanAmount > 0)
+        ? remainingLoanAmount
+        : (monthsCompleted > 0 ? calculateRemainingBalance(result, monthsCompleted) : result.principal);
     }
 
     const emiToUse = result.emi;
@@ -258,7 +263,7 @@ const EMICalculator = () => {
 
     for (let month = 1; month <= tenureToUse; month++) {
       const interestPayment = balance * monthlyRate;
-      const principalPayment = emiToUse - interestPayment;
+      const principalPayment = Math.min(emiToUse - interestPayment, balance); // Don't overpay
       balance -= principalPayment;
 
       schedule.push({
@@ -268,6 +273,9 @@ const EMICalculator = () => {
         interestPayment: Math.round(interestPayment),
         balance: Math.round(Math.max(0, balance))
       });
+
+      // Stop schedule if loan is fully paid off
+      if (balance <= 0) break;
     }
 
     return schedule;
@@ -277,12 +285,15 @@ const EMICalculator = () => {
 
   // Calculate and display the actual remaining balance for user reference
   const actualRemainingBalance = useMemo(() => {
+    if (remainingLoanAmount && remainingLoanAmount > 0) {
+      return remainingLoanAmount;
+    }
     if (!prepaymentEnabled || monthsCompleted <= 0) {
       return loanAmount;
     }
     const baseResult = calculateEMI();
     return calculateRemainingBalance(baseResult, monthsCompleted);
-  }, [loanAmount, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths]);
+  }, [loanAmount, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths, remainingLoanAmount]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -551,10 +562,10 @@ const EMICalculator = () => {
               />
 
               <CalculatorInput
-                label="Prepayment amount"
+                label="Prepayment amount (optional)"
                 value={prepaymentAmount}
                 onChange={setPrepaymentAmount}
-                min={100}
+                min={0}
                 max={calculateRemainingBalance(result, monthsCompleted)}
                 step={100}
                 prefix={symbol}
@@ -899,12 +910,15 @@ const EMICalculator = () => {
             ]
           }] : [])
         ]}
-        schedule={result?.schedule?.map((item: any) => ({
+        isLoanSchedule={true}
+        scheduleTitle="EMI Amortization Schedule"
+        scheduleHeaders={{ period: "Month", invested: "Principal Paid", interest: "Interest Paid", balance: "Outstanding Balance" }}
+        schedule={generateAmortizationSchedule().map((item) => ({
           period: `Month ${item.month}`,
-          invested: item.principal,
-          interest: item.interest,
-          total: item.balance,
-        })) || []}
+          invested: Math.round(item.principalPayment),
+          interest: Math.round(item.interestPayment),
+          total: Math.round(item.balance),
+        }))}
       />
     </div>
   );

@@ -423,6 +423,8 @@ const FDCalculator = () => {
           ...(result.tds > 0 ? [{ label: "TDS Deduction", value: `-${formatCurrency(result.tds)}` }] : []),
           { label: "Total Maturity Value", value: formatCurrency(result.maturityAmount), isHighlight: true },
         ]}
+        scheduleTitle="Fixed Deposit Growth Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Principal Deposited", interest: "Interest Accumulated", balance: "Maturity Balance" }}
         schedule={fdSchedule}
       />
 

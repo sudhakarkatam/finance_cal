@@ -189,18 +189,52 @@ const CompoundInterest = () => {
     { value: '12', label: 'Monthly' },
   ];
 
+  // Compute active YMD duration for display in reports and inputs
+  const activeYMD = useMemo(() => {
+    if (startDate && endDate) {
+      return dateRangeToYMD(startDate, endDate);
+    }
+    return { years: manualYears, months: manualMonths, days: manualDays };
+  }, [startDate, endDate, manualYears, manualMonths, manualDays]);
+
   const compoundSchedule = useMemo(() => {
-    const years = Math.max(1, Math.ceil(getTimeInYears()));
+    const totalTime = getTimeInYears();
+    if (totalTime <= 0) return [];
+
+    const totalPeriods = Math.max(1, Math.ceil(totalTime));
     const n = Number(frequency) || 1;
     const r = annualRate / 100;
     const rows = [];
+    let prevAmount = principal;
 
-    for (let i = 1; i <= years; i++) {
-      const amount = principal * Math.pow(1 + r / n, n * i);
+    for (let i = 1; i <= totalPeriods; i++) {
+      const isLast = i === totalPeriods;
+      const timeForPeriod = isLast ? totalTime : i;
+      
+      let amount = 0;
+      const compoundingFrequency = Number(frequency);
+
+      // Use exact calculation for fractional period on last period
+      if (compoundingFrequency === 1 && (startDate && endDate || manualYears > 0 || manualMonths > 0 || manualDays > 0)) {
+        const effYears = Math.floor(timeForPeriod);
+        const fraction = timeForPeriod - effYears;
+        const compoundPart = principal * Math.pow(1 + r, effYears);
+        amount = compoundPart * (1 + r * fraction);
+      } else {
+        amount = principal * Math.pow(1 + r / n, n * timeForPeriod);
+      }
+
       const interestEarned = amount - principal;
+      const periodLabel = isLast && totalTime % 1 !== 0
+        ? `Final (${totalTime.toFixed(2)} Yrs)`
+        : `Year ${i}`;
+
+      const openingBalance = i === 1 ? principal : prevAmount;
+      prevAmount = amount;
+
       rows.push({
-        period: `Year ${i}`,
-        invested: Math.round(principal),
+        period: periodLabel,
+        invested: Math.round(openingBalance),
         interest: Math.round(interestEarned),
         total: Math.round(amount),
       });
@@ -534,13 +568,25 @@ const CompoundInterest = () => {
           { label: "Principal Investment", value: formatCurrency(principal) },
           { label: "Interest Rate", value: interestRateType === 'rupee-per-month' ? `₹${rate}/month (${annualRate.toFixed(1)}% p.a.)` : `${rate}% p.a.` },
           { label: "Compounding Frequency", value: frequency === '1' ? 'Annually' : frequency === '2' ? 'Semi-Annually' : frequency === '4' ? 'Quarterly' : 'Monthly' },
-          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${manualYears}y ${manualMonths}m ${manualDays}d)` },
+          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${activeYMD.years}y ${activeYMD.months}m ${activeYMD.days}d)` },
         ]}
         results={[
           { label: "Principal Amount", value: formatCurrency(result.principal) },
           { label: "Total Compound Interest Earned", value: formatCurrency(result.interest) },
           { label: "Final Maturity Corpus", value: formatCurrency(result.total), isHighlight: true },
         ]}
+        analysis={[
+          {
+            title: "📈 Compounding Growth & Yield Analysis",
+            items: [
+              { label: "Effective Annual Rate (EAR)", value: `${((Math.pow(1 + (annualRate / 100) / Number(frequency), Number(frequency)) - 1) * 100).toFixed(2)}% p.a.` },
+              { label: "Wealth Growth Multiplier", value: `${(result.total / (result.principal || 1)).toFixed(2)}x` },
+              { label: "Interest Share of Maturity", value: `${(((result.interest) / (result.total || 1)) * 100).toFixed(1)}% of total corpus`, isHighlight: true }
+            ]
+          }
+        ]}
+        scheduleTitle="Compound Interest Compounding Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Opening Principal", interest: "Interest Accumulated", balance: "Total Corpus" }}
         schedule={compoundSchedule}
       />
     </div>

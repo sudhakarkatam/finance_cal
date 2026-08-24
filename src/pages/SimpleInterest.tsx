@@ -62,15 +62,32 @@ const SimpleInterest = () => {
 
   const result = calculateSimpleInterest(principal, rate, getTimeInYears());
 
+  // Compute active YMD duration for display in reports and inputs
+  const activeYMD = useMemo(() => {
+    if (startDate && endDate) {
+      return dateRangeToYMD(startDate, endDate);
+    }
+    return { years: manualYears, months: manualMonths, days: manualDays };
+  }, [startDate, endDate, manualYears, manualMonths, manualDays]);
+
   const simpleSchedule = useMemo(() => {
-    const years = Math.max(1, Math.ceil(getTimeInYears()));
+    const totalTime = getTimeInYears();
+    if (totalTime <= 0) return [];
+
+    const totalPeriods = Math.max(1, Math.ceil(totalTime));
     const annualInterest = (principal * rate) / 100;
     const rows = [];
 
-    for (let i = 1; i <= years; i++) {
-      const interestEarned = Math.round(annualInterest * i);
+    for (let i = 1; i <= totalPeriods; i++) {
+      const isLast = i === totalPeriods;
+      const timeForPeriod = isLast ? totalTime : i;
+      const interestEarned = Math.round(annualInterest * timeForPeriod);
+      const periodLabel = isLast && totalTime % 1 !== 0
+        ? `Final (${totalTime.toFixed(2)} Yrs)`
+        : `Year ${i}`;
+
       rows.push({
-        period: `Year ${i}`,
+        period: periodLabel,
         invested: Math.round(principal),
         interest: interestEarned,
         total: Math.round(principal + interestEarned),
@@ -352,13 +369,15 @@ const SimpleInterest = () => {
         inputs={[
           { label: "Principal Investment", value: formatAmount(principal) },
           { label: "Annual Interest Rate", value: `${rate}%` },
-          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${manualYears}y ${manualMonths}m ${manualDays}d)` },
+          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${activeYMD.years}y ${activeYMD.months}m ${activeYMD.days}d)` },
         ]}
         results={[
           { label: "Principal Amount", value: formatAmount(result.principal) },
           { label: "Total Simple Interest Earned", value: formatAmount(result.interest) },
           { label: "Final Maturity Amount", value: formatAmount(result.total), isHighlight: true },
         ]}
+        scheduleTitle="Simple Interest Growth Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Principal Amount", interest: "Interest Earned", balance: "Total Amount" }}
         schedule={simpleSchedule}
       />
     </div>

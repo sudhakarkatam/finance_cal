@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Calculator, TrendingUp, Info } from "lucide-react";
+import { Save, RotateCcw, Calculator, TrendingUp, Info, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import {
   calculateInflation,
   calculatePresentValue,
@@ -36,6 +37,7 @@ const InflationCalculator = () => {
   const [years, setYears] = useState(10);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     if (calculationType === "future") {
@@ -408,6 +410,15 @@ const InflationCalculator = () => {
             </p>
           </div>
         )}
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -429,6 +440,26 @@ const InflationCalculator = () => {
                 "presentValue" in result ? result.presentValue : 0,
             }
         }
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Inflation Purchasing Power Impact Report"
+        inputs={[
+          { label: "Calculation Type", value: calculationType === "future" ? "Future Cost Projection" : "Present Value Equivalency" },
+          { label: calculationType === "future" ? "Today's Cost/Price" : "Target Future Cost", value: formatAmount(calculationType === "future" ? currentPrice : futurePrice) },
+          { label: "Annual Inflation Rate", value: `${inflationRate}%` },
+          { label: "Time Duration", value: `${years} Years` },
+        ]}
+        results={[
+          {
+            label: calculationType === "future" ? "Projected Future Cost" : "Equivalent Present Value",
+            value: formatAmount(calculationType === "future" ? ("futurePrice" in result ? result.futurePrice : 0) : ("presentValue" in result ? result.presentValue : 0)),
+            isHighlight: true
+          },
+          { label: "Purchasing Power Loss", value: `${Math.round((1 - 1 / Math.pow(1 + inflationRate / 100, years)) * 100)}%` },
+        ]}
       />
     </div>
   );

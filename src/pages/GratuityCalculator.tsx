@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HandCoins, Info, RotateCcw, Save } from 'lucide-react';
+import { HandCoins, Info, RotateCcw, Save, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ const GratuityCalculator = () => {
   const [isEligible, setIsEligible] = useState(true);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const calculateGratuity = () => {
     const basicSalary = lastDrawnSalary; // b = Last drawn basic salary + dearness allowance
@@ -401,6 +403,15 @@ const GratuityCalculator = () => {
           <Save className="w-5 h-5" />
           Save Calculation
         </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-5 h-5" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -414,6 +425,22 @@ const GratuityCalculator = () => {
           completedYears: result.completedYears,
           isEligible: result.isEligible ? 1 : 0
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Gratuity Benefit Valuation Statement"
+        inputs={[
+          { label: "Last Drawn Basic Salary (+DA)", value: formatAmount(lastDrawnSalary) },
+          { label: "Completed Years of Service", value: `${yearsOfService} Years` },
+          { label: "Gratuity Act Coverage", value: isGratuityActCovered ? "Covered (15/26 days)" : "Not Covered (15/30 days)" },
+        ]}
+        results={[
+          { label: "Eligible Gratuity Amount", value: formatAmount(result.gratuityAmount), isHighlight: true },
+          { label: "Tax Exemption Limit (Sec 10(10))", value: formatAmount(2000000) },
+          { label: "Eligibility Status", value: result.isEligible ? "Eligible (>= 5 Years)" : "Not Eligible (< 5 Years)" },
+        ]}
       />
     </div>
   );

@@ -14,6 +14,7 @@ export interface ScheduleRow {
   period: string; // e.g., "Year 1" or "Month 12"
   invested: number;
   interest: number;
+  withdrawal?: number;
   total: number;
 }
 

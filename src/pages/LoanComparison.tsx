@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Scale } from 'lucide-react';
+import { RotateCcw, Scale, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
+import ShareReportModal from '@/components/ShareReportModal';
 import { useCurrency } from '@/hooks/useCurrency';
 
 const LoanComparison = () => {
   const { formatAmount, symbol } = useCurrency();
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   // Loan 1
   const [amount1, setAmount1] = useState(3500000);
   const [rate1, setRate1] = useState(8.5);
@@ -223,8 +225,36 @@ const LoanComparison = () => {
               ✓ {getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan1' ? 'Loan 1' : 'Loan 2'} is the better option
             </p>
           </div>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            onClick={() => setShareDialogOpen(true)}
+          >
+            <Share2 className="w-4 h-4" />
+            Export & Share Comparison PDF
+          </Button>
         </div>
       </Card>
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Side-by-Side Dual Loan Comparison Report"
+        inputs={[
+          { label: "Loan 1 Principal", value: formatAmount(amount1) },
+          { label: "Loan 1 Interest Rate & Tenure", value: `${rate1}% | ${tenure1 / 12} Yrs (${tenure1} Mos)` },
+          { label: "Loan 2 Principal", value: formatAmount(amount2) },
+          { label: "Loan 2 Interest Rate & Tenure", value: `${rate2}% | ${tenure2 / 12} Yrs (${tenure2} Mos)` },
+        ]}
+        results={[
+          { label: "Optimal Choice Recommendation", value: `✓ ${getBetterOption(loan1.totalPayment, loan2.totalPayment) === 'loan1' ? 'Loan Option 1' : 'Loan Option 2'} Saves More Money`, isHighlight: true },
+          { label: "Loan 1 Monthly EMI", value: formatAmount(loan1.emi) },
+          { label: "Loan 2 Monthly EMI", value: formatAmount(loan2.emi) },
+          { label: "Total Interest Savings Difference", value: formatAmount(getDifference(loan1.totalInterest, loan2.totalInterest)) },
+          { label: "Total Payment Outflow Savings Difference", value: formatAmount(getDifference(loan1.totalPayment, loan2.totalPayment)) },
+        ]}
+      />
     </div>
   );
 };

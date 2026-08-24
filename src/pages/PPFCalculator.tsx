@@ -384,6 +384,8 @@ const PPFCalculator = () => {
           { label: "Tax-Free Interest Earned", value: formatAmount(result.returns) },
           { label: "Total Tax-Free Maturity", value: formatAmount(result.total), isHighlight: true },
         ]}
+        scheduleTitle="PPF 15-Year Accumulation Schedule"
+        scheduleHeaders={{ period: "Year", invested: "Total Deposited", interest: "Interest Earned", balance: "PPF Account Balance" }}
         schedule={ppfSchedule}
       />
 

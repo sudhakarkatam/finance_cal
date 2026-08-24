@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Car, Bike, Users, Route, RotateCcw, Info, Fan, MapPin, Bed, User, Coffee, Calendar, CreditCard } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Save } from 'lucide-react';
+import { Save, Share2 } from 'lucide-react';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface VehicleType {
@@ -179,6 +180,7 @@ const TripCostCalculator = () => {
     const [includeDepreciation, setIncludeDepreciation] = useState(false);
     const [depreciationRate, setDepreciationRate] = useState(4.0);
     const [showSave, setShowSave] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     // New Optional Fields
     const [driverDailyAllowance, setDriverDailyAllowance] = useState(0);
@@ -790,6 +792,15 @@ const TripCostCalculator = () => {
                                     "Cash Share" is what you actually pay at the pump. "Fair Share" includes the invisible wear & tear on the owner's car.
                                 </AlertDescription>
                             </Alert>
+
+                            <Button
+                                variant="outline"
+                                className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10 mt-3"
+                                onClick={() => setShareDialogOpen(true)}
+                            >
+                                <Share2 className="w-4 h-4" />
+                                Export & Share Trip PDF Report
+                            </Button>
                         </CardContent>
                     </Card>
 
@@ -816,6 +827,47 @@ const TripCostCalculator = () => {
                     trueCost: Math.round(results.totalTrueCost),
                     sharePerPerson: Math.round(results.runningCost / passengers)
                 }}
+            />
+
+            <ShareReportModal
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+                title="Road Trip Cost & Split Expense Statement"
+                inputs={[
+                    { label: "Trip Type", value: isRoundTrip ? "Round Trip (Return)" : "One-Way Drive" },
+                    { label: "Total Distance", value: `${results.totalDistance} km` },
+                    { label: "Vehicle Type", value: VEHICLE_TYPES.find(v => v.id === vehicleId)?.name || "Vehicle" },
+                    { label: "Vehicle Mileage", value: `${mileage} km/${fuelType === 'electric' ? 'kWh' : 'l'}` },
+                    { label: "Fuel Price", value: formatAmount(fuelPrice) },
+                    { label: "Passenger Count", value: `${passengers} People` },
+                ]}
+                results={[
+                    { label: "Total Estimated Fuel Cost", value: formatAmount(Math.round(results.fuelCost)) },
+                    { label: "Total Toll & Parking Fees", value: formatAmount(tolls) },
+                    { label: "Total Food & Stay Expenses", value: formatAmount(foodCost + (hotelCostPerNight * nightsStay)) },
+                    { label: "Net Total Trip Outflow", value: formatAmount(Math.round(results.runningCost)), isHighlight: true },
+                    { label: "Per Person Cash Split Share", value: formatAmount(Math.round(results.cashCost / passengers)) },
+                    { label: "Per Person Fair Split Share (Inc. Wear & Dep)", value: formatAmount(Math.round(results.totalTrueCost / passengers)) },
+                ]}
+                analysis={[
+                    {
+                        title: "🚗 Driving Efficiency & Vehicle Wear Audit",
+                        items: [
+                            { label: "Fuel Volume Required", value: `${results.fuelNeeded.toFixed(1)} ${fuelType === 'electric' ? 'kWh' : 'Liters'}` },
+                            { label: "Effective Fuel Efficiency", value: `${(isAcOn ? mileage * 0.85 : mileage).toFixed(1)} km/${fuelType === 'electric' ? 'kWh' : 'L'} ${isAcOn ? '(AC On)' : ''}` },
+                            { label: "Vehicle Wear & Maintenance Cost", value: formatAmount(Math.round(results.maintenanceCost)) },
+                            { label: "True Running Cost Per Km Driven", value: `${formatAmount(Number((results.totalTrueCost / (results.totalDistance || 1)).toFixed(2)))}/km`, isHighlight: true }
+                        ]
+                    },
+                    {
+                        title: "👥 Per-Person Group Expense Breakdown",
+                        items: [
+                            { label: "Total Passenger Count", value: `${passengers} Travellers` },
+                            { label: "Cash Out-of-Pocket Share (Fuel+Tolls+Stay)", value: formatAmount(Math.round(results.cashCost / (passengers || 1))) },
+                            { label: "Fair Share (Inc. Car Maintenance & Dep)", value: formatAmount(Math.round(results.totalTrueCost / (passengers || 1))), isHighlight: true }
+                        ]
+                    }
+                ]}
             />
         </div >
     );

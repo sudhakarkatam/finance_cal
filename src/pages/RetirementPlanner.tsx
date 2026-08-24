@@ -671,7 +671,7 @@ const RetirementPlanner = () => {
       <ShareReportModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        title="Retirement Financial Independence Report"
+        title="Retirement Financial Independence Statement"
         inputs={[
           { label: "Current Age / Retirement Age", value: `${currentAge} to ${retirementAge} Years` },
           { label: "Target Life Expectancy", value: `${lifeExpectancy} Years` },
@@ -683,10 +683,36 @@ const RetirementPlanner = () => {
         ]}
         results={[
           { label: "Total Target Required Corpus", value: formatAmount(result.requiredCorpus) },
-          { label: "Projected Corpus at Age 60", value: formatAmount(result.corpusAtRetirement) },
-          { label: "Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
-          { label: "Goal Status", value: result.isAchievable ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
+          { label: "Projected Corpus at Retirement (Age 60)", value: formatAmount(result.corpusAtRetirement) },
+          { label: "Minimum Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
+          { label: "Retirement Goal Status", value: result.isAchievable ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
         ]}
+        analysis={[
+          {
+            title: "Retirement Goal Feasibility & Advisory Analysis",
+            items: [
+              { label: "Target Required Corpus", value: formatAmount(result.requiredCorpus) },
+              { label: "Accumulated Savings at Retirement", value: formatAmount(result.corpusAtRetirement) },
+              {
+                label: "Advisory Recommendation",
+                value: result.isAchievable
+                  ? (result.excessContribution > 0
+                      ? `Exceeds requirement! You can reduce monthly contribution by ${formatAmount(result.excessContribution)} to ${formatAmount(result.requiredMonthlyContribution)}/mo.`
+                      : "Current monthly contribution is on track for target retirement corpus.")
+                  : `Increase monthly SIP by ${formatAmount(result.requiredMonthlyContribution - monthlyContribution)} to bridge the ${formatAmount(result.shortfall)} gap.`,
+                isHighlight: true,
+              },
+            ],
+          },
+        ]}
+        scheduleTitle="Retirement Corpus Projection"
+        scheduleHeaders={{ period: "Age / Year", invested: "Annual Contribution", interest: "Growth Earned", balance: "Portfolio Value" }}
+        schedule={yearlyProjection?.map((p) => ({
+          period: `Age ${p.age} (Yr ${p.year})`,
+          invested: p.contributionsThisYear,
+          interest: Math.max(0, p.portfolioValue - (currentSavings + p.contributionsThisYear * p.year)),
+          total: p.portfolioValue,
+        }))}
       />
     </div>
   );

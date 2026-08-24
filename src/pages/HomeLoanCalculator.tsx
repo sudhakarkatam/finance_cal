@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Home, Calculator, TrendingDown, Clock, Eye, EyeOff, Info } from 'lucide-react';
+import { Save, RotateCcw, Home, Calculator, TrendingDown, Clock, Eye, EyeOff, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,6 +38,7 @@ const HomeLoanCalculator = () => {
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
@@ -123,8 +125,8 @@ const HomeLoanCalculator = () => {
     const baseResult = calculateHomeLoan();
     const monthlyRate = interestRate / (12 * 100);
 
-    // Handle zero prepayment amount
-    if (prepaymentAmount <= 0) {
+    // Handle zero or empty prepayment amount
+    if (!prepaymentAmount || prepaymentAmount <= 0) {
       return {
         ...baseResult,
         interestSaved: 0,
@@ -937,6 +939,15 @@ const HomeLoanCalculator = () => {
             <Save className="w-4 h-4" />
             Save to History
           </Button>
+          <Button
+            variant="outline"
+            className="flex-1 gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareDialogOpen(true)}
+          >
+            <Share2 className="w-4 h-4" />
+            Export & Share Report PDF
+          </Button>
         </div>
       </Card>
 
@@ -976,6 +987,35 @@ const HomeLoanCalculator = () => {
             tenureReduced: result.tenureReduced || 0
           })
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Home Loan EMI & Prepayment Breakdown Statement"
+        inputs={[
+          { label: "Property Value", value: formatAmount(propertyValue) },
+          { label: "Down Payment Amount", value: formatAmount(downPayment) },
+          { label: "Net Loan Principal", value: formatAmount(result.principal) },
+          { label: "Interest Rate", value: `${interestRate}%` },
+          { label: "Loan Tenure", value: `${tenureYears} Years (${totalTenureMonths} Months)` },
+          { label: "Processing Fee Rate", value: `${processingFee}%` },
+        ]}
+        results={[
+          { label: "Monthly Home Loan EMI", value: formatAmount(result.emi), isHighlight: true },
+          { label: "Total Payable Interest", value: formatAmount(result.totalInterest) },
+          { label: "Total Outflow Amount (Principal + Interest)", value: formatAmount(result.totalPayment) },
+          { label: "Annual Tax Benefit Eligibility (Sec 24 + 80C)", value: formatAmount(result.taxBenefit || 0) },
+        ]}
+        isLoanSchedule={true}
+        scheduleTitle="Home Loan Amortization Schedule"
+        scheduleHeaders={{ period: "Month", invested: "Principal Paid", interest: "Interest Paid", balance: "Outstanding Balance" }}
+        schedule={amortizationSchedule?.map((row: any) => ({
+          period: `Month ${row.month}`,
+          invested: row.principalPayment,
+          interest: row.interestPayment,
+          total: row.balance,
+        }))}
       />
     </div>
   );

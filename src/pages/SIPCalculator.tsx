@@ -840,6 +840,8 @@ const SIPCalculator = () => {
             ]
           }] : [])
         ]}
+        scheduleTitle="SIP Wealth Growth Schedule"
+        scheduleHeaders={{ period: "Year", invested: "Amount Invested", interest: "Returns Earned", balance: "Total Value" }}
         schedule={sipSchedule}
       />
 

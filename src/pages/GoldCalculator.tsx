@@ -819,10 +819,10 @@ const GoldCalculator = () => {
 
                                 <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-2">
                                     <div className="text-xs text-muted-foreground">Estimated Net Cash Payout / Credit</div>
-                                    <div className="text-2xl font-bold text-primary">{formatIndianCurrency(oldGoldResale.netCashPayout)}</div>
+                                    <div className="text-2xl font-bold text-primary">{formatAmount(oldGoldResale.netCashPayout)}</div>
                                     <div className="text-xs text-muted-foreground flex justify-between border-t pt-1">
-                                        <span>Gross Gold Value: {formatIndianCurrency(oldGoldResale.grossGoldValue)}</span>
-                                        <span className="text-destructive">Deduction: -{formatIndianCurrency(oldGoldResale.totalDeductionAmount)}</span>
+                                        <span>Gross Gold Value: {formatAmount(oldGoldResale.grossGoldValue)}</span>
+                                        <span className="text-destructive">Deduction: -{formatAmount(oldGoldResale.totalDeductionAmount)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -844,7 +844,7 @@ const GoldCalculator = () => {
                                         <div className="text-muted-foreground">Pure Gold / Coins & Bars</div>
                                     </div>
                                     <div className="text-right font-bold text-primary text-sm">
-                                        {formatIndianCurrency(Number(rate24k) / 10)}/g
+                                        {formatAmount(Number(rate24k) / 10)}/g
                                     </div>
                                 </div>
 
@@ -854,7 +854,7 @@ const GoldCalculator = () => {
                                         <div className="text-muted-foreground">Standard Indian Jewelry</div>
                                     </div>
                                     <div className="text-right font-bold text-foreground text-sm">
-                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.916)}/g
+                                        {formatAmount((Number(rate24k) / 10) * 0.916)}/g
                                     </div>
                                 </div>
 
@@ -864,7 +864,7 @@ const GoldCalculator = () => {
                                         <div className="text-muted-foreground">Diamond & Stone Studded</div>
                                     </div>
                                     <div className="text-right font-bold text-foreground text-sm">
-                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.75)}/g
+                                        {formatAmount((Number(rate24k) / 10) * 0.75)}/g
                                     </div>
                                 </div>
 
@@ -874,7 +874,7 @@ const GoldCalculator = () => {
                                         <div className="text-muted-foreground">Lightweight Western Jewelry</div>
                                     </div>
                                     <div className="text-right font-bold text-foreground text-sm">
-                                        {formatIndianCurrency((Number(rate24k) / 10) * 0.585)}/g
+                                        {formatAmount((Number(rate24k) / 10) * 0.585)}/g
                                     </div>
                                 </div>
                             </CardContent>

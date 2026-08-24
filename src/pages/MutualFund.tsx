@@ -505,6 +505,8 @@ const MutualFund = () => {
             ]
           }] : [])
         ]}
+        scheduleTitle="Mutual Fund Growth Schedule"
+        scheduleHeaders={{ period: "Year", invested: "Amount Invested", interest: "Returns Earned", balance: "Fund Value" }}
         schedule={mfSchedule}
       />
 

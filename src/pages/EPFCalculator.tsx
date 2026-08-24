@@ -501,6 +501,8 @@ const EPFCalculator = () => {
           { label: "Total Interest Earned", value: formatCurrency(result.totalInterest) },
           { label: "Final EPF Maturity Corpus", value: formatCurrency(result.maturityValue), isHighlight: true },
         ]}
+        scheduleTitle="EPF Accumulation Schedule"
+        scheduleHeaders={{ period: "Age", invested: "Total Contribution", interest: "Interest Earned", balance: "EPF Corpus" }}
         schedule={epfSchedule}
       />
 

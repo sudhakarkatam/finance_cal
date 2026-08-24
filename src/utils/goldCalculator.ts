@@ -21,7 +21,7 @@ export const UNIT_CONVERSION = {
 } as const;
 
 export type WeightUnit = keyof typeof UNIT_CONVERSION;
-export type Purity = keyof typeof GOLD_purity_FACTORS;
+export type Purity = keyof typeof GOLD_PURITY_FACTORS;
 
 export interface GoldPriceInput {
     ratePer10g24k: number;

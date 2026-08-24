@@ -645,6 +645,32 @@ const GoalPlanning = () => {
           { label: "Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
           { label: "Goal Readiness Status", value: result.goalMet ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
         ]}
+        analysis={[
+          {
+            title: "🎯 Goal Feasibility & Actionable Advisory",
+            items: [
+              { label: "Inflation-Adjusted Target Goal", value: formatAmount("inflationAdjustedGoal" in result ? (result as any).inflationAdjustedGoal : goalAmount) },
+              { label: "Total Accumulated Corpus", value: formatAmount(result.totalAchieved) },
+              {
+                label: "Advisory Recommendation",
+                value: result.goalMet
+                  ? (result.excessContribution > 0
+                      ? `Exceeds target! You can lower monthly contribution by ${formatAmount(result.excessContribution)} to ${formatAmount(result.requiredMonthlyContribution)}/mo.`
+                      : "Current savings rate is 100% on track for this goal.")
+                  : `Increase monthly SIP contribution by ${formatAmount(result.requiredMonthlyContribution - monthlyContribution)} to bridge the ${formatAmount(result.shortfall)} gap.`,
+                isHighlight: true,
+              },
+            ],
+          },
+        ]}
+        scheduleTitle="Goal Progress Projection"
+        scheduleHeaders={{ period: "Year", invested: "Cumulative Investment", interest: "Growth Earned", balance: "Portfolio Value" }}
+        schedule={yearlyProjection?.map((row) => ({
+          period: `Year ${row.year}`,
+          invested: Math.round(row.cumulativeContributions),
+          interest: Math.round(Math.max(0, row.portfolioValue - row.cumulativeContributions)),
+          total: Math.round(row.portfolioValue),
+        }))}
       />
     </div>
   );

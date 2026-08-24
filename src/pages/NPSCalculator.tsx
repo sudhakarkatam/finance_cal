@@ -524,6 +524,8 @@ const NPSCalculator = () => {
                         ]
                     }] : [])
                 ]}
+                scheduleTitle="NPS Accumulation Schedule"
+                scheduleHeaders={{ period: "Age", invested: "Total Contributions", interest: "Growth Earned", balance: "Corpus Value" }}
                 schedule={npsSchedule}
             />
 
