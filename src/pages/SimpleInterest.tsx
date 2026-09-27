@@ -77,20 +77,25 @@ const SimpleInterest = () => {
     const totalPeriods = Math.max(1, Math.ceil(totalTime));
     const annualInterest = (principal * rate) / 100;
     const rows = [];
+    let prevCorpus = principal;
 
     for (let i = 1; i <= totalPeriods; i++) {
       const isLast = i === totalPeriods;
       const timeForPeriod = isLast ? totalTime : i;
-      const interestEarned = Math.round(annualInterest * timeForPeriod);
+      const closingCorpus = principal + Math.round(annualInterest * timeForPeriod);
+      const openingCorpus = i === 1 ? principal : prevCorpus;
+      const interestForPeriod = closingCorpus - openingCorpus;
+      prevCorpus = closingCorpus;
+
       const periodLabel = isLast && totalTime % 1 !== 0
         ? `Final (${totalTime.toFixed(2)} Yrs)`
         : `Year ${i}`;
 
       rows.push({
         period: periodLabel,
-        invested: Math.round(principal),
-        interest: interestEarned,
-        total: Math.round(principal + interestEarned),
+        invested: Math.round(openingCorpus),
+        interest: Math.round(interestForPeriod),
+        total: Math.round(closingCorpus),
       });
     }
     return rows;
@@ -377,7 +382,7 @@ const SimpleInterest = () => {
           { label: "Final Maturity Amount", value: formatAmount(result.total), isHighlight: true },
         ]}
         scheduleTitle="Simple Interest Growth Schedule"
-        scheduleHeaders={{ period: "Period", invested: "Principal Amount", interest: "Interest Earned", balance: "Total Amount" }}
+        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
         schedule={simpleSchedule}
       />
     </div>

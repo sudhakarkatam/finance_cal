@@ -28,16 +28,19 @@ const FDCalculator = () => {
     const rate = interestRate / 100;
     const compoundingFreq = Number(frequency);
     const totalYearsVal = Math.max(1, Math.ceil(tenure));
+    let prevAmount = principal;
 
     for (let y = 1; y <= totalYearsVal; y++) {
       const timeVal = y > tenure ? tenure : y;
       const mat = principal * Math.pow(1 + rate / compoundingFreq, compoundingFreq * timeVal);
-      const interestEarned = mat - principal;
+      const openingBalance = y === 1 ? principal : prevAmount;
+      const interestForYear = mat - openingBalance;
+      prevAmount = mat;
 
       list.push({
         period: `Year ${y}`,
-        invested: principal,
-        interest: Math.round(interestEarned),
+        invested: Math.round(openingBalance),
+        interest: Math.round(interestForYear),
         total: Math.round(mat),
       });
     }
@@ -424,7 +427,7 @@ const FDCalculator = () => {
           { label: "Total Maturity Value", value: formatCurrency(result.maturityAmount), isHighlight: true },
         ]}
         scheduleTitle="Fixed Deposit Growth Schedule"
-        scheduleHeaders={{ period: "Period", invested: "Principal Deposited", interest: "Interest Accumulated", balance: "Maturity Balance" }}
+        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
         schedule={fdSchedule}
       />
 

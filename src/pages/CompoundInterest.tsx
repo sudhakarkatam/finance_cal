@@ -224,18 +224,18 @@ const CompoundInterest = () => {
         amount = principal * Math.pow(1 + r / n, n * timeForPeriod);
       }
 
-      const interestEarned = amount - principal;
+      const openingBalance = i === 1 ? principal : prevAmount;
+      const interestEarnedForPeriod = amount - openingBalance;
+      prevAmount = amount;
+
       const periodLabel = isLast && totalTime % 1 !== 0
         ? `Final (${totalTime.toFixed(2)} Yrs)`
         : `Year ${i}`;
 
-      const openingBalance = i === 1 ? principal : prevAmount;
-      prevAmount = amount;
-
       rows.push({
         period: periodLabel,
         invested: Math.round(openingBalance),
-        interest: Math.round(interestEarned),
+        interest: Math.round(interestEarnedForPeriod),
         total: Math.round(amount),
       });
     }
@@ -586,7 +586,7 @@ const CompoundInterest = () => {
           }
         ]}
         scheduleTitle="Compound Interest Compounding Schedule"
-        scheduleHeaders={{ period: "Period", invested: "Opening Principal", interest: "Interest Accumulated", balance: "Total Corpus" }}
+        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
         schedule={compoundSchedule}
       />
     </div>
