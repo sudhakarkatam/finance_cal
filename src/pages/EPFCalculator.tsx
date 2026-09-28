@@ -200,73 +200,45 @@ const EPFCalculator = () => {
                     Regulatory rules, contribution formulas, lock-in period, and tax guidelines for Employees' Provident Fund.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 text-sm">
+                <div className="space-y-3.5 text-sm">
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1.5">What is EPF?</h3>
-                    <p className="text-muted-foreground">
-                      The Employees' Provident Fund (EPF) is a statutory, government-backed retirement scheme for salaried employees in India governed by the Employees' Provident Funds and Miscellaneous Provisions Act, 1952. Both the employee and employer contribute monthly under your unique Universal Account Number (UAN).
+                    <h3 className="font-semibold text-foreground mb-1">What is EPF?</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Employees' Provident Fund (EPF) is a government-backed retirement scheme for salaried employees in India. Both you and your employer contribute 12% of your basic pay each month under your UAN.
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1.5">Current EPF Interest Rate</h3>
-                    <p className="text-muted-foreground">
-                      <strong>8.25% p.a. (FY 2024-25 / 2025-26)</strong>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Fixed annually by the Central Board of Trustees (CBT) of EPFO with approval from the Ministry of Finance. Interest is computed monthly on the closing balance and officially credited at financial year-end on March 31st.
+                    <h3 className="font-semibold text-foreground mb-1">Interest Rate</h3>
+                    <p className="text-xs text-muted-foreground">
+                      <strong>8.25% p.a.</strong> (Notified by EPFO). Compounded monthly and credited on March 31st each financial year.
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1.5">Contribution Structure (Total 24%)</h3>
-                    <ul className="list-disc list-inside space-y-1.5 text-muted-foreground">
-                      <li>
-                        <strong>Employee Share (12%):</strong> Deducted from your monthly basic salary + DA. The entire 12% goes directly into your EPF account.
-                      </li>
-                      <li>
-                        <strong>Employer Share (12% Total):</strong>
-                        <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                          <li>
-                            <strong>8.33% to EPS (Pension):</strong> Capped at the statutory wage ceiling of ₹15,000/mo (maximum <strong>₹1,250/month</strong>).
-                          </li>
-                          <li>
-                            <strong>Remainder to EPF Account:</strong> Whatever remains of the employer's 12% is compulsorily credited to your EPF account (e.g., ₹4,750/mo on a ₹50,000 basic salary).
-                          </li>
-                        </ul>
-                      </li>
+                    <h3 className="font-semibold text-foreground mb-1">Monthly Contribution (12% + 12%)</h3>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                      <li><strong>Your Share (12%):</strong> 100% deposited into your EPF account.</li>
+                      <li><strong>Employer Share (12%):</strong> 8.33% goes to EPS pension (max ₹1,250/mo), and the remaining balance goes into your EPF account.</li>
                     </ul>
                   </div>
 
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                      🔒 Mandatory Lock-in & Tax-Free Withdrawal Rules
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1.5 text-xs">
+                      🔒 Key Withdrawal Rules
                     </h4>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-amber-800 dark:text-amber-300">
-                      <li>
-                        <strong>5-Year Continuous Service Rule:</strong> EPF withdrawals are completely tax-free only after <strong>5 continuous years of service</strong> (including jobs transferred using the same UAN).
-                      </li>
-                      <li>
-                        <strong>Early Withdrawal Penalty:</strong> Withdrawing before completing 5 years of continuous service attracts TDS and the amount is added to your taxable income under Section 80C.
-                      </li>
-                      <li>
-                        <strong>Retirement Withdrawal:</strong> 100% of your corpus can be withdrawn upon retirement at age 58 or older.
-                      </li>
-                      <li>
-                        <strong>Unemployment:</strong> 75% can be withdrawn after 1 month of unemployment, and the remaining 25% after 2 months.
-                      </li>
-                      <li>
-                        <strong>Partial Withdrawals:</strong> Allowed for home purchase/construction (after 5 years), medical emergencies (anytime), or marriage/education of children (after 7 years).
-                      </li>
+                    <ul className="list-disc list-inside space-y-1.5 text-xs text-amber-800 dark:text-amber-300">
+                      <li><strong>Tax-Free After 5 Years:</strong> Withdrawals are 100% tax-free after 5 years of continuous service (transferred across jobs under the same UAN).</li>
+                      <li><strong>Partial Withdrawals:</strong> Allowed after 12 months of service for medical needs, home purchase/construction, or marriage/education.</li>
+                      <li><strong>Unemployment:</strong> 75% can be withdrawn after 1 month of unemployment, and the remaining 25% after 12 continuous months.</li>
+                      <li><strong>Retirement (Age 58):</strong> Full EPF balance can be withdrawn lump-sum. EPS pension begins if you completed 10+ years of service.</li>
+                      <li><strong>25% Minimum Balance:</strong> A 25% balance must remain in the account during partial withdrawals so your funds keep compounding.</li>
                     </ul>
                   </div>
 
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
-                      ⚖️ Statutory Disclaimer & Assumptions
-                    </h4>
-                    <p className="text-xs text-blue-800 dark:text-blue-300">
-                      The projections generated by this calculator are estimates based on your assumed annual salary growth and the current 8.25% interest rate. Actual accumulated returns may vary with annual EPFO rate revisions, career breaks, or employer wage ceiling policies.
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
+                      ⚖️ <strong>Disclaimer:</strong> Projections are estimates based on 8.25% interest and your chosen salary growth. Actual returns depend on future EPFO rate notifications and employer policies.
                     </p>
                   </div>
                 </div>
@@ -290,7 +262,7 @@ const EPFCalculator = () => {
           <div className="flex items-center justify-between">
             <p className="text-xs text-blue-600 dark:text-blue-300">EPFO Notified Rate</p>
             <span className="text-xs font-semibold px-2 py-0.5 bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded border border-blue-500/30">
-              FY 2024-25
+              FY 2025-26
             </span>
           </div>
           <p className="text-base font-bold text-blue-900 dark:text-blue-100">
