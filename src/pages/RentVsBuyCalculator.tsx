@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Home, Info, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, RotateCcw, Home, Info, TrendingUp, ChevronDown, ChevronUp, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import {
     Dialog,
     DialogContent,
@@ -51,6 +52,7 @@ const RentVsBuyCalculator = () => {
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     const result = useMemo(() => {
         const months = loanTenure * 12;
@@ -584,6 +586,15 @@ const RentVsBuyCalculator = () => {
                             </div>
                         </div>
                     </div>
+
+                    <Button
+                        variant="outline"
+                        className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10 mt-4"
+                        onClick={() => setShareDialogOpen(true)}
+                    >
+                        <Share2 className="w-4 h-4" />
+                        Export & Share Report PDF
+                    </Button>
                 </div>
             </Card>
 
@@ -600,6 +611,36 @@ const RentVsBuyCalculator = () => {
                     totalSpentBuying: result.totalSpentBuying,
                     totalSpentRenting: result.totalSpentRenting
                 }}
+            />
+
+            <ShareReportModal
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+                title="Rent vs Buy Financial Decision Analysis"
+                inputs={[
+                    { label: "Property Purchase Price", value: formatAmount(propertyPrice) },
+                    { label: "Home Loan Interest Rate", value: `${loanInterest}%` },
+                    { label: "Loan Tenure", value: `${loanTenure} Years` },
+                    { label: "Initial Monthly Rent", value: formatAmount(monthlyRent) },
+                    { label: "Alternative Investment Return", value: `${investmentReturn}%` },
+                ]}
+                results={[
+                    { label: "Financially Optimal Decision", value: `Recommended: ${result.betterOption.toUpperCase()}`, isHighlight: true },
+                    { label: "Buying Future Net Worth", value: formatAmount(result.buyingNetWorth) },
+                    { label: "Renting Future Net Worth", value: formatAmount(result.rentingNetWorth) },
+                    { label: "Net Financial Wealth Difference", value: formatAmount(Math.abs(result.buyingNetWorth - result.rentingNetWorth)) },
+                ]}
+                analysis={[
+                    {
+                        title: "🏠 Rent vs Buy Total Cost & Wealth Comparison",
+                        items: [
+                            { label: "Total Cash Outflow Buying (EMI + Maintenance)", value: formatAmount(result.totalSpentBuying) },
+                            { label: "Total Cash Outflow Renting (Rent Paid)", value: formatAmount(result.totalSpentRenting) },
+                            { label: "Final Property Asset Value at Year " + loanTenure, value: formatAmount(result.finalPropertyValue) },
+                            { label: "Wealth Advantage Recommendation", value: `${result.betterOption === 'buying' ? 'Buying' : 'Renting'} leaves you richer by ${formatAmount(Math.abs(result.buyingNetWorth - result.rentingNetWorth))}`, isHighlight: true }
+                        ]
+                    }
+                ]}
             />
         </div>
     );

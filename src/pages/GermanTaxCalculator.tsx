@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Flag, Info } from 'lucide-react';
+import { Save, RotateCcw, Flag, Info, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import {
   calculateGermanIncomeTax,
   formatGermanCurrency,
@@ -22,7 +23,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const GermanTaxCalculator = () => {
   // Basic Information
@@ -48,6 +48,7 @@ const GermanTaxCalculator = () => {
   const [infoDialogField, setInfoDialogField] = useState<string | null>(null);
   const [additionalDeductionsOpen, setAdditionalDeductionsOpen] = useState(false);
   const [socialSecurityOpen, setSocialSecurityOpen] = useState(true);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     const inputs: GermanTaxInputs = {
@@ -964,6 +965,15 @@ const GermanTaxCalculator = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10 mt-4"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share German Tax Statement PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -995,6 +1005,25 @@ const GermanTaxCalculator = () => {
           effectiveTaxRate: result.effectiveTaxRate,
           marginalTaxRate: result.marginalTaxRate,
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="German Income Tax & Net Salary (Einkommensteuer) Statement"
+        inputs={[
+          { label: "Annual Gross Income (Brutto)", value: formatGermanCurrency(grossIncome) },
+          { label: "Tax Class (Steuerklasse)", value: `Steuerklasse ${taxClass}` },
+          { label: "Federal State (Bundesland)", value: state },
+          { label: "Church Tax (Kirchensteuer)", value: isChurchMember ? "Yes (8-9%)" : "No" },
+        ]}
+        results={[
+          { label: "Annual Net Salary (Nettoeinkommen)", value: formatGermanCurrency(result.netIncome), isHighlight: true },
+          { label: "Monthly Take-Home Salary", value: formatGermanCurrency(result.monthly.netIncome) },
+          { label: "Total Taxes Paid (Einkommensteuer + Soli + Church)", value: formatGermanCurrency(result.totalTaxes) },
+          { label: "Total Social Security Contributions", value: formatGermanCurrency(result.socialSecurity.total) },
+          { label: "Effective Total Tax Burden Rate", value: `${result.effectiveTaxRate.toFixed(1)}%` },
+        ]}
       />
     </div>
   );

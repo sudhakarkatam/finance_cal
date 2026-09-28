@@ -637,8 +637,9 @@ export const calculateEPF = (
   retirementAge: number,
   salaryGrowthPercent: number,
   interestRatePercent: number,
+  capWageCeiling: boolean = false
 ) => {
-  const yearsToRetirement = retirementAge - currentAge;
+  const yearsToRetirement = Math.max(0, retirementAge - currentAge);
   if (yearsToRetirement <= 0) {
     return {
       totalEmployeeContribution: 0,
@@ -647,12 +648,11 @@ export const calculateEPF = (
       totalInterest: 0,
       maturityValue: currentBalance,
       yearsToRetirement: 0,
+      estimatedPensionMonthly: 0,
     };
   }
 
-  const annualInterestRate = interestRatePercent / 100;
   const monthlyInterestRate = interestRatePercent / (12 * 100);
-  const employerContributionPercent = 3.67; // 3.67% of basic salary goes to EPF (8.33% goes to EPS, not included)
 
   let balance = currentBalance;
   let totalEmployeeContribution = 0;
@@ -660,51 +660,71 @@ export const calculateEPF = (
   let totalInterestAccrued = 0;
   let currentMonthlySalary = basicSalary;
 
-  // EPF calculation: Interest calculated monthly on closing balance, compounds monthly
-  // Even though interest is "credited annually" on statements, for calculation purposes
-  // it compounds monthly to get accurate projections
+  // EPF statutory calculation:
+  // - Employee contributes 12% (or higher if VPF)
+  // - Employer contributes 12% total:
+  //   - EPS (Pension) gets 8.33% capped at statutory wage ceiling (₹15,000), max ₹1,250/mo
+  //   - EPF gets the entire remainder: (12% of Basic) - EPS Contribution
   for (let year = 1; year <= yearsToRetirement; year++) {
-    // Calculate monthly contribution for this year (constant throughout the year)
+    const pensionableSalary = Math.min(15000, currentMonthlySalary);
+    const effectiveSalary = capWageCeiling ? pensionableSalary : currentMonthlySalary;
+
     const yearMonthlyEmployeeContribution =
-      (employeeContributionPercent / 100) * currentMonthlySalary;
-    const yearMonthlyEmployerContribution =
-      (employerContributionPercent / 100) * currentMonthlySalary;
+      (employeeContributionPercent / 100) * effectiveSalary;
+
+    // Employer total is 12% of effective salary
+    const totalEmployer12Pct = (12 / 100) * effectiveSalary;
+    // EPS is statutory 8.33% capped at ₹15,000 = ₹1,250/mo exact
+    const monthlyEPS = Math.min(
+      1250,
+      Math.round((pensionableSalary * 8.333333333333334) / 100)
+    );
+    // Remainder of employer's 12% goes directly to EPF account
+    const yearMonthlyEmployerContribution = Math.max(
+      0,
+      totalEmployer12Pct - monthlyEPS
+    );
+
     const yearMonthlyContribution =
       yearMonthlyEmployeeContribution + yearMonthlyEmployerContribution;
 
-    // Process each month: Add contributions, calculate interest on closing balance, compound monthly
     for (let month = 1; month <= 12; month++) {
       totalEmployeeContribution += yearMonthlyEmployeeContribution;
       totalEmployerContribution += yearMonthlyEmployerContribution;
 
-      // Add contribution first to get closing balance
+      // Add contribution to balance
       balance += yearMonthlyContribution;
 
-      // Calculate interest on closing balance (after adding contributions)
-      // This is the method that matches SBI Securities calculator
+      // Monthly interest accrual
       const monthlyInterest = balance * monthlyInterestRate;
       totalInterestAccrued += monthlyInterest;
 
-      // Add interest immediately to balance for monthly compounding
-      // This gives accurate projections even though it's credited annually on statements
+      // Monthly compounding
       balance += monthlyInterest;
     }
 
-    // Apply salary growth at the start of next year
     if (year < yearsToRetirement) {
       currentMonthlySalary *= 1 + salaryGrowthPercent / 100;
     }
   }
 
+  // EPS Pension formula (payable after age 58 with min 10 years of eligible service):
+  // Monthly Pension = (Pensionable Salary * Service Years) / 70
+  // Capped pensionable salary is ₹15,000
+  const pensionYears = Math.min(35, yearsToRetirement);
+  const estimatedPensionMonthly =
+    pensionYears >= 10 ? Math.round((15000 * pensionYears) / 70) : 0;
+
   return {
     totalEmployeeContribution: Math.round(totalEmployeeContribution),
     totalEmployerContribution: Math.round(totalEmployerContribution),
     totalContributions: Math.round(
-      totalEmployeeContribution + totalEmployerContribution,
+      totalEmployeeContribution + totalEmployerContribution
     ),
     totalInterest: Math.round(totalInterestAccrued),
     maturityValue: Math.round(balance),
     yearsToRetirement,
+    estimatedPensionMonthly,
   };
 };
 

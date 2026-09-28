@@ -14,6 +14,7 @@ import {
   Building2,
   Percent,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
@@ -424,32 +425,47 @@ const CurrencyCalculator = () => {
 
             <div className="flex-1 px-3 py-1 text-right">
               <span className="text-xs text-muted-foreground block font-medium">
-                {includeFees ? "Net Payout" : "Total Value"}
+                {includeFees ? "Mid-Market Value" : "Total Value"}
               </span>
               <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
                 {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
-                {(includeFees
-                  ? conversionResult.netAmount
-                  : conversionResult.grossAmount
-                ).toLocaleString(undefined, {
+                {conversionResult.grossAmount.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
+              {includeFees && (
+                <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">After Fees:</span>
+                  <span className="text-sm font-bold text-foreground">
+                    {ALL_CURRENCIES[toCurrency]?.symbol}{" "}
+                    {conversionResult.netAmount.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Mid-Market Exchange Rate Line */}
-        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-foreground font-semibold">
-            <Coins className="w-4 h-4 text-primary" />
-            <span>
-              1 {fromCurrency} = {conversionResult.midMarketRate.toFixed(4)}{" "}
-              {toCurrency}
-            </span>
+        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60 flex flex-col gap-1 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-foreground font-semibold">
+              <Coins className="w-4 h-4 text-primary" />
+              <span>
+                1 {fromCurrency} = {conversionResult.midMarketRate.toFixed(4)}{" "}
+                {toCurrency}
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground font-medium">Mid-Market Rate</span>
           </div>
-          <span className="text-[11px] text-muted-foreground">Mid-Market Rate</span>
+          <p className="text-[10px] text-muted-foreground/80 flex items-center gap-1 pt-0.5 border-t border-border/40">
+            <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+            Market rates update automatically once every 24 hours (at 00:00 UTC daily).
+          </p>
         </div>
 
         {/* ------------------------------------------------------------------------ */}

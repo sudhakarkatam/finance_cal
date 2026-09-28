@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Receipt, Calculator, TrendingDown, Clock, Eye, EyeOff, Info } from 'lucide-react';
+import { Save, RotateCcw, Receipt, Calculator, TrendingDown, Clock, Eye, EyeOff, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
@@ -31,6 +33,7 @@ const EMICalculator = () => {
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showAmortization, setShowAmortization] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
@@ -110,13 +113,16 @@ const EMICalculator = () => {
     const baseResult = calculateEMI();
     const monthlyRate = interestRate / (12 * 100);
 
-    // Calculate the actual remaining balance based on months completed
-    const currentPrincipal = calculateRemainingBalance(baseResult, monthsCompleted);
+    // Calculate the actual remaining balance based on override or months completed
+    const currentPrincipal = (remainingLoanAmount && remainingLoanAmount > 0)
+      ? remainingLoanAmount
+      : calculateRemainingBalance(baseResult, monthsCompleted);
 
     // Handle zero prepayment amount
-    if (prepaymentAmount <= 0) {
+    if (!prepaymentAmount || prepaymentAmount <= 0) {
       return {
         ...baseResult,
+        principal: currentPrincipal,
         interestSaved: 0,
         prepaymentAmount: 0,
         prepaymentCharges: 0
@@ -245,9 +251,11 @@ const EMICalculator = () => {
     let balance = result.principal;
     const monthlyRate = interestRate / (12 * 100);
 
-    // For prepayment scenarios, use the correct starting balance
-    if (prepaymentEnabled && monthsCompleted > 0 && 'principal' in result) {
-      balance = calculateRemainingBalance(result, monthsCompleted);
+    // For prepayment scenarios, use the correct starting balance (override balance or calculated)
+    if (prepaymentEnabled && 'principal' in result) {
+      balance = (remainingLoanAmount && remainingLoanAmount > 0)
+        ? remainingLoanAmount
+        : (monthsCompleted > 0 ? calculateRemainingBalance(result, monthsCompleted) : result.principal);
     }
 
     const emiToUse = result.emi;
@@ -255,7 +263,7 @@ const EMICalculator = () => {
 
     for (let month = 1; month <= tenureToUse; month++) {
       const interestPayment = balance * monthlyRate;
-      const principalPayment = emiToUse - interestPayment;
+      const principalPayment = Math.min(emiToUse - interestPayment, balance); // Don't overpay
       balance -= principalPayment;
 
       schedule.push({
@@ -265,6 +273,9 @@ const EMICalculator = () => {
         interestPayment: Math.round(interestPayment),
         balance: Math.round(Math.max(0, balance))
       });
+
+      // Stop schedule if loan is fully paid off
+      if (balance <= 0) break;
     }
 
     return schedule;
@@ -274,12 +285,15 @@ const EMICalculator = () => {
 
   // Calculate and display the actual remaining balance for user reference
   const actualRemainingBalance = useMemo(() => {
+    if (remainingLoanAmount && remainingLoanAmount > 0) {
+      return remainingLoanAmount;
+    }
     if (!prepaymentEnabled || monthsCompleted <= 0) {
       return loanAmount;
     }
     const baseResult = calculateEMI();
     return calculateRemainingBalance(baseResult, monthsCompleted);
-  }, [loanAmount, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths]);
+  }, [loanAmount, monthsCompleted, prepaymentEnabled, interestRate, totalTenureMonths, remainingLoanAmount]);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -548,10 +562,10 @@ const EMICalculator = () => {
               />
 
               <CalculatorInput
-                label="Prepayment amount"
+                label="Prepayment amount (optional)"
                 value={prepaymentAmount}
                 onChange={setPrepaymentAmount}
-                min={100}
+                min={0}
                 max={calculateRemainingBalance(result, monthsCompleted)}
                 step={100}
                 prefix={symbol}
@@ -816,14 +830,24 @@ const EMICalculator = () => {
           </Alert>
         )}
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
-            className="flex-1 gap-2"
+            className="w-full gap-2 h-12 text-base font-semibold"
             size="lg"
             onClick={() => setSaveDialogOpen(true)}
           >
-            <Save className="w-4 h-4" />
-            Save to History
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
           </Button>
         </div>
       </Card>
@@ -858,6 +882,43 @@ const EMICalculator = () => {
             tenureReduced: result.tenureReduced || 0
           })
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Loan EMI & Amortization Report"
+        inputs={[
+          { label: "Loan Amount", value: formatCurrency(loanAmount) },
+          { label: "Interest Rate (p.a)", value: `${interestRate}%` },
+          { label: "Loan Tenure", value: `${tenureYears}y ${tenureMonths}m` },
+          ...(processingFee > 0 ? [{ label: "Processing Fee", value: formatCurrency(result.processingFees) }] : []),
+        ]}
+        results={[
+          { label: "Principal Loan Amount", value: formatCurrency(result.principal) },
+          { label: "Total Interest Payable", value: formatCurrency(result.totalInterest) },
+          { label: "Monthly EMI", value: formatCurrency(result.emi), isHighlight: true },
+          { label: "Total Payment", value: formatCurrency(result.totalPayment) },
+        ]}
+        analysis={[
+          ...(prepaymentEnabled && 'interestSaved' in result && result.prepaymentAmount > 0 ? [{
+            title: "🎉 Loan Prepayment Benefit Analysis",
+            items: [
+              { label: "Prepayment Amount", value: formatCurrency(result.prepaymentAmount) },
+              { label: "Interest Amount Saved", value: formatCurrency(result.interestSaved), isHighlight: true },
+              ...(result.tenureReduced ? [{ label: "Tenure Reduced", value: `${result.tenureReduced} Months` }] : []),
+            ]
+          }] : [])
+        ]}
+        isLoanSchedule={true}
+        scheduleTitle="EMI Amortization Schedule"
+        scheduleHeaders={{ period: "Month", invested: "Principal Paid", interest: "Interest Paid", balance: "Outstanding Balance" }}
+        schedule={generateAmortizationSchedule().map((item) => ({
+          period: `Month ${item.month}`,
+          invested: Math.round(item.principalPayment),
+          interest: Math.round(item.interestPayment),
+          total: Math.round(item.balance),
+        }))}
       />
     </div>
   );

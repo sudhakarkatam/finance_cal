@@ -85,9 +85,10 @@ const CalculatorInput = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Allow empty input while typing
+    // Allow empty input while typing, pass 0 to parent so live calculations update
     if (inputValue === '') {
       setDisplayValue('');
+      onChange(0);
       return;
     }
 
@@ -141,20 +142,21 @@ const CalculatorInput = ({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // If empty on blur, reset to min value
+    // If empty on blur, set to 0 (or min if min is specified and > 0, but allow 0 for optional inputs)
     if (inputValue === '') {
-      setDisplayValue(formatNumberWithCommas(min));
-      onChange(min);
+      const fallbackVal = min <= 0 ? 0 : 0;
+      setDisplayValue(formatNumberWithCommas(fallbackVal));
+      onChange(fallbackVal);
     } else {
       const numValue = parseNumberFromString(inputValue);
-      // Allow 0 and valid numbers, clamp to min/max range
+      // Allow 0 and valid numbers
       if (!isNaN(numValue) && numValue >= 0) {
-        const clampedValue = Math.min(Math.max(numValue, min), max);
+        const clampedValue = Math.min(Math.max(numValue, Math.min(0, min)), max);
         setDisplayValue(formatNumberWithCommas(clampedValue));
         onChange(clampedValue);
       } else {
-        setDisplayValue(formatNumberWithCommas(min));
-        onChange(min);
+        setDisplayValue('0');
+        onChange(0);
       }
     }
   };

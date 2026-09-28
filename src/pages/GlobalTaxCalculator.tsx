@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Globe, Info } from "lucide-react";
+import { Save, RotateCcw, Globe, Info, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import {
     Select,
     SelectContent,
@@ -29,6 +30,7 @@ const GlobalTaxCalculator = () => {
     const [deChurchTax, setDeChurchTax] = useState(false);
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     const result = useMemo(() => {
         let tax = 0;
@@ -299,6 +301,15 @@ const GlobalTaxCalculator = () => {
                 </Card>
             </div>
 
+            <Button
+                variant="outline"
+                className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                onClick={() => setShareDialogOpen(true)}
+            >
+                <Share2 className="w-4 h-4" />
+                Export & Share Global Tax PDF
+            </Button>
+
             <SaveDialog
                 open={saveDialogOpen}
                 onOpenChange={setSaveDialogOpen}
@@ -308,6 +319,21 @@ const GlobalTaxCalculator = () => {
                     netIncome: result.netIncome,
                     totalTax: result.tax
                 }}
+            />
+
+            <ShareReportModal
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+                title={`Global Income Tax (${country}) Statement`}
+                inputs={[
+                    { label: "Country Jurisdiction", value: country === 'US' ? 'United States (US)' : country === 'UK' ? 'United Kingdom (UK)' : country === 'DE' ? 'Germany (DE)' : 'Australia (AU)' },
+                    { label: "Annual Gross Income", value: format(grossIncome) },
+                ]}
+                results={[
+                    { label: "Annual Net Take-Home Salary", value: format(result.netIncome), isHighlight: true },
+                    { label: "Total Estimated Taxes & Contributions", value: format(result.tax) },
+                    { label: "Effective Tax Rate", value: `${((result.tax / grossIncome) * 100).toFixed(1)}%` },
+                ]}
             />
         </div>
     );

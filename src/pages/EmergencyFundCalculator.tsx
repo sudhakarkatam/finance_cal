@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Shield, Calculator, Info } from 'lucide-react';
+import { Save, RotateCcw, Shield, Calculator, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -17,6 +18,7 @@ const EmergencyFundCalculator = () => {
   const [expectedReturn, setExpectedReturn] = useState(4); // Savings account interest
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     const expenses = monthlyExpenses;
@@ -382,6 +384,15 @@ const EmergencyFundCalculator = () => {
           <Save className="w-5 h-5" />
           Save Calculation
         </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-5 h-5" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -397,6 +408,25 @@ const EmergencyFundCalculator = () => {
           currentSavings: result.currentSavings,
           targetAmount: result.targetAmount
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Emergency Financial Safety Fund Audit"
+        inputs={[
+          { label: "Monthly Essential Expenses", value: formatCurrency(monthlyExpenses) },
+          { label: "Target Safety Cushion Duration", value: `${emergencyMonths} Months` },
+          { label: "Current Emergency Savings", value: formatCurrency(currentSavings) },
+          { label: "Time Period to Build Fund", value: `${savingsPeriod} Months` },
+          { label: "Liquid Account Yield", value: `${expectedReturn}%` },
+        ]}
+        results={[
+          { label: "Recommended Total Emergency Corpus", value: formatCurrency(result.recommendedAmount), isHighlight: true },
+          { label: "Current Safety Coverage", value: `${result.currentSafetyMonths} Months` },
+          { label: "Fund Deficit / Shortfall", value: result.shortfall > 0 ? `-${formatCurrency(result.shortfall)}` : "Fully Safe Shielded 🎉" },
+          { label: "Required Monthly Allocation", value: formatCurrency(result.monthlySavingsRequired) },
+        ]}
       />
     </div>
   );

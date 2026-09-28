@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Receipt, Info } from "lucide-react";
-import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
+import CalculatorInput from "@/components/ui/CalculatorInput";
+import { Share2, Receipt, Info, RotateCcw, Save } from "lucide-react";
 import { calculateGST } from "@/lib/calculations";
 import {
   Dialog,
@@ -83,6 +84,7 @@ const GSTCalculator = () => {
   const [isInclusive, setIsInclusive] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Reset rate when currency changes
   useEffect(() => {
@@ -380,6 +382,15 @@ const GSTCalculator = () => {
             </div>
           </div>
         )}
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -392,6 +403,35 @@ const GSTCalculator = () => {
           gstAmount: result.gstAmount,
           totalAmount: result.totalAmount,
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title={`${config.name} Tax Statement`}
+        inputs={[
+          { label: "Base Amount", value: formatAmount(amount) },
+          { label: `${config.name} Rate`, value: `${gstRate}%` },
+          { label: "Tax Calculation Type", value: isInclusive ? "Inclusive (Included in Price)" : "Exclusive (Added on Price)" },
+        ]}
+        results={[
+          { label: "Net Base Amount", value: formatAmount(result.originalAmount) },
+          { label: `${config.name} Amount`, value: formatAmount(result.gstAmount) },
+          { label: "Final Invoice Amount", value: formatAmount(result.totalAmount), isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "🧾 Tax Component & Rate Split Audit",
+            items: [
+              { label: `${config.name} Tax Rate`, value: `${gstRate}%` },
+              ...(config.showBreakdown ? [
+                { label: "Central GST (CGST)", value: formatAmount(result.gstAmount / 2) },
+                { label: "State GST (SGST)", value: formatAmount(result.gstAmount / 2) }
+              ] : []),
+              { label: "Tax Share of Invoice Total", value: `${((result.gstAmount / (result.totalAmount || 1)) * 100).toFixed(1)}% of final amount`, isHighlight: true }
+            ]
+          }
+        ]}
       />
     </div>
   );

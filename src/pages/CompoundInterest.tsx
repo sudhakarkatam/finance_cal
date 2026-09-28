@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, RotateCcw, Info } from 'lucide-react';
+import { Save, RotateCcw, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import DateRangeInput from '@/components/ui/DateRangeInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { calculateCompoundInterest, calculateCompoundInterestFromMonthlyRupees, calculateCompoundInterestFromMonthlyRupeesWithDays } from '@/lib/calculations';
 import { differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,6 +27,7 @@ const CompoundInterest = () => {
   const [manualDays, setManualDays] = useState(0);
   const [frequency, setFrequency] = useState('1');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // Convert date range to years, months, days for consistent calculation
@@ -186,6 +188,59 @@ const CompoundInterest = () => {
     { value: '4', label: 'Quarterly' },
     { value: '12', label: 'Monthly' },
   ];
+
+  // Compute active YMD duration for display in reports and inputs
+  const activeYMD = useMemo(() => {
+    if (startDate && endDate) {
+      return dateRangeToYMD(startDate, endDate);
+    }
+    return { years: manualYears, months: manualMonths, days: manualDays };
+  }, [startDate, endDate, manualYears, manualMonths, manualDays]);
+
+  const compoundSchedule = useMemo(() => {
+    const totalTime = getTimeInYears();
+    if (totalTime <= 0) return [];
+
+    const totalPeriods = Math.max(1, Math.ceil(totalTime));
+    const n = Number(frequency) || 1;
+    const r = annualRate / 100;
+    const rows = [];
+    let prevAmount = principal;
+
+    for (let i = 1; i <= totalPeriods; i++) {
+      const isLast = i === totalPeriods;
+      const timeForPeriod = isLast ? totalTime : i;
+      
+      let amount = 0;
+      const compoundingFrequency = Number(frequency);
+
+      // Use exact calculation for fractional period on last period
+      if (compoundingFrequency === 1 && (startDate && endDate || manualYears > 0 || manualMonths > 0 || manualDays > 0)) {
+        const effYears = Math.floor(timeForPeriod);
+        const fraction = timeForPeriod - effYears;
+        const compoundPart = principal * Math.pow(1 + r, effYears);
+        amount = compoundPart * (1 + r * fraction);
+      } else {
+        amount = principal * Math.pow(1 + r / n, n * timeForPeriod);
+      }
+
+      const openingBalance = i === 1 ? principal : prevAmount;
+      const interestEarnedForPeriod = amount - openingBalance;
+      prevAmount = amount;
+
+      const periodLabel = isLast && totalTime % 1 !== 0
+        ? `Final (${totalTime.toFixed(2)} Yrs)`
+        : `Year ${i}`;
+
+      rows.push({
+        period: periodLabel,
+        invested: Math.round(openingBalance),
+        interest: Math.round(interestEarnedForPeriod),
+        total: Math.round(amount),
+      });
+    }
+    return rows;
+  }, [principal, annualRate, frequency, manualYears, manualMonths, manualDays, startDate, endDate]);
 
   const handleReset = () => {
     setPrincipal(100000);
@@ -467,14 +522,26 @@ const CompoundInterest = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -490,6 +557,37 @@ const CompoundInterest = () => {
           frequency: Number(frequency)
         }}
         results={result}
+        schedule={compoundSchedule}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Compound Interest Calculation Statement"
+        inputs={[
+          { label: "Principal Investment", value: formatCurrency(principal) },
+          { label: "Interest Rate", value: interestRateType === 'rupee-per-month' ? `₹${rate}/month (${annualRate.toFixed(1)}% p.a.)` : `${rate}% p.a.` },
+          { label: "Compounding Frequency", value: frequency === '1' ? 'Annually' : frequency === '2' ? 'Semi-Annually' : frequency === '4' ? 'Quarterly' : 'Monthly' },
+          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${activeYMD.years}y ${activeYMD.months}m ${activeYMD.days}d)` },
+        ]}
+        results={[
+          { label: "Principal Amount", value: formatCurrency(result.principal) },
+          { label: "Total Compound Interest Earned", value: formatCurrency(result.interest) },
+          { label: "Final Maturity Corpus", value: formatCurrency(result.total), isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "📈 Compounding Growth & Yield Analysis",
+            items: [
+              { label: "Effective Annual Rate (EAR)", value: `${((Math.pow(1 + (annualRate / 100) / Number(frequency), Number(frequency)) - 1) * 100).toFixed(2)}% p.a.` },
+              { label: "Wealth Growth Multiplier", value: `${(result.total / (result.principal || 1)).toFixed(2)}x` },
+              { label: "Interest Share of Maturity", value: `${(((result.interest) / (result.total || 1)) * 100).toFixed(1)}% of total corpus`, isHighlight: true }
+            ]
+          }
+        ]}
+        scheduleTitle="Compound Interest Compounding Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
+        schedule={compoundSchedule}
       />
     </div>
   );

@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Info } from "lucide-react";
+import { Save, RotateCcw, Info, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import DateRangeInput from "@/components/ui/DateRangeInput";
 import ResultChart from "@/components/ui/ResultChart";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import { calculateSimpleInterest } from "@/lib/calculations";
 import { useCurrency } from "@/hooks/useCurrency";
 import { differenceInDays } from "date-fns";
@@ -21,6 +22,7 @@ const SimpleInterest = () => {
   const [manualMonths, setManualMonths] = useState(0);
   const [manualDays, setManualDays] = useState(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const getTimeInYears = () => {
@@ -59,6 +61,45 @@ const SimpleInterest = () => {
   };
 
   const result = calculateSimpleInterest(principal, rate, getTimeInYears());
+
+  // Compute active YMD duration for display in reports and inputs
+  const activeYMD = useMemo(() => {
+    if (startDate && endDate) {
+      return dateRangeToYMD(startDate, endDate);
+    }
+    return { years: manualYears, months: manualMonths, days: manualDays };
+  }, [startDate, endDate, manualYears, manualMonths, manualDays]);
+
+  const simpleSchedule = useMemo(() => {
+    const totalTime = getTimeInYears();
+    if (totalTime <= 0) return [];
+
+    const totalPeriods = Math.max(1, Math.ceil(totalTime));
+    const annualInterest = (principal * rate) / 100;
+    const rows = [];
+    let prevCorpus = principal;
+
+    for (let i = 1; i <= totalPeriods; i++) {
+      const isLast = i === totalPeriods;
+      const timeForPeriod = isLast ? totalTime : i;
+      const closingCorpus = principal + Math.round(annualInterest * timeForPeriod);
+      const openingCorpus = i === 1 ? principal : prevCorpus;
+      const interestForPeriod = closingCorpus - openingCorpus;
+      prevCorpus = closingCorpus;
+
+      const periodLabel = isLast && totalTime % 1 !== 0
+        ? `Final (${totalTime.toFixed(2)} Yrs)`
+        : `Year ${i}`;
+
+      rows.push({
+        period: periodLabel,
+        invested: Math.round(openingCorpus),
+        interest: Math.round(interestForPeriod),
+        total: Math.round(closingCorpus),
+      });
+    }
+    return rows;
+  }, [principal, rate, manualYears, manualMonths, manualDays, startDate, endDate]);
 
   const handleReset = () => {
     setPrincipal(100000);
@@ -296,14 +337,26 @@ const SimpleInterest = () => {
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -312,6 +365,25 @@ const SimpleInterest = () => {
         calculationType="simple"
         inputs={{ principal, rate, time: getTimeInYears() }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Simple Interest Calculation Statement"
+        inputs={[
+          { label: "Principal Investment", value: formatAmount(principal) },
+          { label: "Annual Interest Rate", value: `${rate}%` },
+          { label: "Tenure Period", value: `${getTimeInYears().toFixed(2)} Years (${activeYMD.years}y ${activeYMD.months}m ${activeYMD.days}d)` },
+        ]}
+        results={[
+          { label: "Principal Amount", value: formatAmount(result.principal) },
+          { label: "Total Simple Interest Earned", value: formatAmount(result.interest) },
+          { label: "Final Maturity Amount", value: formatAmount(result.total), isHighlight: true },
+        ]}
+        scheduleTitle="Simple Interest Growth Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
+        schedule={simpleSchedule}
       />
     </div>
   );

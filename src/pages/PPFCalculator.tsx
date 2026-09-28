@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Landmark, Info } from 'lucide-react';
+import { Save, RotateCcw, Landmark, Info, Calendar, Share2, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
 
 const PPFCalculator = () => {
   // PPF is an Indian specific scheme, so we enforce INR
@@ -19,38 +22,87 @@ const PPFCalculator = () => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  const [frequency, setFrequency] = useState<'yearly' | 'monthly'>('yearly');
   const [yearlyInvestment, setYearlyInvestment] = useState(150000);
+  const [monthlyInvestment, setMonthlyInvestment] = useState(12500);
   const [years, setYears] = useState(15);
+  const [extendWithoutContribution, setExtendWithoutContribution] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
-  // PPF interest rate (fixed by government, using current rate)
+  // PPF interest rate (fixed by Ministry of Finance, currently 7.1% p.a.)
   const ppfRate = 7.1;
 
-  const calculatePPF = () => {
-    let maturityAmount = 0;
+  const ppfSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
     const rate = ppfRate / 100;
+    let currentBalance = 0;
+    let runningInvested = 0;
 
-    for (let year = 1; year <= years; year++) {
-      maturityAmount = (maturityAmount + yearlyInvestment) * (1 + rate);
+    for (let y = 1; y <= years; y++) {
+      const isContributing = y <= 15 || !extendWithoutContribution;
+      let depositThisYear = 0;
+      let interestThisYear = 0;
+
+      if (frequency === 'yearly') {
+        depositThisYear = isContributing ? yearlyInvestment : 0;
+        // Lump sum deposited on or before April 5th earns full 12 months interest
+        interestThisYear = (currentBalance + depositThisYear) * rate;
+      } else {
+        const mDep = isContributing ? monthlyInvestment : 0;
+        depositThisYear = mDep * 12;
+        // In PPF, monthly deposits on or before the 5th of each month:
+        // Annual interest = Opening Balance * rate + Monthly Deposit * (rate / 12) * (12 * 13 / 2)
+        interestThisYear = currentBalance * rate + mDep * rate * 6.5;
+      }
+
+      currentBalance = currentBalance + depositThisYear + interestThisYear;
+      runningInvested += depositThisYear;
+
+      let milestoneTag = '';
+      if (y === 3) milestoneTag = ' (Loan Eligible)';
+      else if (y === 7) milestoneTag = ' (Partial Withdrawal)';
+      else if (y === 15) milestoneTag = ' (Maturity)';
+      else if (y > 15 && (y - 15) % 5 === 0) milestoneTag = ` (Ext Block ${(y - 15) / 5})`;
+
+      list.push({
+        period: `Year ${y}${milestoneTag}`,
+        invested: Math.round(runningInvested),
+        interest: Math.round(Math.max(0, currentBalance - runningInvested)),
+        total: Math.round(currentBalance),
+      });
     }
+    return list;
+  }, [frequency, yearlyInvestment, monthlyInvestment, years, extendWithoutContribution, ppfRate]);
 
-    const invested = yearlyInvestment * years;
-    const returns = maturityAmount - invested;
+  const result = useMemo(() => {
+    const lastRow = ppfSchedule[ppfSchedule.length - 1];
+    const invested = lastRow ? lastRow.invested : 0;
+    const total = lastRow ? lastRow.total : 0;
+    const returns = total - invested;
 
     return {
       invested,
-      returns: Math.round(returns),
-      total: Math.round(maturityAmount),
-      interestRate: ppfRate
+      returns,
+      total,
+      interestRate: ppfRate,
     };
-  };
+  }, [ppfSchedule, ppfRate]);
 
-  const result = calculatePPF();
+  // Tax calculation under Section 80C (max ₹1.5L/year deduction)
+  const annualDeposit = frequency === 'yearly' ? yearlyInvestment : monthlyInvestment * 12;
+  const contributingYears = extendWithoutContribution ? Math.min(15, years) : years;
+  const taxSaved = Math.min(150000, annualDeposit) * 0.3 * contributingYears;
 
   const handleReset = () => {
+    setFrequency('yearly');
     setYearlyInvestment(150000);
+    setMonthlyInvestment(12500);
     setYears(15);
+    setExtendWithoutContribution(false);
   };
 
   return (
@@ -79,6 +131,7 @@ const PPFCalculator = () => {
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>About PPF & Calculation</DialogTitle>
+                  <DialogDescription className="sr-only">Comprehensive overview and regulatory details about Public Provident Fund (PPF).</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 text-sm">
                   <div>
@@ -109,10 +162,10 @@ const PPFCalculator = () => {
                   <div>
                     <h3 className="font-semibold text-foreground mb-2">Current Interest Rate</h3>
                     <p className="text-muted-foreground">
-                      <strong>7.1% p.a. (Q4 FY 2024-25)</strong>
+                      <strong>7.1% p.a. (Compounded Annually)</strong>
                     </p>
                     <p className="text-muted-foreground mt-1">
-                      PPF interest rate is reviewed and revised quarterly by the Government. Interest is compounded annually and credited at the end of each financial year.
+                      The PPF interest rate is notified quarterly by the Ministry of Finance, Government of India. Interest is compounded annually and credited at the end of each financial year on March 31st.
                     </p>
                   </div>
                   <div>
@@ -239,46 +292,164 @@ const PPFCalculator = () => {
         <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
           <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
           <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-xs ml-2">
-            This calculator is designed for Indian financial rules (Rupees ₹).
+            This calculator is designed for Indian financial rules (Rupees ₹) under Section 80C.
           </AlertDescription>
         </Alert>
 
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            Current PPF Interest Rate: <span className="font-bold">{ppfRate}% p.a.</span>
-          </p>
-          <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-            Minimum: ₹500/year | Maximum: ₹1,50,000/year
-          </p>
-        </div>
-
-        <CalculatorInput
-          label="Yearly investment"
-          value={yearlyInvestment}
-          onChange={setYearlyInvestment}
-          min={500}
-          max={150000}
-          step={500}
-          prefix={symbol}
-        />
-
-        <CalculatorInput
-          label="Investment period"
-          value={years}
-          onChange={setYears}
-          min={15}
-          max={50}
-          step={1}
-          suffix="Years"
-        />
-
-        <div className="bg-muted/30 p-3 rounded-lg">
-          <p className="text-xs text-muted-foreground">
-            • 15 years minimum lock-in period<br />
-            • Extendable in blocks of 5 years<br />
-            • Tax-free returns under Section 80C
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 p-3.5 rounded-lg">
+          <p className="text-xs text-blue-600 dark:text-blue-300">Govt Fixed Rate</p>
+          <p className="text-base font-bold text-blue-900 dark:text-blue-100">{ppfRate}% p.a. (Compounded Annually)</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Interest calculated monthly & credited annually on March 31st
           </p>
         </div>
+
+        {/* Deposit Frequency Toggle */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-foreground">Deposit Frequency</Label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-muted/60 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setFrequency('yearly')}
+              className={`py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                frequency === 'yearly'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Yearly (Lump Sum)
+            </button>
+            <button
+              type="button"
+              onClick={() => setFrequency('monthly')}
+              className={`py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                frequency === 'monthly'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Monthly Installments
+            </button>
+          </div>
+        </div>
+
+        {/* Investment Amount Input */}
+        {frequency === 'yearly' ? (
+          <div className="space-y-2">
+            <CalculatorInput
+              label="Yearly Investment"
+              value={yearlyInvestment}
+              onChange={setYearlyInvestment}
+              min={500}
+              max={150000}
+              step={500}
+              prefix={symbol}
+            />
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {[25000, 50000, 100000, 150000].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setYearlyInvestment(val)}
+                  className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    yearlyInvestment === val
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {val === 150000 ? '₹1.5 Lakh (Max)' : `₹${(val / 1000).toLocaleString('en-IN')}k`}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <CalculatorInput
+              label="Monthly Investment"
+              value={monthlyInvestment}
+              onChange={setMonthlyInvestment}
+              min={500}
+              max={12500}
+              step={100}
+              prefix={symbol}
+            />
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {[1000, 5000, 10000, 12500].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setMonthlyInvestment(val)}
+                  className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    monthlyInvestment === val
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {val === 12500 ? '₹12,500 (Max ₹1.5L/yr)' : `₹${val.toLocaleString('en-IN')}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5th of the month educational tip */}
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+          <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <div className="leading-relaxed">
+            <span className="font-semibold">The 5th of the Month Rule: </span>
+            {frequency === 'yearly'
+              ? 'Deposit on or before April 5th to earn interest for all 12 months of the financial year.'
+              : 'Deposit on or before the 5th of each month. Deposits made on the 6th or later earn zero interest for that month!'}
+          </div>
+        </div>
+
+        {/* Investment Period (5-Year Blocks) */}
+        <div className="space-y-2">
+          <CalculatorInput
+            label="Investment Period"
+            value={years}
+            onChange={(val) => setYears(Math.max(15, Math.round(val / 5) * 5))}
+            min={15}
+            max={50}
+            step={5}
+            suffix="Years"
+          />
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {[15, 20, 25, 30].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setYears(val)}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                  years === val
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                {val === 15 ? '15Y (Maturity)' : `${val}Y (+${val - 15}Y Ext)`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Extension Option when years > 15 */}
+        {years > 15 && (
+          <div className="flex items-center justify-between p-3.5 bg-muted/40 rounded-lg border border-border">
+            <div className="space-y-0.5 pr-3">
+              <Label htmlFor="ppf-extend" className="text-sm font-medium cursor-pointer">
+                Extend without further contribution
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Stop depositing after Year 15. The accumulated corpus keeps earning 7.1% tax-free interest annually.
+              </p>
+            </div>
+            <Switch
+              id="ppf-extend"
+              checked={extendWithoutContribution}
+              onCheckedChange={setExtendWithoutContribution}
+            />
+          </div>
+        )}
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
@@ -293,35 +464,126 @@ const PPFCalculator = () => {
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-muted-foreground">Total invested</span>
+            <span className="text-sm text-muted-foreground">Total Invested</span>
             <span className="font-semibold text-foreground">{formatAmount(result.invested)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Interest earned</span>
+            <span className="text-sm text-muted-foreground">Tax-Free Interest Earned</span>
             <span className="font-semibold text-primary">{formatAmount(result.returns)}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
-            <span className="text-base font-semibold text-foreground">Maturity value</span>
+            <span className="text-base font-semibold text-foreground">Total Maturity Value</span>
             <span className="text-xl font-bold text-primary">{formatAmount(result.total)}</span>
           </div>
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        {/* Tax Saving & Equivalent FD Yield Badge */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              Sec 80C Tax Saved (30% slab)
+            </div>
+            <div className="text-base font-bold text-emerald-700 dark:text-emerald-300 mt-1">
+              {formatAmount(taxSaved)}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Saved over {contributingYears} contributing years
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <TrendingUp className="w-3.5 h-3.5" />
+              Pre-Tax FD Equivalent Yield
+            </div>
+            <div className="text-base font-bold text-primary mt-1">
+              10.14% p.a.
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              To match PPF's 7.1% tax-free return
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule & Milestones
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="ppf"
-        inputs={{ yearlyInvestment, years, interestRate: ppfRate }}
+        inputs={{
+          yearlyInvestment: frequency === 'yearly' ? yearlyInvestment : monthlyInvestment * 12,
+          years,
+          interestRate: ppfRate,
+          frequency,
+          monthlyInvestment,
+          extendWithoutContribution,
+        }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Public Provident Fund (PPF) Report"
+        inputs={[
+          {
+            label: frequency === 'yearly' ? 'Yearly Deposit' : 'Monthly Deposit',
+            value: frequency === 'yearly' ? formatAmount(yearlyInvestment) : `${formatAmount(monthlyInvestment)}/mo`,
+          },
+          { label: 'Deposit Frequency', value: frequency === 'yearly' ? 'Yearly (Lump Sum)' : 'Monthly Installments' },
+          { label: 'PPF Interest Rate', value: `${ppfRate}% p.a. (Govt Fixed)` },
+          { label: 'Tenure', value: `${years} Years${extendWithoutContribution ? ' (No contribution after Y15)' : ''}` },
+          { label: 'Tax Status', value: '100% Tax Free (Sec 80C)' },
+          { label: '80C Tax Saved (30% slab)', value: formatAmount(taxSaved) },
+        ]}
+        results={[
+          { label: 'Total Deposited', value: formatAmount(result.invested) },
+          { label: 'Tax-Free Interest Earned', value: formatAmount(result.returns) },
+          { label: 'Total Tax-Free Maturity Value', value: formatAmount(result.total), isHighlight: true },
+        ]}
+        scheduleTitle={`PPF ${years}-Year Growth & Milestone Schedule`}
+        scheduleHeaders={{ period: 'Year / Milestone', invested: 'Total Deposited', interest: 'Interest Accrued', balance: 'PPF Balance' }}
+        schedule={ppfSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title={`PPF ${years}-Year Growth Schedule`}
+        schedule={ppfSchedule}
       />
     </div>
   );

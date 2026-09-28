@@ -8,6 +8,7 @@ import {
   GraduationCap,
   PiggyBank,
   TrendingUp,
+  Share2,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
@@ -58,8 +59,9 @@ const EducationPlanner = () => {
   // Education type
   const [educationType, setEducationType] = useState("undergraduate");
 
-  // UI state
+  // Save & Share dialog state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
 
@@ -650,6 +652,15 @@ const EducationPlanner = () => {
           <Save className="w-4 h-4" />
           Save to History
         </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -680,6 +691,52 @@ const EducationPlanner = () => {
           futureEducationCost: result.futureEducationCost,
           totalCorpusAtEducation: result.totalCorpusAtEducation,
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Higher Education Planning & Corpus Statement"
+        inputs={[
+          { label: "Child Current Age", value: `${childCurrentAge} Years` },
+          { label: "Education Start Age", value: `${educationStartAge} Years` },
+          { label: "Years Until College", value: `${result.yearsToEducation} Years` },
+          { label: "Today's Education Cost", value: formatCurrency(currentEducationCost) },
+          { label: "Current Education Savings", value: formatCurrency(currentSavings) },
+          { label: "Monthly Savings Contribution", value: formatCurrency(monthlyContribution) },
+          { label: "Expected Annual Return", value: `${expectedReturn}%` },
+          { label: "Education Inflation Rate", value: `${educationInflationRate}%` },
+        ]}
+        results={[
+          { label: "Projected Future Education Cost", value: formatCurrency(result.futureEducationCost), isHighlight: true },
+          { label: "Projected Savings at College Start", value: formatCurrency(result.totalCorpusAtEducation) },
+          { label: "Target Corpus Shortfall / Gap", value: result.shortfall > 0 ? `-${formatCurrency(result.shortfall)}` : "Fully Funded 🎉" },
+          { label: "Recommended Monthly SIP Required", value: formatCurrency(result.requiredMonthlyContribution) },
+        ]}
+        analysis={[
+          {
+            title: "🎓 Higher Education Feasibility & Advisory Analysis",
+            items: [
+              { label: "Today's Education Cost", value: formatCurrency(currentEducationCost) },
+              { label: "Inflation-Adjusted Future College Cost", value: formatCurrency(result.futureEducationCost) },
+              {
+                label: "Advisory Recommendation",
+                value: result.isAchievable
+                  ? "🎉 Great news! Your current savings & monthly SIP plan will fully fund your child's higher education."
+                  : `Increase monthly SIP by ${formatCurrency(result.requiredMonthlyContribution - monthlyContribution)} to bridge the ${formatCurrency(result.shortfall)} shortfall before age ${educationStartAge}.`,
+                isHighlight: true,
+              },
+            ],
+          },
+        ]}
+        scheduleTitle="Education Fund Projection"
+        scheduleHeaders={{ period: "Child's Age", invested: "Annual Contribution", interest: "Growth Earned", balance: "Corpus Value" }}
+        schedule={yearlyProjection?.map((row: any) => ({
+          period: `Age ${row.age} (Yr ${row.year})`,
+          invested: Math.round(row.contributionsThisYear),
+          interest: Math.round(Math.max(0, row.portfolioValue - row.contributionsThisYear)),
+          total: Math.round(row.portfolioValue),
+        }))}
       />
     </div>
   );

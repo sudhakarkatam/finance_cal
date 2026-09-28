@@ -44,7 +44,8 @@ interface SaveDialogProps {
   | "global-tax"
   | "epf"
   | "time-cost"
-  | "trip-cost";
+  | "trip-cost"
+  | "gold";
   inputs: Record<string, number | string>;
   results: Record<string, number>;
 }

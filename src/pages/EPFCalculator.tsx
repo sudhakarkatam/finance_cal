@@ -2,12 +2,35 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Briefcase, Info } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  Save,
+  RotateCcw,
+  Briefcase,
+  Info,
+  Calendar,
+  Share2,
+  ShieldCheck,
+  TrendingUp,
+  AlertTriangle,
+  Sparkles,
+  Coins,
+} from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
+import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { calculateEPF } from '@/lib/calculations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useCurrency } from '@/hooks/useCurrency';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const EPFCalculator = () => {
   const symbol = "₹";
@@ -18,6 +41,8 @@ const EPFCalculator = () => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // State
   const [basicSalary, setBasicSalary] = useState(50000);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [employeeContribution, setEmployeeContribution] = useState(12);
@@ -25,9 +50,85 @@ const EPFCalculator = () => {
   const [retirementAge, setRetirementAge] = useState(60);
   const [salaryGrowth, setSalaryGrowth] = useState(5);
   const [interestRate, setInterestRate] = useState(8.25);
+  const [capWageCeiling, setCapWageCeiling] = useState(false);
+  const [showInflationAdjusted, setShowInflationAdjusted] = useState(false);
+
+  // Dialog states
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
+  // Annual Employee Deposit for Budget 2021 Section 10(12) cap (₹2.5 Lakhs/year)
+  const effectiveSalaryForDeposit = capWageCeiling ? Math.min(15000, basicSalary) : basicSalary;
+  const annualEmployeeDeposit = (employeeContribution / 100) * effectiveSalaryForDeposit * 12;
+  const isOverTaxThreshold = annualEmployeeDeposit > 250000;
+
+  // Schedule calculation
+  const epfSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const years = Math.max(1, retirementAge - currentAge);
+    let balance = currentBalance;
+    let totalEmpCont = 0;
+    let totalEmprCont = 0;
+    let currentSalary = basicSalary;
+    const monthlyRate = interestRate / (12 * 100);
+
+    for (let year = 1; year <= years; year++) {
+      const pensionableSalary = Math.min(15000, currentSalary);
+      const effectiveSalary = capWageCeiling ? pensionableSalary : currentSalary;
+
+      // Employee share (12% or custom VPF)
+      const empCont = (employeeContribution / 100) * effectiveSalary;
+
+      // Employer statutory share:
+      // Total employer liability is 12% of basic.
+      // EPS share is 8.33% capped at ₹15,000 wage ceiling (max ₹1,250/month).
+      // The entire remainder of the 12% goes directly to the employee's EPF account!
+      const totalEmpr12Pct = (12 / 100) * effectiveSalary;
+      const monthlyEPS = Math.min(
+        1250,
+        Math.round((pensionableSalary * 8.333333333333334) / 100)
+      );
+      const emprCont = Math.max(0, totalEmpr12Pct - monthlyEPS);
+      const monthlyTotal = empCont + emprCont;
+
+      for (let month = 1; month <= 12; month++) {
+        totalEmpCont += empCont;
+        totalEmprCont += emprCont;
+        balance += monthlyTotal;
+        const interest = balance * monthlyRate;
+        balance += interest;
+      }
+
+      const totalCont = totalEmpCont + totalEmprCont;
+      let milestoneTag = '';
+      if (year === 5) milestoneTag = ' (5Y Tax-Free Lock-in Met)';
+      else if (currentAge + year === 58) milestoneTag = ' (EPS Pension Age 58)';
+      else if (currentAge + year === retirementAge) milestoneTag = ' (Retirement)';
+
+      list.push({
+        period: `Age ${currentAge + year}${milestoneTag}`,
+        invested: Math.round(totalCont),
+        interest: Math.round(Math.max(0, balance - totalCont - currentBalance)),
+        total: Math.round(balance),
+      });
+
+      currentSalary *= (1 + salaryGrowth / 100);
+    }
+    return list;
+  }, [
+    basicSalary,
+    currentBalance,
+    employeeContribution,
+    currentAge,
+    retirementAge,
+    salaryGrowth,
+    interestRate,
+    capWageCeiling,
+  ]);
+
+  // Main Result
   const result = useMemo(() => {
     return calculateEPF(
       basicSalary,
@@ -36,9 +137,25 @@ const EPFCalculator = () => {
       currentAge,
       retirementAge,
       salaryGrowth,
-      interestRate
+      interestRate,
+      capWageCeiling
     );
-  }, [basicSalary, currentBalance, employeeContribution, currentAge, retirementAge, salaryGrowth, interestRate]);
+  }, [
+    basicSalary,
+    currentBalance,
+    employeeContribution,
+    currentAge,
+    retirementAge,
+    salaryGrowth,
+    interestRate,
+    capWageCeiling,
+  ]);
+
+  // Inflation-adjusted corpus (purchasing power in today's money assuming 6% inflation)
+  const inflationAdjustedMaturity = useMemo(() => {
+    if (result.yearsToRetirement <= 0) return result.maturityValue;
+    return Math.round(result.maturityValue / Math.pow(1 + 0.06, result.yearsToRetirement));
+  }, [result.maturityValue, result.yearsToRetirement]);
 
   const handleReset = () => {
     setBasicSalary(50000);
@@ -48,17 +165,23 @@ const EPFCalculator = () => {
     setRetirementAge(60);
     setSalaryGrowth(5);
     setInterestRate(8.25);
+    setCapWageCeiling(false);
+    setShowInflationAdjusted(false);
   };
 
   return (
     <div className="p-4 space-y-4 max-w-3xl mx-auto">
       <Card className="p-6 space-y-6 shadow-lg">
+        {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Briefcase className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">EPF Calculator</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">EPF Calculator</h2>
+              <p className="text-xs text-muted-foreground">Employees' Provident Fund & Pension</p>
+            </div>
             <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -70,141 +193,59 @@ const EPFCalculator = () => {
                   <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>About EPF & Calculation</DialogTitle>
+                  <DialogTitle>About EPF & Calculation Rules</DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Regulatory rules, contribution formulas, lock-in period, and tax guidelines for Employees' Provident Fund.
+                  </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 text-sm">
+                <div className="space-y-3.5 text-sm">
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">What is EPF?</h3>
-                    <p className="text-muted-foreground">
-                      The Employee Provident Fund (EPF) is a government-backed savings scheme for salaried employees in India, designed to help fund their retirement. Both the employee and employer contribute to this fund monthly. The EPFO (Employees' Provident Fund Organisation) revises the EPF interest rate annually.
+                    <h3 className="font-semibold text-foreground mb-1">What is EPF?</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Employees' Provident Fund (EPF) is a government-backed retirement scheme for salaried employees in India. Both you and your employer contribute 12% of your basic pay each month under your UAN.
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Current EPF Interest Rate</h3>
-                    <p className="text-muted-foreground">
-                      <strong>8.25% p.a. (FY 2024-25)</strong>
-                    </p>
-                    <p className="text-muted-foreground mt-1">
-                      The EPFO Central Board of Trustees fixes the EPF interest rates every financial year after consulting the Ministry of Finance.
+                    <h3 className="font-semibold text-foreground mb-1">Interest Rate</h3>
+                    <p className="text-xs text-muted-foreground">
+                      <strong>8.25% p.a.</strong> (Notified by EPFO). Compounded monthly and credited on March 31st each financial year.
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Contribution Breakdown</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li><strong>Employee contribution:</strong> 12% of monthly basic salary + dearness allowance (default)</li>
-                      <li><strong>Employer contribution:</strong> 12% total
-                        <ul className="list-disc list-inside ml-4 mt-1">
-                          <li>3.67% goes to EPF account (shown in calculator)</li>
-                          <li>8.33% goes to EPS (Employee Pension Scheme), capped at ₹1,250 if salary &gt; ₹15,000</li>
-                        </ul>
-                      </li>
+                    <h3 className="font-semibold text-foreground mb-1">Monthly Contribution (12% + 12%)</h3>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                      <li><strong>Your Share (12%):</strong> 100% deposited into your EPF account.</li>
+                      <li><strong>Employer Share (12%):</strong> 8.33% goes to EPS pension (max ₹1,250/mo), and the remaining balance goes into your EPF account.</li>
                     </ul>
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Interest Calculation</h3>
-                    <p className="text-muted-foreground">
-                      Interest is calculated monthly on the closing balance (after adding contributions) but credited to the account annually at year-end. The monthly interest rate is derived from the annual rate divided by 12.
-                    </p>
-                    <p className="text-muted-foreground mt-2">
-                      Interest compounding happens at year-end when all accrued monthly interest is added to the balance.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
-                    <p className="text-muted-foreground">
-                      The EPF calculator gives you an instant estimation of your retirement corpus, factoring in your present balance, monthly salary, future increments, and interest rates—helping you make informed decisions about your retirement savings.
-                    </p>
-                    <p className="text-muted-foreground mt-2 text-xs italic">
-                      Note: Employer's EPS contribution (8.33%) is separate and not included in EPF corpus calculation, as it provides separate pension benefits.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
-                    <div className="space-y-3 text-muted-foreground">
-                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Basic EPF Accumulation</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Age 30, Salary ₹50,000, Current balance ₹0, Retirement age 60<br />
-                          <strong>Employee Contribution:</strong> 12% of ₹50,000 = ₹6,000/month<br />
-                          <strong>Employer EPF:</strong> 3.67% of ₹50,000 = ₹1,835/month<br />
-                          <strong>Total Monthly:</strong> ₹7,835<br />
-                          <strong>Annual Contribution:</strong> ₹94,020 × 30 years = ₹28,20,600<br />
-                          <strong>Result:</strong> Maturity corpus ≈ ₹1.5-2 crores (with 8.25% interest and salary growth)<br />
-                          <strong>Benefit:</strong> Tax-free retirement corpus from mandatory savings
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: With Existing Balance</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Age 35, Salary ₹60,000, Current balance ₹5,00,000, Retire at 60<br />
-                          <strong>Monthly Contribution:</strong> ₹7,202 (employee) + ₹2,202 (employer EPF) = ₹9,404<br />
-                          <strong>Years to Retirement:</strong> 25 years<br />
-                          <strong>New Contributions:</strong> ₹28,21,200 over 25 years<br />
-                          <strong>Result:</strong> Total corpus ≈ ₹2.2-2.8 crores (including ₹5L starting balance)<br />
-                          <strong>Advantage:</strong> Existing balance compounds significantly over 25 years
-                        </p>
-                      </div>
-
-                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Salary Growth Impact</p>
-                        <p className="text-sm">
-                          <strong>Situation A:</strong> ₹40,000 salary, 5% annual growth, 30 years → Corpus ≈ ₹1.2 crores<br />
-                          <strong>Situation B:</strong> ₹40,000 salary, 10% annual growth, 30 years → Corpus ≈ ₹2.1 crores<br />
-                          <strong>Difference:</strong> ₹90 lakhs more with higher salary growth<br />
-                          <strong>Reason:</strong> Higher salary = higher contributions = exponential growth<br />
-                          <strong>Lesson:</strong> Salary increments significantly boost EPF corpus over long term
-                        </p>
-                      </div>
-
-                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Employer Contribution Breakdown</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Basic salary = ₹60,000<br />
-                          <strong>Employee Contribution:</strong> 12% = ₹7,200 (goes to EPF)<br />
-                          <strong>Employer Total:</strong> 12% = ₹7,200<br />
-                          <strong>Employer EPF:</strong> 3.67% = ₹2,202 (included in corpus)<br />
-                          <strong>Employer EPS:</strong> 8.33% = ₹5,000 (capped at ₹1,250 if salary &gt; ₹15,000)<br />
-                          <strong>EPF Corpus Impact:</strong> Only ₹2,202/month from employer to EPF<br />
-                          <strong>Total EPF:</strong> ₹7,200 + ₹2,202 = ₹9,402/month grows to retirement
-                        </p>
-                      </div>
-
-                      <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                        <p className="font-semibold text-red-900 dark:text-red-100 mb-1">Real-World Scenario</p>
-                        <p className="text-sm">
-                          <strong>Meera's Journey:</strong> Started at age 25, salary ₹30,000, grew to ₹1,50,000 by age 60<br />
-                          <strong>Contributions:</strong> Started with ₹3,602/month, ended with ₹18,502/month<br />
-                          <strong>Total Invested:</strong> ₹62,46,580 over 35 years<br />
-                          <strong>Final Corpus:</strong> ₹2,00,22,922 at retirement (₹2 crores+)<br />
-                          <strong>Interest Earned:</strong> ₹1,37,76,342 (more than double the contributions)<br />
-                          <strong>Success:</strong> EPF provided secure retirement fund through disciplined savings
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
-                      <li>Check EPF balance annually through EPFO portal - ensure employer contributions are credited</li>
-                      <li>Don't withdraw EPF before retirement unless absolutely necessary - it loses compounding power</li>
-                      <li>Transfer EPF when changing jobs - maintain continuity for better returns</li>
-                      <li>Salary increments directly increase EPF contributions and final corpus</li>
-                      <li>EPF is fully tax-free at withdrawal after 5 years of continuous service</li>
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1.5 text-xs">
+                      🔒 Key Withdrawal Rules
+                    </h4>
+                    <ul className="list-disc list-inside space-y-1.5 text-xs text-amber-800 dark:text-amber-300">
+                      <li><strong>Tax-Free After 5 Years:</strong> Withdrawals are 100% tax-free after 5 years of continuous service (transferred across jobs under the same UAN).</li>
+                      <li><strong>Partial Withdrawals:</strong> Allowed after 12 months of service for medical needs, home purchase/construction, or marriage/education.</li>
+                      <li><strong>Unemployment:</strong> 75% can be withdrawn after 1 month of unemployment, and the remaining 25% after 12 continuous months.</li>
+                      <li><strong>Retirement (Age 58):</strong> Full EPF balance can be withdrawn lump-sum. EPS pension begins if you completed 10+ years of service.</li>
+                      <li><strong>25% Minimum Balance:</strong> A 25% balance must remain in the account during partial withdrawals so your funds keep compounding.</li>
                     </ul>
+                  </div>
+
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
+                      ⚖️ <strong>Disclaimer:</strong> Projections are estimates based on 8.25% interest and your chosen salary growth. Actual returns depend on future EPFO rate notifications and employer policies.
+                    </p>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -216,27 +257,91 @@ const EPFCalculator = () => {
           </Button>
         </div>
 
-        <Alert className="bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
-          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-          <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-xs ml-2">
-            This calculator is designed for Indian financial rules (Rupees ₹).
-          </AlertDescription>
-        </Alert>
+        {/* Rate & 5Y Lock-in Info Card */}
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 p-3.5 rounded-lg space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-blue-600 dark:text-blue-300">EPFO Notified Rate</p>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-blue-500/15 text-blue-700 dark:text-blue-300 rounded border border-blue-500/30">
+              FY 2025-26
+            </span>
+          </div>
+          <p className="text-base font-bold text-blue-900 dark:text-blue-100">
+            {interestRate}% p.a. (Compounded Annually)
+          </p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-0.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Tax-free withdrawals after 5 years of continuous service under Sec 80C.</span>
+          </p>
+        </div>
 
-        <p className="text-sm text-muted-foreground">
-          Calculate your Employee Provident Fund corpus at retirement - estimate total contributions, interest earned, and projected maturity value
-        </p>
+        {/* Corporate CTC vs Statutory Wage Ceiling Toggle */}
+        <div className="space-y-1.5 bg-muted/40 p-3 rounded-lg border border-border">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium text-foreground">Employer Contribution Model</Label>
+            <span className="text-[11px] text-muted-foreground">
+              {capWageCeiling ? 'Capped at ₹15,000' : 'Actual Basic Salary'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setCapWageCeiling(false)}
+              className={`py-2 px-3 text-xs font-medium rounded-md transition-all text-center ${
+                !capWageCeiling
+                  ? 'bg-background text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Actual Basic (Tech/Corporate CTC)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCapWageCeiling(true)}
+              className={`py-2 px-3 text-xs font-medium rounded-md transition-all text-center ${
+                capWageCeiling
+                  ? 'bg-background text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Statutory Cap (₹15,000 Ceiling)
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1 leading-normal">
+            {!capWageCeiling
+              ? 'Standard for private & tech companies: Employer pays 12% of full basic (EPS capped at ₹1,250, remainder to EPF).'
+              : 'Minimum statutory model: Employer & employee contributions are capped at 12% of ₹15,000 (₹1,800/mo each).'}
+          </p>
+        </div>
 
+        {/* Inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <CalculatorInput
-            label="Basic Monthly Salary (including DA)"
-            value={basicSalary}
-            onChange={setBasicSalary}
-            min={0}
-            max={10000000}
-            step={100}
-            prefix={symbol}
-          />
+          <div className="space-y-1.5">
+            <CalculatorInput
+              label="Basic Monthly Salary (including DA)"
+              value={basicSalary}
+              onChange={setBasicSalary}
+              min={0}
+              max={10000000}
+              step={100}
+              prefix={symbol}
+            />
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {[25000, 50000, 75000, 100000].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setBasicSalary(val)}
+                  className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                    basicSalary === val
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  ₹{(val / 1000).toLocaleString('en-IN')}k
+                </button>
+              ))}
+            </div>
+          </div>
 
           <CalculatorInput
             label="Current EPF Balance"
@@ -248,15 +353,23 @@ const EPFCalculator = () => {
             prefix={symbol}
           />
 
-          <CalculatorInput
-            label="Employee EPF Contribution %"
-            value={employeeContribution}
-            onChange={setEmployeeContribution}
-            min={0}
-            max={100}
-            step={0.1}
-            suffix="%"
-          />
+          <div className="space-y-1">
+            <CalculatorInput
+              label="Employee Contribution %"
+              value={employeeContribution}
+              onChange={setEmployeeContribution}
+              min={0}
+              max={100}
+              step={0.5}
+              suffix="%"
+            />
+            {employeeContribution > 12 && (
+              <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>12% Mandatory EPF + {(employeeContribution - 12).toFixed(1)}% Voluntary (VPF)</span>
+              </div>
+            )}
+          </div>
 
           <CalculatorInput
             label="Current Age"
@@ -272,8 +385,8 @@ const EPFCalculator = () => {
             label="Expected Retirement Age"
             value={retirementAge}
             onChange={setRetirementAge}
-            min={55}
-            max={60}
+            min={40}
+            max={65}
             step={1}
             suffix="years"
           />
@@ -294,109 +407,160 @@ const EPFCalculator = () => {
             onChange={setInterestRate}
             min={1}
             max={20}
-            step={0.01}
+            step={0.05}
             suffix="%"
           />
         </div>
 
-        {(currentAge >= retirementAge) && (
-          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-            <p className="text-xs text-red-700">
+        {/* Budget 2021 Tax Rule Alert (> ₹2.5L / year) */}
+        {isOverTaxThreshold && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="leading-relaxed">
+              <span className="font-semibold">Budget 2021 Section 10(12) Rule: </span>
+              Your annual employee EPF deposit ({formatCurrency(annualEmployeeDeposit)}) exceeds ₹2,50,000. Interest earned on contributions above ₹2.5L/year is taxable at your income tax slab rate.
+            </div>
+          </div>
+        )}
+
+        {currentAge >= retirementAge && (
+          <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-lg border border-red-200 dark:border-red-800">
+            <p className="text-xs text-red-700 dark:text-red-300">
               <strong>Error:</strong> Current Age cannot be greater than or equal to retirement age.
             </p>
           </div>
         )}
+      </Card>
 
-        {(retirementAge > 60) && (
-          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-            <p className="text-xs text-red-700">
-              <strong>Error:</strong> The maximum retirement age is 60 years.
+      {/* Results Card */}
+      <Card className="p-6 space-y-5 shadow-lg">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">EPF Retirement Corpus</h3>
+          <div className="text-xs text-muted-foreground font-medium">
+            Horizon: <span className="font-bold text-foreground">{result.yearsToRetirement} Years</span>
+          </div>
+        </div>
+
+        {/* Donut Chart */}
+        <ResultChart
+          principal={result.totalContributions}
+          returns={result.totalInterest}
+          principalLabel="Contributions"
+          returnsLabel="Interest Accrued"
+        />
+
+        {/* Contribution Breakdown Grid */}
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="bg-secondary/40 p-3.5 rounded-lg border border-border space-y-1">
+            <span className="text-muted-foreground block">Employee Contribution</span>
+            <span className="text-[11px] text-muted-foreground block">({employeeContribution}% of salary)</span>
+            <span className="text-sm font-bold text-foreground block pt-0.5">
+              {formatCurrency(result.totalEmployeeContribution)}
+            </span>
+          </div>
+
+          <div className="bg-secondary/40 p-3.5 rounded-lg border border-border space-y-1">
+            <span className="text-muted-foreground block">Employer EPF Contribution</span>
+            <span className="text-[11px] text-muted-foreground block">(12% minus EPS cap)</span>
+            <span className="text-sm font-bold text-foreground block pt-0.5">
+              {formatCurrency(result.totalEmployerContribution)}
+            </span>
+          </div>
+        </div>
+
+        {/* Totals */}
+        <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
+          <div className="flex justify-between items-center py-1.5">
+            <span className="text-sm text-muted-foreground">Total Combined Deposits</span>
+            <span className="font-semibold text-foreground">{formatCurrency(result.totalContributions)}</span>
+          </div>
+          <div className="flex justify-between items-center py-1.5 border-t border-border">
+            <span className="text-sm text-muted-foreground">Total Interest Earned</span>
+            <span className="font-semibold text-primary">{formatCurrency(result.totalInterest)}</span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
+            <div>
+              <span className="text-base font-semibold text-foreground block">Final Maturity Corpus</span>
+              <span className="text-xs text-muted-foreground">Lump sum available at retirement</span>
+            </div>
+            <span className="text-2xl font-bold text-primary">
+              {formatCurrency(showInflationAdjusted ? inflationAdjustedMaturity : result.maturityValue)}
+            </span>
+          </div>
+        </div>
+
+        {/* Inflation Adjustment Switch */}
+        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border text-xs">
+          <div className="space-y-0.5 pr-2">
+            <Label htmlFor="epf-inflation" className="font-medium cursor-pointer text-xs">
+              Show today's purchasing power (Inflation adjusted)
+            </Label>
+            <p className="text-[11px] text-muted-foreground">
+              Calculates equivalent purchasing power assuming 6% annual inflation over {result.yearsToRetirement} years.
             </p>
+          </div>
+          <Switch
+            id="epf-inflation"
+            checked={showInflationAdjusted}
+            onCheckedChange={setShowInflationAdjusted}
+          />
+        </div>
+
+        {/* EPS Lifetime Pension Card */}
+        {result.estimatedPensionMonthly > 0 && (
+          <div className="p-3.5 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-start gap-3">
+            <Coins className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-purple-900 dark:text-purple-200">
+                  Estimated EPS Lifetime Pension
+                </span>
+                <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                  {formatCurrency(result.estimatedPensionMonthly)} / mo
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Payable monthly after age 58 under Employee Pension Scheme (EPS-95) rules for completed service.
+              </p>
+            </div>
           </div>
         )}
 
-        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-700">
-            <strong>Note:</strong> Current EPF interest rate: 8.25% p.a. (FY 2024-25). Employer's EPF contribution is 3.67% of basic salary (8.33% goes to EPS, not included in EPF corpus).
-          </p>
+        {/* Action Buttons */}
+        <div className="space-y-3 pt-1">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual EPF Growth Schedule & Milestones
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
         </div>
       </Card>
 
-      <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">EPF Retirement Analysis</h3>
-
-        {/* Investment Summary */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <h4 className="font-semibold text-blue-800 mb-3">📋 Investment Summary</h4>
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-3 text-sm">
-            <div className="text-center">
-              <p className="text-blue-600 mb-1">Years to Retirement</p>
-              <p className="font-bold text-blue-800">{result.yearsToRetirement} years</p>
-            </div>
-            <div className="text-center">
-              <p className="text-blue-600 mb-1">Interest Rate</p>
-              <p className="font-bold text-blue-800">{interestRate}%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-secondary/50 p-4 rounded-lg text-center border">
-              <p className="text-xs text-muted-foreground mb-1">Total Employee Contribution</p>
-              <p className="text-xs text-muted-foreground mb-1">(12% of salary)</p>
-              <p className="text-base font-bold text-foreground">{formatCurrency(result.totalEmployeeContribution)}</p>
-            </div>
-            <div className="bg-secondary/50 p-4 rounded-lg text-center border">
-              <p className="text-xs text-muted-foreground mb-1">Total Employer EPF Contribution</p>
-              <p className="text-xs text-muted-foreground mb-1">(3.67% of salary)</p>
-              <p className="text-base font-bold text-foreground">{formatCurrency(result.totalEmployerContribution)}</p>
-            </div>
-          </div>
-
-          <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
-            <p className="text-xs text-muted-foreground mb-1">Total Contributions</p>
-            <p className="text-xs text-muted-foreground mb-1">(Employee + Employer EPF)</p>
-            <p className="text-base font-bold text-primary">{formatCurrency(result.totalContributions)}</p>
-          </div>
-
-          <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
-            <p className="text-xs text-muted-foreground mb-1">Total Interest Earned</p>
-            <p className="text-base font-bold text-primary">{formatCurrency(result.totalInterest)}</p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 p-5 rounded-xl text-center shadow-md">
-              <p className="text-xs text-green-100 mb-1">Maturity Value (Corpus at Retirement)</p>
-              <p className="text-2xl font-bold text-green-50">{formatCurrency(result.maturityValue)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Important Note */}
-        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-          <h4 className="font-semibold text-amber-800 mb-2">📌 Important Note</h4>
-          <div className="space-y-2 text-xs text-amber-700">
-            <p>
-              <strong>Employer EPS Contribution:</strong> Employer's EPS contribution (8.33% of basic salary, capped at ₹1,250 if salary &gt; ₹15,000) is separate and provides pension benefits. It is not included in the EPF corpus calculation shown above.
-            </p>
-            <p>
-              <strong>EPF Lock-in Period:</strong> The Employees' Provident Fund (EPF) has a lock-in period of five years for tax-free withdrawals, but the full amount can be withdrawn at retirement or after 15 years of service. While you can't withdraw the entire amount before five years for it to be tax-free, partial withdrawals are permitted for specific purposes like unemployment, home purchases, or medical emergencies.
-            </p>
-          </div>
-        </div>
-
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save Calculation
-        </Button>
-      </Card>
-
+      {/* Save Calculation Dialog */}
       <SaveDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
@@ -408,7 +572,8 @@ const EPFCalculator = () => {
           currentAge,
           retirementAge,
           salaryGrowth,
-          interestRate
+          interestRate,
+          capWageCeiling,
         }}
         results={{
           totalEmployeeContribution: result.totalEmployeeContribution,
@@ -416,12 +581,46 @@ const EPFCalculator = () => {
           totalContributions: result.totalContributions,
           totalInterest: result.totalInterest,
           maturityValue: result.maturityValue,
-          yearsToRetirement: result.yearsToRetirement
+          yearsToRetirement: result.yearsToRetirement,
         }}
+      />
+
+      {/* Share & PDF Report Modal */}
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Employees' Provident Fund (EPF) Report"
+        inputs={[
+          { label: "Basic Monthly Salary", value: formatCurrency(basicSalary) },
+          { label: "Current EPF Balance", value: formatCurrency(currentBalance) },
+          { label: "Employee Contribution", value: `${employeeContribution}%` },
+          { label: "Employer EPF Share", value: capWageCeiling ? "Statutory ₹1,800/mo Cap" : "12% of Basic minus EPS" },
+          { label: "Annual Salary Hike", value: `${salaryGrowth}%` },
+          { label: "EPF Interest Rate (p.a)", value: `${interestRate}%` },
+          { label: "Retirement Horizon", value: `${currentAge} to ${retirementAge} Years (${result.yearsToRetirement} Yrs)` },
+          { label: "Tax Exemption", value: "Tax-Free after 5 Years (Sec 80C)" },
+        ]}
+        results={[
+          { label: "Employee Share Deposited", value: formatCurrency(result.totalEmployeeContribution) },
+          { label: "Employer Share Deposited", value: formatCurrency(result.totalEmployerContribution) },
+          { label: "Total Combined Deposits", value: formatCurrency(result.totalContributions) },
+          { label: "Total Interest Earned", value: formatCurrency(result.totalInterest) },
+          { label: "Final EPF Maturity Corpus", value: formatCurrency(result.maturityValue), isHighlight: true },
+        ]}
+        scheduleTitle={`EPF ${result.yearsToRetirement}-Year Accumulation Schedule`}
+        scheduleHeaders={{ period: "Age / Milestone", invested: "Total Deposited", interest: "Interest Accrued", balance: "EPF Balance" }}
+        schedule={epfSchedule}
+      />
+
+      {/* Growth Schedule Modal */}
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title={`EPF ${result.yearsToRetirement}-Year Growth Schedule`}
+        schedule={epfSchedule}
       />
     </div>
   );
 };
 
 export default EPFCalculator;
-

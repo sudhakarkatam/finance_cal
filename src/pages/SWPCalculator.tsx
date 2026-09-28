@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Calculator, Eye, EyeOff, Info } from "lucide-react";
+import { Save, RotateCcw, Calculator, Eye, EyeOff, Info, Share2 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
+import { ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import { calculateSWP } from "@/lib/calculations";
 import { useCurrency } from "@/hooks/useCurrency";
 import {
@@ -34,6 +36,7 @@ const SWPCalculator = () => {
   const [withdrawalStartsThisMonth, setWithdrawalStartsThisMonth] =
     useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [showFullTable, setShowFullTable] = useState(false);
   const [showAllRows, setShowAllRows] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
@@ -46,6 +49,32 @@ const SWPCalculator = () => {
     inflationRate,
     withdrawalStartsThisMonth,
   );
+
+  const swpYearlySchedule = useMemo(() => {
+    const data = result?.fullAmortizationData;
+    if (!data || data.length === 0) return [];
+
+    const rows: ScheduleRow[] = [];
+    let yearNum = 1;
+
+    for (let i = 0; i < data.length; i += 12) {
+      const chunk = data.slice(i, i + 12);
+      const startBal = chunk[0].startingBalance;
+      const endBal = chunk[chunk.length - 1].endingBalance;
+      const totalYearInterest = chunk.reduce((sum: number, m: any) => sum + m.interestEarned, 0);
+      const totalYearWithdrawal = chunk.reduce((sum: number, m: any) => sum + m.withdrawal, 0);
+
+      rows.push({
+        period: `Year ${yearNum}`,
+        invested: Math.round(startBal),
+        interest: Math.round(totalYearInterest),
+        withdrawal: Math.round(totalYearWithdrawal),
+        total: Math.round(endBal),
+      });
+      yearNum++;
+    }
+    return rows;
+  }, [result]);
 
   const handleReset = () => {
     setInvestmentAmount(1000000);
@@ -482,88 +511,100 @@ const SWPCalculator = () => {
           </div>
         )}
 
-        <div className="flex gap-2">
-          <Button
-            className="flex-1 gap-2"
-            size="lg"
-            onClick={() => setSaveDialogOpen(true)}
-          >
-            <Save className="w-4 h-4" />
-            Save to History
-          </Button>
+        <div className="space-y-3 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-11 text-sm font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-4 h-4" />
+              Save Calculation
+            </Button>
 
-          <Dialog open={showFullTable} onOpenChange={setShowFullTable}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Calculator className="w-4 h-4" />
-                View Schedule
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[95vw] w-full max-h-[85vh] overflow-hidden flex flex-col">
-              <DialogHeader className="flex-shrink-0">
-                <DialogTitle>
-                  Complete SWP Schedule ({result.fullAmortizationData.length}{" "}
-                  months)
-                </DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-auto mt-4">
-                <div className="min-w-[700px]">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[60px]">
-                            Month
-                          </TableHead>
-                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
-                            Starting Balance
-                          </TableHead>
-                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
-                            Interest Earned
-                          </TableHead>
-                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">
-                            Withdrawal
-                          </TableHead>
-                          <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
-                            Ending Balance
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(showAllRows
-                          ? result.fullAmortizationData
-                          : result.fullAmortizationData.slice(0, 24)
-                        ).map((row) => (
-                          <TableRow
-                            key={row.month}
-                            className="hover:bg-muted/30"
-                          >
-                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-medium">
-                              {row.month}
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">
-                              {formatAmount(row.startingBalance)}
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">
-                              +{formatAmount(row.interestEarned)}
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-red-600">
-                              -{formatAmount(row.withdrawal)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold ${row.endingBalance < 0 ? "text-destructive" : ""}`}
-                            >
-                              {formatAmount(row.endingBalance)}
-                            </TableCell>
+            <Dialog open={showFullTable} onOpenChange={setShowFullTable}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full gap-2 h-11 text-sm font-semibold">
+                  <Calculator className="w-4 h-4" />
+                  View Schedule
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] w-full max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader className="flex-shrink-0">
+                  <DialogTitle>
+                    Complete SWP Schedule ({result.fullAmortizationData.length}{" "}
+                    months)
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-auto mt-4">
+                  <div className="min-w-[700px]">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[60px]">
+                              Month
+                            </TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
+                              Starting Balance
+                            </TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
+                              Interest Earned
+                            </TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[80px]">
+                              Withdrawal
+                            </TableHead>
+                            <TableHead className="font-semibold text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 min-w-[100px]">
+                              Ending Balance
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {(showAllRows
+                            ? result.fullAmortizationData
+                            : result.fullAmortizationData.slice(0, 24)
+                          ).map((row) => (
+                            <TableRow
+                              key={row.month}
+                              className="hover:bg-muted/30"
+                            >
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-medium">
+                                {row.month}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2">
+                                {formatAmount(row.startingBalance)}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-green-600">
+                                +{formatAmount(row.interestEarned)}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 text-red-600">
+                                -{formatAmount(row.withdrawal)}
+                              </TableCell>
+                              <TableCell
+                                className={`text-xs sm:text-sm py-2 sm:py-3 px-1 sm:px-2 font-semibold ${row.endingBalance < 0 ? "text-destructive" : ""}`}
+                              >
+                                {formatAmount(row.endingBalance)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-11 text-sm font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-4 h-4" />
+            Export & Share Report PDF
+          </Button>
         </div>
       </Card>
 
@@ -588,6 +629,43 @@ const SWPCalculator = () => {
           sustainableWithdrawal: result.sustainableWithdrawal,
           depletionMonth: result.depletionMonth || 0,
         }}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Systematic Withdrawal Plan (SWP) Statement"
+        inputs={[
+          { label: "Total Corpus Amount", value: formatAmount(investmentAmount) },
+          { label: "Monthly Withdrawal Amount", value: formatAmount(withdrawalPerMonth) },
+          { label: "Expected Portfolio Return (p.a)", value: `${expectedReturn}%` },
+          { label: "Withdrawal Duration", value: years ? `${years} Years` : "Until Depletion" },
+          ...(inflationRate > 0 ? [{ label: "Annual Inflation Rate", value: `${inflationRate}%` }] : []),
+        ]}
+        results={[
+          { label: "Initial Investment Corpus", value: formatAmount(result.invested) },
+          { label: "Total Amount Withdrawn", value: formatAmount(result.totalWithdrawn) },
+          { label: "Total Interest Earned", value: formatAmount(result.totalInterest) },
+          { label: "Final Remaining Balance", value: formatAmount(result.finalBalance), isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "💡 SWP Sustainability & Corpus Longevity Analysis",
+            items: [
+              { label: "Recommended Sustainable Monthly Withdrawal", value: `${formatAmount(result.sustainableWithdrawal)}/mo` },
+              {
+                label: "Corpus Depletion Status",
+                value: result.depletionMonth
+                  ? `⚠️ Corpus Depleted at Month ${result.depletionMonth} (${(result.depletionMonth / 12).toFixed(1)} Years)`
+                  : `🎉 Sustainable! Corpus lasts full ${years || 30} years with ${formatAmount(result.finalBalance)} remaining balance.`,
+                isHighlight: true,
+              },
+            ],
+          },
+        ]}
+        scheduleTitle="Systematic Withdrawal Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Starting Balance", interest: "Interest Earned", withdrawal: "Withdrawals", balance: "Ending Balance" }}
+        schedule={swpYearlySchedule}
       />
     </div>
   );

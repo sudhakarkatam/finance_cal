@@ -1,4 +1,4 @@
-const CACHE_NAME = "financial-calculators-v1.0.3";
+const CACHE_NAME = "financial-calculators-v1.0.4";
 const urlsToCache = ["/", "/index.html", "/manifest.json"];
 
 // Clear old caches on install
@@ -35,13 +35,21 @@ self.addEventListener("activate", (event) => {
 
 // Network first, then cache strategy
 self.addEventListener("fetch", (event) => {
+  // Only cache GET requests (Cache API throws an error for HEAD, POST, etc.)
+  if (event.request.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        // Only cache successful basic responses
+        if (response && response.status === 200) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
         return response;
       })
       .catch(() => {

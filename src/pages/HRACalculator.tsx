@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Home, Info } from 'lucide-react';
+import { Save, RotateCcw, Home, Info, Share2 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { calculateHRA } from '@/lib/calculations';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
@@ -35,6 +36,7 @@ const HRACalculator = () => {
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     return calculateHRA(basicSalary, dearnessAllowance, hraReceived, monthlyRent, cityType === 'metro');
@@ -382,6 +384,15 @@ const HRACalculator = () => {
           <Save className="w-4 h-4" />
           Save Calculation
         </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -402,6 +413,24 @@ const HRACalculator = () => {
           annualHRAReceived: result.annualHRAReceived,
           annualRent: result.annualRent
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="HRA Tax Exemption Statement"
+        inputs={[
+          { label: "Monthly Basic Salary", value: formatAmount(basicSalary) },
+          { label: "Monthly DA", value: formatAmount(dearnessAllowance) },
+          { label: "HRA Received (Monthly)", value: formatAmount(hraReceived) },
+          { label: "Actual Rent Paid (Monthly)", value: formatAmount(monthlyRent) },
+          { label: "City Classification", value: cityType === 'metro' ? "Metro City (50% Basic)" : "Non-Metro City (40% Basic)" },
+        ]}
+        results={[
+          { label: "Annual HRA Exemption (Tax-Free)", value: formatAmount(result.hraExemption), isHighlight: true },
+          { label: "Annual Taxable HRA Amount", value: formatAmount(result.taxableHRA) },
+          { label: "Max Annual Tax Savings (30% Slab)", value: formatAmount(Math.round(result.hraExemption * 0.3)) },
+        ]}
       />
     </div>
   );

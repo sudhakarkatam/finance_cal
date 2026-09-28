@@ -12,9 +12,11 @@ import {
   GraduationCap,
   Heart,
   Briefcase,
+  Share2,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import { calculateGoalPlanning } from "@/lib/calculations";
 import { useCurrency } from "@/hooks/useCurrency";
 import {
@@ -61,6 +63,8 @@ const GoalPlanning = () => {
 
   // UI state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
   const [showCalculations, setShowCalculations] = useState(false);
   const [isCalculated, setIsCalculated] = useState(false);
 
@@ -566,14 +570,26 @@ const GoalPlanning = () => {
           </Alert>
         )}
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <Button
+            className="w-full gap-2 h-12 text-base font-semibold"
+            size="lg"
+            onClick={() => setSaveDialogOpen(true)}
+          >
+            <Save className="w-5 h-5" />
+            Save Calculation
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+            size="lg"
+            onClick={() => setShareModalOpen(true)}
+          >
+            <Share2 className="w-5 h-5" />
+            Export & Share Report
+          </Button>
+        </div>
       </Card>
 
       <SaveDialog
@@ -608,6 +624,53 @@ const GoalPlanning = () => {
                 : goalAmount,
           } as Record<string, number>
         }
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Financial Goal Planning Roadmap"
+        inputs={[
+          { label: "Target Goal Category", value: goalCategory.toUpperCase() },
+          { label: "Goal Amount Target", value: formatAmount(goalAmount) },
+          { label: "Target Time Horizon", value: `${targetYears} Years` },
+          { label: "Current Initial Savings", value: formatAmount(currentSavings) },
+          { label: "Planned Monthly Savings", value: formatAmount(monthlyContribution) },
+          { label: "Expected Investment Return", value: `${expectedReturn}%` },
+          ...(inflationEnabled ? [{ label: "Annual Inflation Rate", value: `${inflationRate}%` }] : []),
+        ]}
+        results={[
+          { label: "Target Required Corpus", value: formatAmount("inflationAdjustedGoal" in result ? (result as any).inflationAdjustedGoal : goalAmount) },
+          { label: "Projected Wealth Achieved", value: formatAmount(result.totalAchieved) },
+          { label: "Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
+          { label: "Goal Readiness Status", value: result.goalMet ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "🎯 Goal Feasibility & Actionable Advisory",
+            items: [
+              { label: "Inflation-Adjusted Target Goal", value: formatAmount("inflationAdjustedGoal" in result ? (result as any).inflationAdjustedGoal : goalAmount) },
+              { label: "Total Accumulated Corpus", value: formatAmount(result.totalAchieved) },
+              {
+                label: "Advisory Recommendation",
+                value: result.goalMet
+                  ? (result.excessContribution > 0
+                      ? `Exceeds target! You can lower monthly contribution by ${formatAmount(result.excessContribution)} to ${formatAmount(result.requiredMonthlyContribution)}/mo.`
+                      : "Current savings rate is 100% on track for this goal.")
+                  : `Increase monthly SIP contribution by ${formatAmount(result.requiredMonthlyContribution - monthlyContribution)} to bridge the ${formatAmount(result.shortfall)} gap.`,
+                isHighlight: true,
+              },
+            ],
+          },
+        ]}
+        scheduleTitle="Goal Progress Projection"
+        scheduleHeaders={{ period: "Year", invested: "Cumulative Investment", interest: "Growth Earned", balance: "Portfolio Value" }}
+        schedule={yearlyProjection?.map((row) => ({
+          period: `Year ${row.year}`,
+          invested: Math.round(row.cumulativeContributions),
+          interest: Math.round(Math.max(0, row.portfolioValue - row.cumulativeContributions)),
+          total: Math.round(row.portfolioValue),
+        }))}
       />
     </div>
   );

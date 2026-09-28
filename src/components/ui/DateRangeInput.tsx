@@ -290,49 +290,77 @@ const DateRangeInput = ({
                 {calendarYearMode === 'start' ? (
                   <div className="p-4 space-y-4 min-w-64">
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-muted-foreground" />
-                        <Label className="text-sm font-medium">Select Year</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 justify-between">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigateStartYear('prev')}
-                          className="h-8 w-8 p-0"
+                          onClick={() => setStartSelectedYear((prev) => prev - 5)}
+                          className="h-7 text-xs px-2"
+                        >
+                          -5y
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setStartSelectedYear((prev) => prev - 1)}
+                          className="h-7 w-7 p-0"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <div className="flex-1 text-center">
-                          <Button
-                            variant="ghost"
-                            className="font-semibold text-lg h-auto py-2 cursor-pointer"
-                            onClick={() => setCalendarYearMode(null)}
-                          >
-                            {startSelectedYear}
-                          </Button>
+                        <div className="flex-1 text-center font-bold text-base text-primary">
+                          {startSelectedYear}
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigateStartYear('next')}
-                          className="h-8 w-8 p-0"
+                          onClick={() => setStartSelectedYear((prev) => prev + 1)}
+                          className="h-7 w-7 p-0"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setStartSelectedYear((prev) => prev + 5)}
+                          className="h-7 text-xs px-2"
+                        >
+                          +5y
+                        </Button>
                       </div>
-                      <Select value={startSelectedYear.toString()} onValueChange={handleStartYearSelect}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`${startSelectedYear}`} />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-48">
-                          {yearOptions.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
+
+                      {/* Quick 1-Tap Year Grid */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground font-medium">Quick Select Year:</Label>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((yr) => (
+                            <Button
+                              key={yr}
+                              type="button"
+                              variant={startSelectedYear === yr ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs font-semibold p-0"
+                              onClick={() => handleStartYearSelect(yr.toString())}
+                            >
+                              {yr}
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      </div>
+
+                      <div className="pt-1">
+                        <Select value={startSelectedYear.toString()} onValueChange={handleStartYearSelect}>
+                          <SelectTrigger className="h-8 text-xs font-semibold">
+                            <SelectValue placeholder="All Years..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {yearOptions.map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -377,45 +405,77 @@ const DateRangeInput = ({
                         <Check className="w-4 h-4 text-muted-foreground" />
                         <Label className="text-sm font-medium">Select Year</Label>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 justify-between">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigateYear('prev')}
-                          className="h-8 w-8 p-0"
+                          onClick={() => setSelectedYear((prev) => prev - 5)}
+                          className="h-7 text-xs px-2"
+                        >
+                          -5y
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedYear((prev) => prev - 1)}
+                          className="h-7 w-7 p-0"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <div className="flex-1 text-center">
-                          <Button
-                            variant="ghost"
-                            className="font-semibold text-lg h-auto py-2 cursor-pointer"
-                            onClick={() => setCalendarYearMode(null)}
-                          >
-                            {selectedYear}
-                          </Button>
+                        <div className="flex-1 text-center font-bold text-base text-primary">
+                          {selectedYear}
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigateYear('next')}
-                          className="h-8 w-8 p-0"
+                          onClick={() => setSelectedYear((prev) => prev + 1)}
+                          className="h-7 w-7 p-0"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedYear((prev) => prev + 5)}
+                          className="h-7 text-xs px-2"
+                        >
+                          +5y
+                        </Button>
                       </div>
-                      <Select value={selectedYear.toString()} onValueChange={handleYearSelect}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`${selectedYear}`} />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-48">
-                          {yearOptions.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
+
+                      {/* Quick 1-Tap Year Grid */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground font-medium">Quick Select Year:</Label>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031].map((yr) => (
+                            <Button
+                              key={yr}
+                              type="button"
+                              variant={selectedYear === yr ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs font-semibold p-0"
+                              onClick={() => handleYearSelect(yr.toString())}
+                            >
+                              {yr}
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      </div>
+
+                      <div className="pt-1">
+                        <Select value={selectedYear.toString()} onValueChange={handleYearSelect}>
+                          <SelectTrigger className="h-8 text-xs font-semibold">
+                            <SelectValue placeholder="All Years..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {yearOptions.map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ) : (

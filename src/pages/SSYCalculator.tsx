@@ -9,9 +9,11 @@ import {
   PiggyBank,
   TrendingUp,
   Info,
+  Share2,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
+import ShareReportModal from "@/components/ShareReportModal";
 import { calculateSSY } from "@/lib/calculations";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +45,7 @@ const SSYCalculator = () => {
   const [inflationRate, setInflationRate] = useState(6);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const result = useMemo(() => {
     return calculateSSY(
@@ -642,6 +645,15 @@ const SSYCalculator = () => {
           <Save className="w-4 h-4" />
           Save Calculation
         </Button>
+
+        <Button
+          variant="outline"
+          className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10"
+          onClick={() => setShareDialogOpen(true)}
+        >
+          <Share2 className="w-4 h-4" />
+          Export & Share Report PDF
+        </Button>
       </Card>
 
       <SaveDialog
@@ -663,6 +675,32 @@ const SSYCalculator = () => {
           inflationAdjustedValue: result.inflationAdjustedValue,
           maturityYear: result.maturityYear,
         }}
+      />
+
+      <ShareReportModal
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        title="Sukanya Samriddhi Yojana (SSY) Statement"
+        inputs={[
+          { label: "Annual Investment Amount", value: formatAmount(annualInvestment) },
+          { label: "Girl Child Age", value: `${girlAge} Years` },
+          { label: "Investment Start Year", value: `${investmentStartYear}` },
+          { label: "SSY Interest Rate", value: `${interestRate}%` },
+        ]}
+        results={[
+          { label: "Total Invested (15 Years)", value: formatAmount(result.totalInvested) },
+          { label: "Total Tax-Free Interest Earned", value: formatAmount(result.totalInterest) },
+          { label: "Final Maturity Corpus (Year 21)", value: formatAmount(result.maturityValue), isHighlight: true },
+          { label: "Maturity Year", value: `${result.maturityYear}` },
+        ]}
+        scheduleTitle="Sukanya Samriddhi Yearly Schedule"
+        scheduleHeaders={{ period: "Year", invested: "Total Deposited", interest: "Interest Earned", balance: "Account Balance" }}
+        schedule={result.yearlySchedule?.map((row: any) => ({
+          period: `Year ${row.year} (${row.calendarYear})`,
+          invested: row.totalInvested,
+          interest: row.interestEarned,
+          total: row.balance,
+        }))}
       />
     </div>
   );

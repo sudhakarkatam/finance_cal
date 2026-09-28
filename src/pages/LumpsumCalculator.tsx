@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Coins, Info } from 'lucide-react';
+import { Save, RotateCcw, Coins, Info, Calendar, Share2, TrendingUp, Sparkles, Percent } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
+import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const LumpsumCalculator = () => {
   const { formatAmount, symbol } = useCurrency();
@@ -14,20 +18,50 @@ const LumpsumCalculator = () => {
   const [expectedReturn, setExpectedReturn] = useState(12);
   const [years, setYears] = useState(10);
   const [months, setMonths] = useState(0);
+  const [adjustInflation, setAdjustInflation] = useState(false);
+  const [inflationRate, setInflationRate] = useState(6);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const totalYears = years + (months / 12);
+
+  const lumpsumSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const rate = expectedReturn / 100;
+    const totalYearsVal = Math.max(1, Math.ceil(totalYears));
+
+    for (let y = 1; y <= totalYearsVal; y++) {
+      const timeVal = y > totalYears ? totalYears : y;
+      const fv = investment * Math.pow(1 + rate, timeVal);
+      list.push({
+        period: `Year ${y}`,
+        invested: investment,
+        interest: Math.round(Math.max(0, fv - investment)),
+        total: Math.round(fv),
+      });
+    }
+    return list;
+  }, [investment, expectedReturn, totalYears]);
 
   const calculateLumpsum = () => {
     const rate = expectedReturn / 100;
     const futureValue = investment * Math.pow(1 + rate, totalYears);
     const returns = futureValue - investment;
+    const realFutureValue = futureValue / Math.pow(1 + (inflationRate / 100), totalYears);
+    const multiplier = investment > 0 ? (futureValue / investment).toFixed(2) : "0";
+    const doublingYears = expectedReturn > 0 ? (72 / expectedReturn).toFixed(1) : "N/A";
+    const returnsPercentage = futureValue > 0 ? ((returns / futureValue) * 100).toFixed(1) : "0";
 
     return {
       invested: investment,
       returns: Math.round(returns),
-      total: Math.round(futureValue)
+      total: Math.round(futureValue),
+      realFutureValue: Math.round(realFutureValue),
+      multiplier,
+      doublingYears,
+      returnsPercentage
     };
   };
 
@@ -251,6 +285,31 @@ const LumpsumCalculator = () => {
             Total period: <span className="font-semibold text-foreground">{totalYears.toFixed(1)} years</span>
           </div>
         </div>
+
+        {/* Inflation Adjustment Switch */}
+        <div className="bg-card p-4 rounded-lg border space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium text-foreground">Adjust for Inflation</Label>
+              <p className="text-xs text-muted-foreground">Calculate real purchasing power of maturity amount</p>
+            </div>
+            <Switch
+              checked={adjustInflation}
+              onCheckedChange={setAdjustInflation}
+            />
+          </div>
+          {adjustInflation && (
+            <CalculatorInput
+              label="Expected Inflation Rate (p.a)"
+              value={inflationRate}
+              onChange={setInflationRate}
+              min={0}
+              max={25}
+              step={0.5}
+              suffix="%"
+            />
+          )}
+        </div>
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
@@ -276,16 +335,45 @@ const LumpsumCalculator = () => {
             <span className="text-base font-semibold text-foreground">Total value</span>
             <span className="text-xl font-bold text-primary">{formatAmount(result.total)}</span>
           </div>
+          {adjustInflation && (
+            <div className="flex justify-between items-center pt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <span>Inflation-Adjusted Real Value ({inflationRate}% p.a.)</span>
+              <span className="font-bold text-sm">{formatAmount(result.realFutureValue)}</span>
+            </div>
+          )}
         </div>
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={() => setSaveDialogOpen(true)}
-        >
-          <Save className="w-4 h-4" />
-          Save to History
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <Calendar className="w-4 h-4 text-primary" />
+            View Annual Growth Schedule Table
+          </Button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              className="w-full gap-2 h-12 text-base font-semibold"
+              size="lg"
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <Save className="w-5 h-5" />
+              Save Calculation
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
+              size="lg"
+              onClick={() => setShareModalOpen(true)}
+            >
+              <Share2 className="w-5 h-5" />
+              Export & Share Report
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <SaveDialog
@@ -294,6 +382,46 @@ const LumpsumCalculator = () => {
         calculationType="lumpsum"
         inputs={{ investment, expectedReturn, years, months }}
         results={result}
+      />
+
+      <ShareReportModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        title="Lumpsum Investment Report"
+        inputs={[
+          { label: "One-Time Investment", value: formatAmount(investment) },
+          { label: "Expected Return (p.a)", value: `${expectedReturn}%` },
+          { label: "Investment Duration", value: `${totalYears.toFixed(1)} Years` },
+          ...(adjustInflation ? [{ label: "Assumed Inflation Rate", value: `${inflationRate}% p.a.` }] : []),
+        ]}
+        results={[
+          { label: "Invested Amount", value: formatAmount(result.invested) },
+          { label: "Estimated Returns", value: formatAmount(result.returns) },
+          { label: "Total Maturity Value", value: formatAmount(result.total), isHighlight: true },
+        ]}
+        analysis={[
+          {
+            title: "📈 Compounding Growth & Yield Analysis",
+            items: [
+              { label: "Capital Growth Multiplier", value: `${result.multiplier}x Initial Investment` },
+              { label: "Capital Doubling Period (Rule of 72)", value: `Doubles every ${result.doublingYears} Years` },
+              { label: "Returns Share of Maturity Corpus", value: `${result.returnsPercentage}% of total maturity`, isHighlight: true },
+              ...(adjustInflation ? [
+                { label: `Real Value (${inflationRate}% Inflation)`, value: formatAmount(result.realFutureValue) }
+              ] : [])
+            ]
+          }
+        ]}
+        scheduleTitle="Lumpsum Growth Schedule"
+        scheduleHeaders={{ period: "Year", invested: "Principal Deposited", interest: "Wealth Gain", balance: "Total Corpus" }}
+        schedule={lumpsumSchedule}
+      />
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Lumpsum Investment Growth Schedule"
+        schedule={lumpsumSchedule}
       />
     </div>
   );

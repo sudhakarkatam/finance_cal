@@ -8,6 +8,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(WhatsAppSharePlugin.class);
         super.onCreate(savedInstanceState);
 
         // Enable edge-to-edge display for Android 15+ compatibility
@@ -56,3 +57,4 @@ public class MainActivity extends BridgeActivity {
         }
     }
 }
+

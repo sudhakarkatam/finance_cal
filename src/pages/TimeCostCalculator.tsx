@@ -6,9 +6,10 @@ import CalculatorInput from '@/components/ui/CalculatorInput';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, Briefcase, TrendingUp, AlertCircle, RotateCcw, Repeat, Banknote, CalendarDays, Percent, Save, CreditCard } from 'lucide-react';
+import { Clock, Briefcase, TrendingUp, AlertCircle, RotateCcw, Repeat, Banknote, CalendarDays, Percent, Save, CreditCard, Share2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import SaveDialog from '@/components/SaveDialog';
+import ShareReportModal from '@/components/ShareReportModal';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -53,6 +54,7 @@ const TimeCostCalculator = () => {
     const [commuteHoursPerWeek, setCommuteHoursPerWeek] = useState(5);
     const [monthlyWorkExpenses, setMonthlyWorkExpenses] = useState(2000);
     const [showSave, setShowSave] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
     // New Optional Fields
     // 1. Cost Per Use
@@ -459,10 +461,19 @@ const TimeCostCalculator = () => {
                                         {formatAmount(Math.round(results.futureValue))}
                                     </span>
                                 </div>
-                                <p className="text-xs text-muted-foreground italic">
+                                 <p className="text-xs text-muted-foreground italic">
                                     "Compound interest is the eighth wonder of the world. He who understands it, earns it... he who doesn't... pays it."
                                 </p>
                             </div>
+
+                            <Button
+                                variant="outline"
+                                className="w-full gap-2 font-semibold border-primary/40 text-primary hover:bg-primary/10 mt-4"
+                                onClick={() => setShareDialogOpen(true)}
+                            >
+                                <Share2 className="w-4 h-4" />
+                                Export & Share Time Cost PDF
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
@@ -483,6 +494,46 @@ const TimeCostCalculator = () => {
                     hoursToWork: Math.round(results.hoursNeeded),
                     opportunityCost: Math.round(results.futureValue)
                 }}
+            />
+
+            <ShareReportModal
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+                title="Time-Cost & Working Hours Expense Audit"
+                inputs={[
+                    { label: "Monthly Take-Home Salary", value: formatAmount(monthlySalary) },
+                    { label: "Weekly Work Hours", value: `${workHoursPerWeek} Hours/Week` },
+                    ...(isAdvancedMode ? [
+                        { label: "Weekly Commute Hours", value: `${commuteHoursPerWeek} Hours/Week` },
+                        { label: "Monthly Work Expenses", value: formatAmount(monthlyWorkExpenses) }
+                    ] : []),
+                    { label: "Target Item Price", value: formatAmount(itemPrice) },
+                ]}
+                results={[
+                    { label: "Nominal Hourly Rate", value: `${formatAmount(Math.round(results.basicHourlyRate))}/hr` },
+                    { label: "True Net Hourly Rate", value: `${formatAmount(Math.round(results.finalHourlyRate))}/hr` },
+                    { label: "Life Hours Required to Earn Item", value: `${Math.round(results.hoursNeeded)} Life Hours`, isHighlight: true },
+                    { label: "10-Year Opportunity Cost (at 12%)", value: formatAmount(Math.round(results.futureValue)) },
+                ]}
+                analysis={[
+                    {
+                        title: "⏳ Work-Time Exchange & Value Audit",
+                        items: [
+                            { label: "Equivalent Full Work Days", value: `${results.daysNeeded.toFixed(1)} Work Days (8h/day)` },
+                            { label: "Equivalent Work Weeks", value: `${results.weeksNeeded.toFixed(1)} Work Weeks` },
+                            { label: "Cost Per Use (Utility)", value: `${formatAmount(Math.round(results.costPerUse))}/${usageFrequency}` },
+                            { label: "Lost Investment Growth (10 Yrs)", value: `${formatAmount(Math.round(results.futureValue - results.realPrice))} potential interest lost`, isHighlight: true }
+                        ]
+                    },
+                    ...(isEmi ? [{
+                        title: "💳 Financing & EMI Interest Impact",
+                        items: [
+                            { label: "Original Sticker Price", value: formatAmount(itemPrice) },
+                            { label: "Total Price Paid (With EMI)", value: formatAmount(Math.round(results.realPrice)) },
+                            { label: "Extra Interest Paid", value: formatAmount(Math.round(results.totalInterest)), isHighlight: true }
+                        ]
+                    }] : [])
+                ]}
             />
         </div>
     );
