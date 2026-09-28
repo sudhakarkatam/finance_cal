@@ -72,4 +72,24 @@ public class WhatsAppSharePlugin extends Plugin {
             call.reject("Failed to open WhatsApp: " + ex.getMessage());
         }
     }
+
+    @PluginMethod
+    public void openPlayStore(PluginCall call) {
+        String pkg = "com.easecraft.financialcalculator";
+        try {
+            Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg));
+            marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(marketIntent);
+            call.resolve();
+        } catch (Exception e) {
+            try {
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + pkg));
+                webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(webIntent);
+                call.resolve();
+            } catch (Exception ex) {
+                call.reject("Could not open Play Store: " + ex.getMessage());
+            }
+        }
+    }
 }

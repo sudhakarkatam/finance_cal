@@ -32,30 +32,41 @@ const ReviewPage = () => {
 
     if (isCapacitorNative) {
       try {
-        const { InAppReview } = await import("@capacitor-community/in-app-review");
-        await InAppReview.requestReview();
-        toast({
-          title: "Thank you for your rating!",
-          description: "Your feedback helps us keep improving the app.",
-        });
+        const { registerPlugin } = await import("@capacitor/core");
+        const WhatsAppShare = registerPlugin<any>("WhatsAppShare");
+        await WhatsAppShare.openPlayStore();
         return;
       } catch (err) {
-        console.warn("InAppReview failed or unavailable, fallback to market intent", err);
-        window.location.href = PLAY_STORE_MARKET_URL;
-        return;
+        console.warn("Native openPlayStore failed, trying market protocol", err);
+        try {
+          window.location.href = PLAY_STORE_MARKET_URL;
+          return;
+        } catch (mErr) {
+          console.warn("Market URL failed", mErr);
+        }
       }
     }
 
+    // Web or fallback
     window.open(PLAY_STORE_URL, "_blank");
-    toast({
-      title: "Thank you for your support!",
-      description: "Opening Google Play Store...",
-    });
   };
 
   const handleRating = async (stars: number) => {
     setRating(stars);
-    await handleOpenPlayStore();
+    if (stars >= 4) {
+      toast({
+        title: "Thank you for the support!",
+        description: "Redirecting to Google Play Store to post your review ⭐",
+      });
+      setTimeout(() => {
+        handleOpenPlayStore();
+      }, 400);
+    } else {
+      toast({
+        title: "Thank you for your feedback!",
+        description: "We are actively working to make Financial Calculator better for you.",
+      });
+    }
   };
 
   const handleShareApp = async () => {

@@ -723,13 +723,17 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
     (el as HTMLElement).style.overflow = "visible";
   });
 
-  // 3. Force clean light theme card backgrounds
-  const cards = clone.querySelectorAll(".bg-muted\\/40, .bg-muted\\/30, .bg-muted\\/20, .bg-muted\\/50, .bg-card");
+  // 3. Force clean light theme card backgrounds across all cards and input containers
+  const cards = clone.querySelectorAll(
+    ".bg-muted\\/40, .bg-muted\\/30, .bg-muted\\/20, .bg-muted\\/50, .bg-card, [class*='bg-background'], [class*='dark:bg-card'], [class*='bg-muted'], [class*='dark:bg-slate']"
+  );
   cards.forEach((el) => {
     const hEl = el as HTMLElement;
-    hEl.style.backgroundColor = "#f8fafc";
-    hEl.style.borderColor = "#cbd5e1";
-    hEl.style.color = "#0f172a";
+    if (!hEl.closest(".bg-primary") && !hEl.closest(".bg-slate-900") && !hEl.closest(".bg-emerald-950")) {
+      hEl.style.backgroundColor = "#ffffff";
+      hEl.style.borderColor = "#cbd5e1";
+      hEl.style.color = "#0f172a";
+    }
   });
 
   // 3b. Force crisp styling on highlighted primary cards (e.g. Total Maturity / Monthly EMI)
@@ -749,14 +753,16 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
   const mutedTexts = clone.querySelectorAll(".text-muted-foreground");
   mutedTexts.forEach((el) => {
     const hEl = el as HTMLElement;
-    hEl.style.color = "#475569";
+    if (!hEl.closest(".bg-primary") && !hEl.closest(".bg-slate-900") && !hEl.closest(".bg-emerald-950")) {
+      hEl.style.color = "#334155";
+    }
   });
 
   // 5. Force high-contrast text on ALL values - no amber/yellow/grey in PDF
   const boldTexts = clone.querySelectorAll(".font-semibold, .font-bold, .font-extrabold");
   boldTexts.forEach((el) => {
     const hEl = el as HTMLElement;
-    if (!hEl.closest(".bg-primary") && !hEl.classList.contains("text-white") && !hEl.classList.contains("text-primary-foreground")) {
+    if (!hEl.closest(".bg-primary") && !hEl.closest(".bg-slate-900") && !hEl.closest(".bg-emerald-950") && !hEl.classList.contains("text-white") && !hEl.classList.contains("text-primary-foreground")) {
       if (hEl.classList.contains("text-emerald-600") || hEl.classList.contains("dark:text-emerald-400") || hEl.classList.contains("text-primary")) {
         hEl.style.color = "#047857"; // darker emerald for PDF
       } else {
@@ -768,7 +774,7 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
   // 5b. Fix amber/yellow/slate interest column text → solid dark color for PDF
   const amberTexts = clone.querySelectorAll(".text-amber-600, .dark\\:text-amber-400, .text-slate-600, .dark\\:text-slate-300");
   amberTexts.forEach((el) => {
-    if (!el.closest(".bg-primary")) {
+    if (!el.closest(".bg-primary") && !el.closest(".bg-slate-900") && !el.closest(".bg-emerald-950")) {
       (el as HTMLElement).style.color = "#1e293b"; // slate-800 → very dark, readable on white
     }
   });
@@ -776,7 +782,7 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
   // 5c. Fix ALL muted/grey text to be clearly readable
   const allMutedTexts = clone.querySelectorAll(".text-muted-foreground, .text-gray-500, .text-gray-400, .text-slate-400, .text-slate-500");
   allMutedTexts.forEach((el) => {
-    if (!el.closest(".bg-primary")) {
+    if (!el.closest(".bg-primary") && !el.closest(".bg-slate-900") && !el.closest(".bg-emerald-950")) {
       (el as HTMLElement).style.color = "#334155"; // slate-700 → dark and clear
     }
   });
@@ -829,7 +835,7 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
   });
 
   // 7c. Solid background for analysis cards in PDF
-  const analysisCards = clone.querySelectorAll(".bg-blue-50\\/70");
+  const analysisCards = clone.querySelectorAll(".bg-blue-50\\/70, .dark\\:bg-blue-950\\/40");
   analysisCards.forEach((el) => {
     (el as HTMLElement).style.backgroundColor = "#eff6ff";
     (el as HTMLElement).style.borderColor = "#bfdbfe";
@@ -897,6 +903,24 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
         bEl.style.borderColor = "rgba(251, 191, 36, 0.7)";
       }
     });
+  });
+
+  // 11. Final Contrast Pass: Ensure no light text is left on white/light backgrounds
+  const allTextNodes = clone.querySelectorAll("span, p, div, label, td, th");
+  allTextNodes.forEach((node) => {
+    const el = node as HTMLElement;
+    if (el.closest(".bg-slate-900") || el.closest(".bg-emerald-950") || el.closest(".bg-primary") || el.classList.contains("bg-emerald-600")) {
+      return; // Leave intentionally white/colored text in dark headers & green badges alone
+    }
+    const computedColor = el.style.color;
+    if (
+      computedColor === "rgb(255, 255, 255)" ||
+      computedColor === "#ffffff" ||
+      computedColor === "rgb(241, 245, 249)" ||
+      computedColor === "rgb(226, 232, 240)"
+    ) {
+      el.style.color = el.classList.contains("font-bold") || el.classList.contains("font-semibold") ? "#0f172a" : "#334155";
+    }
   });
 
   return clone;
@@ -1247,6 +1271,13 @@ export const ShareReportModal = ({
     const element = document.getElementById("printable-share-report");
     if (!element) return null;
 
+    // Temporarily disable dark theme on html so all CSS variables and dark: classes evaluate in clean Light Mode
+    const htmlEl = document.documentElement;
+    const wasDark = htmlEl.classList.contains("dark");
+    if (wasDark) {
+      htmlEl.classList.remove("dark");
+    }
+
     const clone = preparePdfClone(element);
 
     // Mount clone off-screen
@@ -1272,6 +1303,9 @@ export const ShareReportModal = ({
       const pdfBlob: Blob = await (window as any).html2pdf().set(opt).from(clone).output('blob');
       return { blob: pdfBlob, fileName };
     } finally {
+      if (wasDark) {
+        htmlEl.classList.add("dark");
+      }
       if (container && container.parentNode) {
         container.parentNode.removeChild(container);
       }
@@ -1520,7 +1554,7 @@ export const ShareReportModal = ({
                     autoComplete="tel"
                     placeholder="e.g. +91 98765 43210"
                     value={contactInfo}
-                    onChange={(e) => setContactInfo(e.target.value)}
+                    onChange={(e) => setContactInfo(e.target.value.replace(/[^\d+\-\s()]/g, ''))}
                     className="h-8 text-xs bg-background"
                   />
                 </div>
@@ -1735,7 +1769,7 @@ export const ShareReportModal = ({
                           return (
                             <div
                               key={idx}
-                              className="bg-background/80 dark:bg-card p-1.5 rounded-lg border border-border/40"
+                              className="bg-card dark:bg-card/90 p-1.5 rounded-lg border border-border/60 print:bg-white print:border-slate-300"
                             >
                               <span className="text-[10px] text-muted-foreground block truncate">
                                 {cleanLabel || inp.label}

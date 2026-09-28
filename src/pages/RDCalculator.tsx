@@ -155,16 +155,64 @@ const RDCalculator = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-1.5">Official Banking Compounding Method</h3>
-                    <p className="text-muted-foreground">
-                      Under Indian Banks' Association (IBA) guidelines, <strong>RD interest is compounded quarterly</strong>, even though installments are deposited monthly. This calculator uses the statutory IBA formula:
+                    <h3 className="font-semibold text-foreground mb-1.5">Official Banking Compounding Formula</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Under Indian Banks' Association (IBA) guidelines, <strong>RD interest is compounded quarterly</strong> (every 3 months), even though you deposit installments monthly. This calculator uses the statutory IBA formula:
                     </p>
-                    <p className="text-xs font-mono bg-muted p-2 rounded mt-1.5">
-                      M = P × [ (1 + i)^n - 1 ] / [ 1 - (1 + i)^(-1/3) ]
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Where <em>i = Rate / 400</em> (quarterly rate) and <em>n</em> = number of quarters. This matches SBI and Post Office passbooks to the single rupee.
-                    </p>
+                    
+                    {/* Formula Box */}
+                    <div className="bg-muted/50 p-3 rounded-lg border border-border/60 my-2 text-center">
+                      <p className="text-xs font-mono font-bold text-primary">
+                        M = P × [ (1 + i)ⁿ - 1 ] / [ 1 - (1 + i)^(-1/3) ]
+                      </p>
+                    </div>
+
+                    {/* Variable Definitions */}
+                    <div className="space-y-1.5 text-xs bg-card p-3 rounded-lg border border-border/50">
+                      <p className="font-semibold text-foreground pb-1 border-b border-border/40">
+                        Formula Terms Explained:
+                      </p>
+                      <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+                        <div className="flex items-start gap-2">
+                          <span className="font-mono font-bold text-primary shrink-0 w-8">M</span>
+                          <span className="text-muted-foreground">
+                            <strong>Maturity Amount</strong> — The total final payout you receive at the end (Total Deposits + Total Compounded Interest).
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-mono font-bold text-primary shrink-0 w-8">P</span>
+                          <span className="text-muted-foreground">
+                            <strong>Monthly Deposit</strong> — The fixed amount you deposit into the RD every month (e.g. ₹5,000).
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-mono font-bold text-primary shrink-0 w-8">i</span>
+                          <span className="text-muted-foreground">
+                            <strong>Quarterly Interest Rate</strong> — Calculated as <code>Annual Interest Rate (%) / 400</code> (e.g. 6.5% ÷ 400 = 0.01625).
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-mono font-bold text-primary shrink-0 w-8">n</span>
+                          <span className="text-muted-foreground">
+                            <strong>Number of Quarters</strong> — Total tenure in months divided by 3 (e.g. 60 months = 20 quarters).
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-mono font-bold text-primary shrink-0 w-8">(-1/3)</span>
+                          <span className="text-muted-foreground">
+                            <strong>Monthly Conversion Factor</strong> — Accounts for monthly deposits compounding over a 3-month quarter (1 month = 1/3 of a quarter).
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* How It Works in Simple Words */}
+                    <div className="mt-2.5 p-2.5 bg-muted/30 rounded-lg border border-border/40 text-xs space-y-1">
+                      <p className="font-semibold text-foreground">💡 How It Works in Practice:</p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        Each monthly installment earns interest for the remaining tenure. Your 1st deposit earns interest for the full duration, while your last deposit earns interest for 1 month. At the end of every quarter, accumulated interest is added to your balance, compounding future returns and matching your SBI, HDFC, or Post Office passbook to the single rupee.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
