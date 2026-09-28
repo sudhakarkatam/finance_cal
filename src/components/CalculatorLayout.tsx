@@ -17,6 +17,8 @@ import {
   Percent,
   Globe,
   Star,
+  Search,
+  ArrowLeft,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,9 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { useToast } from "@/hooks/use-toast";
+import { triggerHaptic } from "@/lib/haptics";
+import SmartReviewPrompt from "@/components/SmartReviewPrompt";
+import { useSearch } from "@/context/SearchContext";
 
 interface CalculatorLayoutProps {
   children: ReactNode;
@@ -42,8 +47,10 @@ const CalculatorLayout = ({
   const safeAreaInsets = useSafeArea();
   const isHomePage = location.pathname === "/" || location.pathname === "/home";
   const mainRef = useRef<HTMLElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const lastBackPressRef = useRef<number>(0);
+  const { searchQuery, setSearchQuery, isSearchOpen, closeSearch, openSearch } = useSearch();
 
   // Reset scroll position to top whenever route/page changes
   useEffect(() => {
@@ -52,6 +59,23 @@ const CalculatorLayout = ({
     }
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Close search when navigating away from Home
+  useEffect(() => {
+    if (!isHomePage && isSearchOpen) {
+      closeSearch();
+    }
+  }, [location.pathname, isHomePage, isSearchOpen]);
+
+  // Focus search input whenever search mode is opened
+  useEffect(() => {
+    if (isSearchOpen) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isSearchOpen]);
 
   // Native Android hardware back button listener (Double-press on Home to Exit)
   useEffect(() => {
@@ -63,6 +87,14 @@ const CalculatorLayout = ({
       listenerHandler = await CapacitorApp.addListener(
         "backButton",
         () => {
+          if (sidebarOpen) {
+            setSidebarOpen(false);
+            return;
+          }
+          if (isSearchOpen) {
+            closeSearch();
+            return;
+          }
           if (!isHomePage) {
             navigate("/");
           } else {
@@ -88,7 +120,7 @@ const CalculatorLayout = ({
         listenerHandler.remove();
       }
     };
-  }, [isHomePage, navigate, toast]);
+  }, [isHomePage, navigate, toast, isSearchOpen, sidebarOpen]);
 
   // Handle back button navigation
   useEffect(() => {
@@ -113,6 +145,31 @@ const CalculatorLayout = ({
       window.removeEventListener("popstate", handlePopState);
     };
   }, [isHomePage, navigate]);
+
+  // Tap-Outside & Scroll Keyboard Auto-Dismiss for mobile Android/iOS
+  useEffect(() => {
+    const handleTapOutside = (event: PointerEvent | TouchEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")
+      ) {
+        const target = event.target as HTMLElement | null;
+        // Don't blur if the user tapped on another input, button, select, slider, switch, or tab
+        const isInteractive = target?.closest(
+          "input, textarea, button, select, [role='slider'], [role='switch'], [role='tab'], label"
+        );
+        if (!isInteractive) {
+          (activeEl as HTMLElement).blur();
+        }
+      }
+    };
+
+    document.addEventListener("pointerdown", handleTapOutside, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", handleTapOutside);
+    };
+  }, []);
 
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
@@ -176,6 +233,7 @@ const CalculatorLayout = ({
                     <button
                       key={item.path}
                       onClick={() => {
+                        triggerHaptic();
                         navigate(item.path);
                         setSidebarOpen(false);
                       }}
@@ -202,7 +260,10 @@ const CalculatorLayout = ({
           {sidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                triggerHaptic();
+                setSidebarOpen(false);
+              }}
             />
           )}
         </>
@@ -210,25 +271,112 @@ const CalculatorLayout = ({
 
       {/* Main content wrapper */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Header with hamburger menu - only show on Home page */}
+        {/* Header with hamburger menu, search and settings - only show on Home page */}
         {showHeader && (
-          <header className="bg-primary text-primary-foreground px-4 py-3 mx-2 mt-2 sm:mx-4 sm:mt-3 shadow-md flex items-center gap-3 relative z-10 rounded-lg flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            <h1 className="text-lg font-bold flex-1">Financial Calculators</h1>
-            <SettingsDialog />
+          <header className="bg-primary text-primary-foreground px-3 sm:px-4 py-2.5 mx-2 mt-2 sm:mx-4 sm:mt-3 shadow-md flex items-center gap-2 relative z-10 rounded-lg flex-shrink-0 transition-all duration-200 min-h-[52px]">
+            {isSearchOpen ? (
+              <div className="flex items-center gap-2 w-full animate-in fade-in duration-150">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    triggerHaptic();
+                    closeSearch();
+                  }}
+                  className="text-primary-foreground hover:bg-primary-foreground/15 shrink-0"
+                  title="Back"
+                  aria-label="Close search"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+
+                <div className="relative flex-1 min-w-0 flex items-center">
+                  <Search className="w-4 h-4 text-primary-foreground/70 absolute left-3 pointer-events-none" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    inputMode="search"
+                    enterKeyHint="search"
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        triggerHaptic();
+                        closeSearch();
+                      } else if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="Search tools (car, pension, gold)..."
+                    className="w-full min-w-0 bg-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/70 text-sm pl-9 pr-8 py-2 rounded-lg outline-none border border-primary-foreground/20 focus:border-primary-foreground/40 focus:bg-primary-foreground/20 transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="absolute right-2 p-1 text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                      title="Clear search"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <SettingsDialog />
+              </div>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    triggerHaptic();
+                    setSidebarOpen(true);
+                  }}
+                  className="text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+                  title="Menu"
+                  aria-label="Menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+
+                <h1 className="text-lg font-bold flex-1 truncate px-1">Financial Calculators</h1>
+
+                {/* Top bar search icon button right left to settings button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    triggerHaptic();
+                    openSearch();
+                  }}
+                  className="text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+                  title="Search calculators"
+                  aria-label="Search tools"
+                >
+                  <Search className="w-5 h-5" />
+                </Button>
+
+                <SettingsDialog />
+              </>
+            )}
           </header>
         )}
 
         {/* Main content area with proper scrolling and padding */}
         <main
           ref={mainRef}
+          onScroll={() => {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+              (activeEl as HTMLElement).blur();
+            }
+          }}
           className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-4"
           style={{
             paddingBottom: `${totalBottomHeight + 16}px`, // Extra 16px for breathing room
@@ -256,7 +404,10 @@ const CalculatorLayout = ({
             ].map((item) => (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(item.path);
+                }}
                 className={cn(
                   "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-[60px] touch-manipulation",
                   location.pathname === item.path ||
@@ -276,6 +427,9 @@ const CalculatorLayout = ({
           </div>
         </nav>
       </div>
+
+      {/* Smart Google Play In-App Review Prompt */}
+      <SmartReviewPrompt />
     </div>
   );
 };

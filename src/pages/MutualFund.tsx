@@ -1,33 +1,71 @@
 import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Calculator, TrendingUp, Calendar, Share2 } from "lucide-react";
+import {
+  Save,
+  RotateCcw,
+  Calculator,
+  Calendar,
+  Share2,
+  Wallet,
+  Receipt,
+  Sparkles,
+  Info,
+} from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import ResultChart from "@/components/ui/ResultChart";
 import SaveDialog from "@/components/SaveDialog";
 import ShareReportModal from "@/components/ShareReportModal";
-import InvestmentScheduleDialog, { ScheduleRow } from "@/components/InvestmentScheduleDialog";
-import {
-  calculateMutualFund,
-  calculateStepUpMutualFund,
-  calculateInflationAdjustedSIP,
-  calculateStepUpSIPWithComparison,
-} from "@/lib/calculations";
+import { InvestmentScheduleDialog, ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { triggerHaptic } from "@/lib/haptics";
+import { recordPositiveEngagement } from "@/lib/reviewManager";
+
+type InvestmentType = "sip" | "lumpsum";
+type FundCategory = "equity" | "debt";
 
 const MutualFund = () => {
   const { formatAmount, symbol } = useCurrency();
-  // Basic SIP inputs
-  const [monthlyInvestment, setMonthlyInvestment] = useState(100000);
-  const [expectedReturn, setExpectedReturn] = useState(12);
+
+  // Mode: SIP or Lumpsum
+  const [investmentType, setInvestmentType] = useState<InvestmentType>("sip");
+  const [monthlyInvestment, setMonthlyInvestment] = useState(10000);
+  const [lumpsumAmount, setLumpsumAmount] = useState(100000);
+  const [expectedReturn, setExpectedReturn] = useState(12); // Gross return rate %
   const [years, setYears] = useState(10);
   const [months, setMonths] = useState(0);
 
-  // Advanced features
+  // Direct vs Regular Plan Expense Ratio (TER)
+  const [compareDirectRegular, setCompareDirectRegular] = useState(true);
+  const [directTER, setDirectTER] = useState(0.5); // Direct plan expense ratio %
+  const [regularTER, setRegularTER] = useState(1.5); // Regular plan expense ratio %
+
+  // Latest 2026 Budget Capital Gains Tax Rules
+  const [taxEnabled, setTaxEnabled] = useState(true);
+  const [fundCategory, setFundCategory] = useState<FundCategory>("equity");
+  const [incomeTaxSlab, setIncomeTaxSlab] = useState(30); // For debt funds
+
+  // Step-Up SIP (SIP mode only)
   const [stepUpEnabled, setStepUpEnabled] = useState(false);
   const [stepUpPercentage, setStepUpPercentage] = useState(10);
+
+  // Inflation Adjustment
   const [inflationEnabled, setInflationEnabled] = useState(false);
   const [inflationRate, setInflationRate] = useState(6);
 
@@ -35,143 +73,287 @@ const MutualFund = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [isCalculated, setIsCalculated] = useState(false);
-
-  const calculateAdvancedSIP = () => {
-    if (stepUpEnabled && stepUpPercentage > 0) {
-      return calculateStepUpMutualFund(
-        monthlyInvestment,
-        expectedReturn,
-        totalYears,
-        stepUpPercentage,
-      );
-    }
-
-    // Fallback to regular mutual fund calculation
-    return calculateMutualFund(monthlyInvestment, expectedReturn, totalYears);
-  };
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   const totalYears = years + months / 12;
 
-  const normalResult = useMemo(() => {
-    return stepUpEnabled
-      ? calculateAdvancedSIP()
-      : calculateMutualFund(monthlyInvestment, expectedReturn, totalYears);
-  }, [
-    monthlyInvestment,
-    expectedReturn,
-    totalYears,
-    stepUpEnabled,
-    stepUpPercentage,
-  ]);
+  // Calculation Engine: Calculates corpus for a given net annual rate
+  const computePortfolio = (annualRate: number) => {
+    const totalMonths = Math.max(1, Math.round(totalYears * 12));
+    const monthlyRate = annualRate / 12 / 100;
 
-  const result = useMemo(() => {
-    if (!inflationEnabled) return normalResult;
+    let invested = 0;
+    let balance = 0;
 
-    // Calculate inflation-adjusted result using inflation-adjusted return rate
-    const inflationAdjustedResult = calculateInflationAdjustedSIP(
-      monthlyInvestment,
-      expectedReturn,
-      totalYears,
-      inflationRate,
-      stepUpEnabled ? stepUpPercentage : 0,
-    );
+    if (investmentType === "lumpsum") {
+      invested = lumpsumAmount;
+      balance = lumpsumAmount * Math.pow(1 + annualRate / 100, totalYears);
+    } else {
+      let curMonthly = monthlyInvestment;
+      for (let m = 1; m <= totalMonths; m++) {
+        if (stepUpEnabled && m > 1 && (m - 1) % 12 === 0) {
+          curMonthly *= 1 + stepUpPercentage / 100;
+        }
+        invested += curMonthly;
+        balance = (balance + curMonthly) * (1 + monthlyRate);
+      }
+    }
 
-    // Return result with both normal and inflation-adjusted values
+    const returns = Math.max(0, balance - invested);
     return {
-      ...inflationAdjustedResult,
-      normalTotal: normalResult.total,
-      inflationAdjustedTotal: inflationAdjustedResult.total,
-      inflationRate: inflationRate,
+      invested: Math.round(invested),
+      returns: Math.round(returns),
+      total: Math.round(balance),
+    };
+  };
+
+  // Main Calculation Result
+  const result = useMemo(() => {
+    // 1. Gross Return Result (Pre-TER)
+    const gross = computePortfolio(expectedReturn);
+
+    // 2. Direct Plan Result (Gross - Direct TER)
+    const netDirectRate = Math.max(0.1, expectedReturn - directTER);
+    const direct = computePortfolio(netDirectRate);
+
+    // 3. Regular Plan Result (Gross - Regular TER)
+    const netRegularRate = Math.max(0.1, expectedReturn - regularTER);
+    const regular = computePortfolio(netRegularRate);
+
+    // Broker commission loss (Direct Advantage)
+    const commissionDifference = Math.max(0, direct.total - regular.total);
+
+    // Primary result uses Direct plan if comparison active, else gross
+    const activeTotal = compareDirectRegular ? direct.total : gross.total;
+    const activeInvested = gross.invested;
+    const activeReturns = Math.max(0, activeTotal - activeInvested);
+
+    // 4. Latest 2026 Budget Capital Gains Tax Calculation
+    // - Equity Fund (held > 1 yr): 12.5% LTCG on gains exceeding ₹1,25,000 exemption
+    // - Equity Fund (held <= 1 yr): 20% STCG on all gains
+    // - Debt Fund: Taxed at investor's marginal slab rate (e.g. 30%)
+    let taxAmount = 0;
+    let taxRateApplied = 0;
+    let taxTypeLabel = "";
+    let exemptGains = 0;
+    let taxableGains = 0;
+
+    if (taxEnabled) {
+      if (fundCategory === "equity") {
+        if (totalYears > 1) {
+          taxTypeLabel = "12.5% LTCG (Budget 2024/2026)";
+          taxRateApplied = 12.5;
+          exemptGains = Math.min(activeReturns, 125000); // ₹1.25L statutory exemption
+          taxableGains = Math.max(0, activeReturns - 125000);
+          taxAmount = Math.round(taxableGains * 0.125);
+        } else {
+          taxTypeLabel = "20% STCG (Short-Term)";
+          taxRateApplied = 20;
+          taxableGains = activeReturns;
+          taxAmount = Math.round(taxableGains * 0.20);
+        }
+      } else {
+        // Debt fund taxed at marginal income slab rate
+        taxTypeLabel = `${incomeTaxSlab}% Slab Tax (Sec 50AA)`;
+        taxRateApplied = incomeTaxSlab;
+        taxableGains = activeReturns;
+        taxAmount = Math.round(taxableGains * (incomeTaxSlab / 100));
+      }
+    }
+
+    const postTaxTotal = Math.round(activeTotal - taxAmount);
+
+    // Inflation purchasing power
+    const inflationAdjustedTotal = inflationEnabled && totalYears > 0
+      ? Math.round(activeTotal / Math.pow(1 + inflationRate / 100, totalYears))
+      : activeTotal;
+
+    return {
+      invested: activeInvested,
+      returns: activeReturns,
+      total: activeTotal,
+      grossTotal: gross.total,
+      directTotal: direct.total,
+      regularTotal: regular.total,
+      commissionDifference,
+      taxAmount,
+      taxRateApplied,
+      taxTypeLabel,
+      exemptGains,
+      taxableGains,
+      postTaxTotal,
+      inflationAdjustedTotal,
+      netDirectRate,
+      netRegularRate,
     };
   }, [
-    normalResult,
+    investmentType,
+    monthlyInvestment,
+    lumpsumAmount,
+    expectedReturn,
+    totalYears,
+    stepUpEnabled,
+    stepUpPercentage,
+    compareDirectRegular,
+    directTER,
+    regularTER,
+    taxEnabled,
+    fundCategory,
+    incomeTaxSlab,
     inflationEnabled,
     inflationRate,
-    monthlyInvestment,
-    expectedReturn,
-    totalYears,
-    stepUpEnabled,
-    stepUpPercentage,
   ]);
 
-  const comparisonResult = useMemo(() => {
-    if (stepUpEnabled && stepUpPercentage > 0) {
-      return calculateStepUpSIPWithComparison(
-        monthlyInvestment,
-        expectedReturn,
-        totalYears,
-        stepUpPercentage,
-      );
-    }
-    return null;
-  }, [
-    monthlyInvestment,
-    expectedReturn,
-    totalYears,
-    stepUpEnabled,
-    stepUpPercentage,
-  ]);
-
-  // Generate Year-by-Year Growth Schedule Table
-  const mfSchedule = useMemo(() => {
+  // Annual Growth Schedule Table (Direct vs Regular Comparison)
+  const mfSchedule = useMemo((): ScheduleRow[] => {
     const list: ScheduleRow[] = [];
-    const monthlyRate = expectedReturn / 12 / 100;
-    const totalMonthsCount = Math.max(1, Math.round(totalYears * 12));
+    const totalMonths = Math.max(1, Math.round(totalYears * 12));
+    const netDirectRate = Math.max(0.1, expectedReturn - (compareDirectRegular ? directTER : 0)) / 12 / 100;
+    const netRegularRate = Math.max(0.1, expectedReturn - (compareDirectRegular ? regularTER : 0)) / 12 / 100;
 
-    let currentInv = 0;
-    let currentAmount = 0;
-    let currentMonthlyInv = monthlyInvestment;
+    let curInv = 0;
+    let directBal = 0;
+    let regularBal = 0;
+    let curMonthly = monthlyInvestment;
 
-    for (let m = 1; m <= totalMonthsCount; m++) {
-      if (stepUpEnabled && m > 1 && (m - 1) % 12 === 0) {
-        currentMonthlyInv = currentMonthlyInv * (1 + stepUpPercentage / 100);
+    for (let m = 1; m <= totalMonths; m++) {
+      if (investmentType === "lumpsum") {
+        curInv = lumpsumAmount;
+        const netDirectAnnual = Math.max(0.1, expectedReturn - (compareDirectRegular ? directTER : 0));
+        const netRegularAnnual = Math.max(0.1, expectedReturn - (compareDirectRegular ? regularTER : 0));
+        directBal = lumpsumAmount * Math.pow(1 + netDirectAnnual / 100, m / 12);
+        regularBal = lumpsumAmount * Math.pow(1 + netRegularAnnual / 100, m / 12);
+      } else {
+        if (stepUpEnabled && m > 1 && (m - 1) % 12 === 0) {
+          curMonthly *= 1 + stepUpPercentage / 100;
+        }
+        curInv += curMonthly;
+        directBal = (directBal + curMonthly) * (1 + netDirectRate);
+        regularBal = (regularBal + curMonthly) * (1 + netRegularRate);
       }
 
-      currentInv += currentMonthlyInv;
-      currentAmount = (currentAmount + currentMonthlyInv) * (1 + monthlyRate);
-
-      if (m % 12 === 0 || m === totalMonthsCount) {
+      if (m % 12 === 0 || m === totalMonths) {
         const yearNum = Math.ceil(m / 12);
         list.push({
           period: `Year ${yearNum}${m % 12 !== 0 ? ` (${m % 12}m)` : ""}`,
-          invested: Math.round(currentInv),
-          interest: Math.round(Math.max(0, currentAmount - currentInv)),
-          total: Math.round(currentAmount),
+          invested: Math.round(curInv),
+          interest: Math.round(Math.max(0, directBal - curInv)),
+          total: Math.round(directBal),
         });
       }
     }
-    return list;
-  }, [monthlyInvestment, expectedReturn, totalYears, stepUpEnabled, stepUpPercentage]);
 
-  const handleCalculate = () => {
-    setIsCalculated(true);
-  };
+    return list;
+  }, [
+    investmentType,
+    monthlyInvestment,
+    lumpsumAmount,
+    expectedReturn,
+    totalYears,
+    stepUpEnabled,
+    stepUpPercentage,
+    compareDirectRegular,
+    directTER,
+    regularTER,
+  ]);
 
   const handleReset = () => {
-    setMonthlyInvestment(100000);
+    triggerHaptic();
+    setInvestmentType("sip");
+    setMonthlyInvestment(10000);
+    setLumpsumAmount(100000);
     setExpectedReturn(12);
     setYears(10);
     setMonths(0);
+    setCompareDirectRegular(true);
+    setDirectTER(0.5);
+    setRegularTER(1.5);
+    setTaxEnabled(true);
+    setFundCategory("equity");
+    setIncomeTaxSlab(30);
     setStepUpEnabled(false);
     setStepUpPercentage(10);
     setInflationEnabled(false);
     setInflationRate(6);
-    setIsCalculated(false);
+  };
+
+  const handleCalculate = () => {
+    triggerHaptic();
+    recordPositiveEngagement("mf_calculated");
   };
 
   return (
-    <div className="p-4 space-y-4 max-w-3xl mx-auto">
-      <Card className="p-6 space-y-6 shadow-lg">
+    <div className="p-4 space-y-4 max-w-3xl mx-auto pb-20">
+      <Card className="p-6 space-y-6 shadow-lg bg-card">
+        {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-primary" />
+              <Wallet className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Mutual Fund Calculator
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                Mutual Fund Calculator
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Direct vs Regular Plan & 2026 Capital Gains Tax
+              </p>
+            </div>
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => {
+                    triggerHaptic();
+                    setInfoDialogOpen(true);
+                  }}
+                >
+                  <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Mutual Fund Investment & 2026 Tax Rules</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3.5 text-xs text-muted-foreground leading-relaxed">
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm mb-1">
+                      Direct vs Regular Plans (SEBI Rule)
+                    </h3>
+                    <p>
+                      Every mutual fund scheme offers two options:
+                      <strong> Direct Plan</strong> (investing directly through AMC/app without intermediary) and
+                      <strong> Regular Plan</strong> (investing through a distributor or bank broker).
+                    </p>
+                    <p className="mt-1">
+                      Regular plans charge an extra <strong>1.0% to 1.5% commission annually</strong> from your portfolio value.
+                      Over 15 to 20 years, this extra fee costs investors <strong>₹15 Lakhs to ₹30 Lakhs+</strong> in lost returns!
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <h3 className="font-semibold text-foreground text-sm mb-1">
+                      Latest 2026 Capital Gains Tax Rates (Budget 2024–2026)
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>
+                        <strong>Equity LTCG (&gt;1 Year):</strong> Taxed at <strong>12.5%</strong>. First <strong>₹1,25,000 profit is 100% Tax-Free</strong> each financial year!
+                      </li>
+                      <li>
+                        <strong>Equity STCG (&le;1 Year):</strong> Taxed at flat <strong>20%</strong> without exemption.
+                      </li>
+                      <li>
+                        <strong>Debt Mutual Funds:</strong> Taxed at your personal income tax slab rate (Sec 50AA).
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -183,32 +365,77 @@ const MutualFund = () => {
           </Button>
         </div>
 
-        <CalculatorInput
-          label="Monthly investment"
-          value={monthlyInvestment}
-          onChange={setMonthlyInvestment}
-          min={0}
-          max={10000000}
-          step={500}
-          prefix={symbol}
-        />
+        {/* Investment Mode Toggle: SIP vs Lumpsum */}
+        <div className="grid grid-cols-2 p-1 bg-secondary/50 rounded-xl border border-border">
+          <button
+            type="button"
+            className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+              investmentType === "sip"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => {
+              triggerHaptic();
+              setInvestmentType("sip");
+            }}
+          >
+            SIP (Monthly Investment)
+          </button>
+          <button
+            type="button"
+            className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+              investmentType === "lumpsum"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => {
+              triggerHaptic();
+              setInvestmentType("lumpsum");
+            }}
+          >
+            Lumpsum (One-Time)
+          </button>
+        </div>
 
+        {/* Amount Input */}
+        {investmentType === "sip" ? (
+          <CalculatorInput
+            label="Monthly Investment Amount"
+            value={monthlyInvestment}
+            onChange={setMonthlyInvestment}
+            min={500}
+            max={5000000}
+            step={500}
+            prefix={symbol}
+          />
+        ) : (
+          <CalculatorInput
+            label="One-Time Lumpsum Investment"
+            value={lumpsumAmount}
+            onChange={setLumpsumAmount}
+            min={1000}
+            max={50000000}
+            step={5000}
+            prefix={symbol}
+          />
+        )}
+
+        {/* Expected Gross Return */}
         <CalculatorInput
-          label="Expected return rate (p.a)"
+          label="Expected Gross Annual Return (CAGR)"
           value={expectedReturn}
           onChange={setExpectedReturn}
-          min={0}
-          max={100}
-          step={0.1}
+          min={1}
+          max={40}
+          step={0.5}
           suffix="%"
         />
 
+        {/* Investment Tenure */}
         <div className="bg-card p-4 rounded-lg border">
-          <div className="mb-3">
-            <label className="text-sm font-medium text-foreground">
-              Investment Period
-            </label>
-          </div>
+          <Label className="text-sm font-medium text-foreground mb-2 block">
+            Investment Tenure
+          </Label>
           <div className="grid grid-cols-2 gap-3">
             <CalculatorInput
               label="Years"
@@ -228,46 +455,152 @@ const MutualFund = () => {
             />
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            Total period:{" "}
+            Total Investment Horizon:{" "}
             <span className="font-semibold text-foreground">
-              {totalYears.toFixed(1)} years
+              {totalYears.toFixed(1)} Years ({Math.round(totalYears * 12)} Months)
             </span>
           </div>
         </div>
 
-        {/* Step-Up SIP */}
-        <div className="bg-card p-4 rounded-lg border">
-          <div className="flex items-center justify-between mb-3">
-            <Label htmlFor="step-up" className="text-sm font-medium">
-              Step-Up SIP
-            </Label>
+        {/* Direct vs Regular Plan Expense Ratio (TER) Comparison */}
+        <div className="bg-card p-4 rounded-lg border space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="direct-regular" className="text-sm font-semibold cursor-pointer">
+                Compare Direct vs Regular Plan (TER)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                See distributor commission lost in Regular plans
+              </p>
+            </div>
             <Switch
-              id="step-up"
-              checked={stepUpEnabled}
-              onCheckedChange={setStepUpEnabled}
+              id="direct-regular"
+              checked={compareDirectRegular}
+              onCheckedChange={setCompareDirectRegular}
             />
           </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Increase your SIP amount automatically every year
-          </p>
-          {stepUpEnabled && (
-            <CalculatorInput
-              label="Annual Step-Up Percentage"
-              value={stepUpPercentage}
-              onChange={setStepUpPercentage}
-              min={1}
-              max={50}
-              step={1}
-              suffix="%"
-            />
+
+          {compareDirectRegular && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
+              <CalculatorInput
+                label="Direct Plan Expense Ratio (TER)"
+                value={directTER}
+                onChange={setDirectTER}
+                min={0.1}
+                max={2.5}
+                step={0.1}
+                suffix="%"
+              />
+              <CalculatorInput
+                label="Regular Plan Expense Ratio (TER)"
+                value={regularTER}
+                onChange={setRegularTER}
+                min={0.5}
+                max={3.0}
+                step={0.1}
+                suffix="%"
+              />
+            </div>
           )}
         </div>
 
+        {/* Latest 2026 Capital Gains Tax Feature */}
+        <div className="bg-card p-4 rounded-lg border space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="tax-calc" className="text-sm font-semibold cursor-pointer">
+                Calculate Post-Tax In-Hand Returns
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Latest Finance Act / Budget 2024–2026 statutory rates
+              </p>
+            </div>
+            <Switch
+              id="tax-calc"
+              checked={taxEnabled}
+              onCheckedChange={setTaxEnabled}
+            />
+          </div>
+
+          {taxEnabled && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Fund Asset Type</Label>
+                <Select
+                  value={fundCategory}
+                  onValueChange={(val: FundCategory) => setFundCategory(val)}
+                >
+                  <SelectTrigger className="w-full h-10">
+                    <SelectValue placeholder="Select fund type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equity">
+                      Equity Mutual Fund (&gt;65% Equity) - 12.5% LTCG / ₹1.25L Exemption
+                    </SelectItem>
+                    <SelectItem value="debt">
+                      Debt Mutual Fund (&lt;65% Equity) - Slab Tax (Sec 50AA)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {fundCategory === "debt" && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Your Income Tax Slab Rate</Label>
+                  <Select
+                    value={String(incomeTaxSlab)}
+                    onValueChange={(val) => setIncomeTaxSlab(Number(val))}
+                  >
+                    <SelectTrigger className="w-full h-10">
+                      <SelectValue placeholder="Select tax slab" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10% Slab Rate</SelectItem>
+                      <SelectItem value="20">20% Slab Rate</SelectItem>
+                      <SelectItem value="30">30% Slab Rate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Step-Up SIP (SIP Mode Only) */}
+        {investmentType === "sip" && (
+          <div className="bg-card p-4 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="step-up" className="text-sm font-medium cursor-pointer">
+                Annual Step-Up SIP
+              </Label>
+              <Switch
+                id="step-up"
+                checked={stepUpEnabled}
+                onCheckedChange={setStepUpEnabled}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Increase monthly investment annually as your income grows
+            </p>
+            {stepUpEnabled && (
+              <CalculatorInput
+                label="Annual Step-Up Percentage"
+                value={stepUpPercentage}
+                onChange={setStepUpPercentage}
+                min={1}
+                max={50}
+                step={1}
+                suffix="%"
+              />
+            )}
+          </div>
+        )}
+
         {/* Inflation Adjustment */}
         <div className="bg-card p-4 rounded-lg border">
-          <div className="flex items-center justify-between mb-3">
-            <Label htmlFor="inflation" className="text-sm font-medium">
-              Inflation Adjustment
+          <div className="flex items-center justify-between mb-2">
+            <Label htmlFor="inflation" className="text-sm font-medium cursor-pointer">
+              Adjust for Inflation (Purchasing Power)
             </Label>
             <Switch
               id="inflation"
@@ -276,16 +609,16 @@ const MutualFund = () => {
             />
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            Account for inflation to see real returns (affects calculation)
+            Shows what your future maturity corpus can actually buy in today's money
           </p>
           {inflationEnabled && (
             <CalculatorInput
-              label="Expected Inflation Rate (p.a)"
+              label="Expected Annual Inflation Rate"
               value={inflationRate}
               onChange={setInflationRate}
               min={1}
-              max={50}
-              step={0.1}
+              max={20}
+              step={0.5}
               suffix="%"
             />
           )}
@@ -297,127 +630,119 @@ const MutualFund = () => {
           onClick={handleCalculate}
         >
           <Calculator className="w-5 h-5" />
-          Calculate Investment
+          Calculate Mutual Fund Returns
         </Button>
       </Card>
 
-      <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">
-          Investment Analysis
+      {/* Analysis & Results Card */}
+      <Card className="p-6 space-y-5 shadow-lg bg-card">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          Mutual Fund Wealth Projection
         </h3>
 
+        {/* Visual Chart */}
         <ResultChart
           principal={result.invested}
           returns={result.returns}
-          principalLabel="Invested amount"
-          returnsLabel={
-            inflationEnabled ? "Inflation-Adjusted Returns" : "Est. returns"
-          }
+          principalLabel="Capital Invested"
+          returnsLabel={compareDirectRegular ? "Direct Plan Returns" : "Gross Returns"}
         />
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-secondary/50 p-4 rounded-lg text-center border">
-              <p className="text-xs text-muted-foreground mb-1">
-                Total Invested
-              </p>
-              <p className="text-base font-bold text-foreground">
-                {formatAmount(result.invested)}
-              </p>
+        {/* Direct Plan Advantage Callout */}
+        {compareDirectRegular && result.commissionDifference > 0 && (
+          <div className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/40 dark:to-green-950/40 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                <span>🎯</span> Direct Plan Advantage
+              </span>
+              <span className="text-base font-extrabold text-emerald-900 dark:text-emerald-200">
+                +{formatAmount(result.commissionDifference)}
+              </span>
             </div>
-            <div className="bg-primary/5 p-4 rounded-lg text-center border border-primary/20">
-              <p className="text-xs text-muted-foreground mb-1">Returns</p>
-              <p className="text-base font-bold text-primary">
-                {formatAmount(result.returns)}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md">
-              <p className="text-xs text-primary-foreground/80 mb-1">
-                {inflationEnabled ? "Inflation-Adjusted Value" : "Total Value"}
-              </p>
-              <p className="text-2xl font-bold text-primary-foreground">
-                {formatAmount(result.total)}
-              </p>
-            </div>
-
-            {inflationEnabled && "normalTotal" in result && (
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-xl text-center shadow-md">
-                <p className="text-xs text-green-100 mb-1">
-                  Normal Value (without inflation)
-                </p>
-                <p className="text-xl font-bold text-green-50">
-                  {formatAmount(result.normalTotal)}
-                </p>
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-relaxed">
+              By investing in the <strong>Direct Plan ({result.netDirectRate.toFixed(1)}% net)</strong> instead of the Regular Plan ({result.netRegularRate.toFixed(1)}% net), you save <strong>{formatAmount(result.commissionDifference)}</strong> in distributor commissions!
+            </p>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 text-xs">
+              <div>
+                <span className="text-muted-foreground block text-[10px]">Direct Plan Value</span>
+                <span className="font-bold text-foreground text-sm">{formatAmount(result.directTotal)}</span>
               </div>
-            )}
-          </div>
-
-          {/* Step-Up vs No Step-Up Comparison */}
-          {stepUpEnabled && comparisonResult && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-              <h4 className="font-semibold text-blue-800 mb-3 text-center">
-                📈 Step-Up SIP Benefit Analysis
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
-                  <p className="text-xs text-blue-600 mb-1">Without Step-Up</p>
-                  <p className="text-lg font-bold text-blue-800">
-                    {formatAmount(comparisonResult.withoutStepUp.total)}
-                  </p>
-                </div>
-                <div className="bg-white/70 p-3 rounded-lg text-center border border-blue-100">
-                  <p className="text-xs text-green-600 mb-1">With Step-Up</p>
-                  <p className="text-lg font-bold text-green-800">
-                    {formatAmount(comparisonResult.withStepUp.total)}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-r from-green-100 to-emerald-100 p-3 rounded-lg text-center border border-green-200">
-                  <p className="text-xs text-green-700 mb-1">Benefit</p>
-                  <p className="text-lg font-bold text-green-800">
-                    +{comparisonResult.percentageDifference}%
-                  </p>
-                  <p className="text-sm font-semibold text-green-700">
-                    {formatAmount(comparisonResult.difference)}
-                  </p>
-                </div>
+              <div>
+                <span className="text-muted-foreground block text-[10px]">Regular Plan Value</span>
+                <span className="font-bold text-muted-foreground text-sm">{formatAmount(result.regularTotal)}</span>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Advanced Features Summary */}
-        {(stepUpEnabled || inflationEnabled) && (
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h4 className="font-semibold text-blue-800 mb-2">
-              📊 Advanced Features Applied
-            </h4>
-            <div className="space-y-2">
-              {stepUpEnabled && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Step-Up SIP</span>
-                  <span className="font-semibold text-blue-800">
-                    {stepUpPercentage}% annual increase
-                  </span>
-                </div>
-              )}
-              {inflationEnabled && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">
-                    Inflation Adjustment
-                  </span>
-                  <span className="font-semibold text-blue-800">
-                    {inflationRate}% per year
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
 
-        <div className="space-y-3">
+        {/* Core Value Summary Grid */}
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="bg-secondary/40 p-3.5 rounded-lg border">
+            <span className="text-xs text-muted-foreground block mb-1">Total Invested</span>
+            <span className="text-base font-bold text-foreground">{formatAmount(result.invested)}</span>
+          </div>
+          <div className="bg-primary/5 p-3.5 rounded-lg border border-primary/20">
+            <span className="text-xs text-muted-foreground block mb-1">Estimated Returns</span>
+            <span className="text-base font-bold text-primary">{formatAmount(result.returns)}</span>
+          </div>
+        </div>
+
+        {/* Total Pre-Tax Value */}
+        <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md text-primary-foreground space-y-1">
+          <span className="text-xs opacity-90 block">
+            {compareDirectRegular ? "Projected Direct Plan Corpus" : "Total Projected Corpus"}
+          </span>
+          <span className="text-3xl font-extrabold block">{formatAmount(result.total)}</span>
+        </div>
+
+        {/* Latest 2026 Capital Gains Tax Breakdown Card */}
+        {taxEnabled && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <Receipt className="w-3.5 h-3.5 text-amber-700 dark:text-amber-300" />
+                Capital Gains Tax ({result.taxTypeLabel})
+              </span>
+              <span className="font-bold text-red-600 dark:text-red-400 text-sm">
+                -{formatAmount(result.taxAmount)}
+              </span>
+            </div>
+
+            {fundCategory === "equity" && totalYears > 1 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                First <strong>₹1,25,000 profit is 100% Tax-Free</strong> under Budget 2024–2026. Only profits above ₹1.25L are taxed at 12.5%.
+              </p>
+            )}
+
+            <div className="flex justify-between items-center pt-2 border-t border-amber-200/80 dark:border-amber-800/80">
+              <span className="text-xs font-semibold text-foreground">Net In-Hand Returns (Post-Tax)</span>
+              <span className="text-base font-bold text-green-600 dark:text-green-400">
+                {formatAmount(result.postTaxTotal)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Inflation Purchasing Power Display */}
+        {inflationEnabled && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3.5 rounded-xl space-y-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-blue-800 dark:text-blue-300">
+                Purchasing Power Today ({inflationRate}% Inflation)
+              </span>
+              <span className="text-base font-bold text-blue-900 dark:text-blue-200">
+                {formatAmount(result.inflationAdjustedTotal)}
+              </span>
+            </div>
+            <p className="text-[11px] text-blue-700 dark:text-blue-300">
+              In {totalYears.toFixed(1)} years, {formatAmount(result.total)} will buy what {formatAmount(result.inflationAdjustedTotal)} buys today.
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-3 pt-2">
           <Button
             variant="secondary"
             className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
@@ -450,70 +775,69 @@ const MutualFund = () => {
         </div>
       </Card>
 
+      {/* Schedule Dialog */}
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Mutual Fund Growth & Direct Plan Schedule"
+        schedule={mfSchedule}
+      />
+
+      {/* Save Dialog - Preserving Backwards Compatibility */}
       <SaveDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="mutualfund"
         inputs={{
-          monthlyInvestment,
+          investmentType: investmentType === "sip" ? 1 : 2,
+          amount: investmentType === "sip" ? monthlyInvestment : lumpsumAmount,
           expectedReturn,
           years,
           months,
-          stepUpEnabled: stepUpEnabled ? 1 : 0,
-          stepUpPercentage,
+          directTER,
+          regularTER,
           inflationEnabled: inflationEnabled ? 1 : 0,
-          inflationRate,
         }}
         results={{
-          ...result,
-          normalTotal: normalResult.total,
-          inflationAdjustedTotal: result.total,
-          inflationRate: inflationEnabled ? inflationRate : 0,
+          invested: result.invested,
+          returns: result.returns,
+          total: result.total,
+          directTotal: result.directTotal,
+          regularTotal: result.regularTotal,
+          commissionDifference: result.commissionDifference,
+          postTaxTotal: result.postTaxTotal,
         }}
       />
 
+      {/* Share Report Modal */}
       <ShareReportModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        title="Mutual Fund Growth Report"
+        title="Mutual Fund Investment & Tax Analysis Statement"
         inputs={[
-          { label: "Monthly Investment", value: formatAmount(monthlyInvestment) },
-          { label: "Expected Return (p.a)", value: `${expectedReturn}%` },
-          { label: "Investment Duration", value: `${totalYears.toFixed(1)} Years` },
-          ...(stepUpEnabled ? [{ label: "Annual Step-Up", value: `${stepUpPercentage}%` }] : []),
-          ...(inflationEnabled ? [{ label: "Inflation Rate", value: `${inflationRate}%` }] : []),
+          { label: "Investment Mode", value: investmentType === "sip" ? "Monthly SIP" : "One-Time Lumpsum" },
+          { label: "Investment Amount", value: formatAmount(investmentType === "sip" ? monthlyInvestment : lumpsumAmount) },
+          { label: "Expected Gross CAGR", value: `${expectedReturn}% p.a.` },
+          { label: "Investment Horizon", value: `${years} Years ${months > 0 ? `${months} Months` : ""}` },
+          ...(compareDirectRegular ? [
+            { label: "Direct Plan TER", value: `${directTER}%` },
+            { label: "Regular Plan TER", value: `${regularTER}%` },
+          ] : []),
         ]}
         results={[
-          { label: "Total Investment", value: formatAmount(result.invested) },
-          { label: "Estimated Wealth Gain", value: formatAmount(result.returns || (result.total - result.invested)) },
-          { label: "Total Maturity Value", value: formatAmount(result.total), isHighlight: true },
-        ]}
-        analysis={[
-          ...(stepUpEnabled && comparisonResult ? [{
-            title: "📈 Step-Up Benefit Analysis",
-            items: [
-              { label: "Without Step-Up", value: formatAmount(comparisonResult.withoutStepUp.total) },
-              { label: "With Step-Up", value: formatAmount(comparisonResult.withStepUp.total) },
-              { label: "Net Benefit Gain", value: `+${comparisonResult.percentageDifference}% (${formatAmount(comparisonResult.difference)})`, isHighlight: true }
-            ]
-          }] : []),
-          ...(inflationEnabled && "normalTotal" in result ? [{
-            title: "🎈 Inflation Adjustment Analysis",
-            items: [
-              { label: "Normal Maturity (Without Inflation)", value: formatAmount(result.normalTotal) },
-              { label: "Real Purchasing Power Maturity", value: formatAmount(result.total), isHighlight: true }
-            ]
-          }] : [])
+          { label: "Total Capital Invested", value: formatAmount(result.invested) },
+          { label: "Estimated Direct Plan Corpus", value: formatAmount(result.directTotal), isHighlight: true },
+          ...(compareDirectRegular ? [
+            { label: "Regular Plan Corpus", value: formatAmount(result.regularTotal) },
+            { label: "Commission Saved by Going Direct", value: `+${formatAmount(result.commissionDifference)}`, isHighlight: true },
+          ] : []),
+          ...(taxEnabled ? [
+            { label: `Capital Gains Tax (${result.taxTypeLabel})`, value: `-${formatAmount(result.taxAmount)}` },
+            { label: "Net In-Hand Post-Tax Corpus", value: formatAmount(result.postTaxTotal), isHighlight: true },
+          ] : []),
         ]}
         scheduleTitle="Mutual Fund Growth Schedule"
-        scheduleHeaders={{ period: "Year", invested: "Amount Invested", interest: "Returns Earned", balance: "Fund Value" }}
-        schedule={mfSchedule}
-      />
-
-      <InvestmentScheduleDialog
-        open={scheduleModalOpen}
-        onOpenChange={setScheduleModalOpen}
-        title="Mutual Fund Growth Schedule"
+        scheduleHeaders={{ period: "Period", invested: "Invested Capital", interest: "Returns", balance: "Portfolio Value" }}
         schedule={mfSchedule}
       />
     </div>

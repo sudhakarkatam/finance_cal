@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Sparkles,
   Coins,
+  TrendingDown,
 } from 'lucide-react';
 import CalculatorInput from '@/components/ui/CalculatorInput';
 import ResultChart from '@/components/ui/ResultChart';
@@ -23,6 +24,8 @@ import SaveDialog from '@/components/SaveDialog';
 import ShareReportModal from '@/components/ShareReportModal';
 import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { calculateEPF } from '@/lib/calculations';
+import { triggerHaptic } from '@/lib/haptics';
+import { recordPositiveEngagement } from '@/lib/reviewManager';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +55,7 @@ const EPFCalculator = () => {
   const [interestRate, setInterestRate] = useState(8.25);
   const [capWageCeiling, setCapWageCeiling] = useState(false);
   const [showInflationAdjusted, setShowInflationAdjusted] = useState(false);
+  const [inflationRate, setInflationRate] = useState(6);
 
   // Dialog states
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -151,13 +155,14 @@ const EPFCalculator = () => {
     capWageCeiling,
   ]);
 
-  // Inflation-adjusted corpus (purchasing power in today's money assuming 6% inflation)
+  // Inflation-adjusted corpus (purchasing power in today's money)
   const inflationAdjustedMaturity = useMemo(() => {
     if (result.yearsToRetirement <= 0) return result.maturityValue;
-    return Math.round(result.maturityValue / Math.pow(1 + 0.06, result.yearsToRetirement));
-  }, [result.maturityValue, result.yearsToRetirement]);
+    return Math.round(result.maturityValue / Math.pow(1 + inflationRate / 100, result.yearsToRetirement));
+  }, [result.maturityValue, result.yearsToRetirement, inflationRate]);
 
   const handleReset = () => {
+    triggerHaptic();
     setBasicSalary(50000);
     setCurrentBalance(0);
     setEmployeeContribution(12);
@@ -167,6 +172,7 @@ const EPFCalculator = () => {
     setInterestRate(8.25);
     setCapWageCeiling(false);
     setShowInflationAdjusted(false);
+    setInflationRate(6);
   };
 
   return (
@@ -484,26 +490,63 @@ const EPFCalculator = () => {
               <span className="text-xs text-muted-foreground">Lump sum available at retirement</span>
             </div>
             <span className="text-2xl font-bold text-primary">
-              {formatCurrency(showInflationAdjusted ? inflationAdjustedMaturity : result.maturityValue)}
+              {formatCurrency(result.maturityValue)}
             </span>
           </div>
         </div>
 
-        {/* Inflation Adjustment Switch */}
-        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border text-xs">
-          <div className="space-y-0.5 pr-2">
-            <Label htmlFor="epf-inflation" className="font-medium cursor-pointer text-xs">
-              Show today's purchasing power (Inflation adjusted)
-            </Label>
-            <p className="text-[11px] text-muted-foreground">
-              Calculates equivalent purchasing power assuming 6% annual inflation over {result.yearsToRetirement} years.
+        {/* Inflation Purchasing Power Display */}
+        {showInflationAdjusted && (
+          <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 p-3.5 rounded-xl space-y-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-orange-800 dark:text-orange-300">
+                Purchasing Power Today ({inflationRate}% Inflation)
+              </span>
+              <span className="text-base font-bold text-orange-900 dark:text-orange-200">
+                {formatCurrency(inflationAdjustedMaturity)}
+              </span>
+            </div>
+            <p className="text-[11px] text-orange-700/80 dark:text-orange-300/80">
+              At age {retirementAge} in {result.yearsToRetirement} years, {formatCurrency(result.maturityValue)} will have the equivalent purchasing power of {formatCurrency(inflationAdjustedMaturity)} in today's money.
             </p>
           </div>
-          <Switch
-            id="epf-inflation"
-            checked={showInflationAdjusted}
-            onCheckedChange={setShowInflationAdjusted}
-          />
+        )}
+
+        {/* Inflation Adjustment Switch */}
+        <div className="p-3.5 bg-muted/40 rounded-xl border border-border text-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 pr-2">
+              <Label htmlFor="epf-inflation" className="font-medium cursor-pointer text-xs flex items-center gap-1.5">
+                <TrendingDown className="w-3.5 h-3.5 text-orange-500" />
+                Adjust for Inflation (Today's Purchasing Power)
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Shows the real purchasing power of your EPF corpus in today's rupees
+              </p>
+            </div>
+            <Switch
+              id="epf-inflation"
+              checked={showInflationAdjusted}
+              onCheckedChange={(val) => {
+                triggerHaptic();
+                setShowInflationAdjusted(val);
+              }}
+            />
+          </div>
+
+          {showInflationAdjusted && (
+            <div className="pt-2 border-t">
+              <CalculatorInput
+                label="Expected Inflation Rate (p.a)"
+                value={inflationRate}
+                onChange={setInflationRate}
+                min={1}
+                max={20}
+                step={0.5}
+                suffix="%"
+              />
+            </div>
+          )}
         </div>
 
         {/* EPS Lifetime Pension Card */}
@@ -531,7 +574,11 @@ const EPFCalculator = () => {
           <Button
             variant="secondary"
             className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
-            onClick={() => setScheduleModalOpen(true)}
+            onClick={() => {
+              triggerHaptic();
+              setScheduleModalOpen(true);
+              recordPositiveEngagement('view_schedule');
+            }}
           >
             <Calendar className="w-4 h-4 text-primary" />
             View Annual EPF Growth Schedule & Milestones
@@ -539,9 +586,13 @@ const EPFCalculator = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
-              className="w-full gap-2 h-12 text-base font-semibold"
+              className="w-full gap-2 h-12 text-base font-semibold shadow-md"
               size="lg"
-              onClick={() => setSaveDialogOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setSaveDialogOpen(true);
+                recordPositiveEngagement('save');
+              }}
             >
               <Save className="w-5 h-5" />
               Save Calculation
@@ -551,7 +602,11 @@ const EPFCalculator = () => {
               variant="outline"
               className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
               size="lg"
-              onClick={() => setShareModalOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setShareModalOpen(true);
+                recordPositiveEngagement('share_report');
+              }}
             >
               <Share2 className="w-5 h-5" />
               Export & Share Report
@@ -606,6 +661,7 @@ const EPFCalculator = () => {
           { label: "Total Combined Deposits", value: formatCurrency(result.totalContributions) },
           { label: "Total Interest Earned", value: formatCurrency(result.totalInterest) },
           { label: "Final EPF Maturity Corpus", value: formatCurrency(result.maturityValue), isHighlight: true },
+          ...(showInflationAdjusted ? [{ label: `Purchasing Power Today (${inflationRate}% Inflation)`, value: formatCurrency(inflationAdjustedMaturity), isHighlight: true }] : []),
         ]}
         scheduleTitle={`EPF ${result.yearsToRetirement}-Year Accumulation Schedule`}
         scheduleHeaders={{ period: "Age / Milestone", invested: "Total Deposited", interest: "Interest Accrued", balance: "EPF Balance" }}

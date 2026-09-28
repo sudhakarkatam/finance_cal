@@ -42,6 +42,7 @@ import TimeCostCalculator from "./pages/TimeCostCalculator";
 import TripCostCalculator from "./pages/TripCostCalculator";
 import GoldCalculator from "./pages/GoldCalculator";
 import ReviewPage from "./pages/ReviewPage";
+import { SearchProvider } from "./context/SearchContext";
 
 const queryClient = new QueryClient();
 
@@ -50,8 +51,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
+      <SearchProvider>
+        <BrowserRouter>
+          <Routes>
           <Route
             path="/"
             element={
@@ -363,6 +365,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </SearchProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

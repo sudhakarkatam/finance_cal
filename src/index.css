@@ -172,6 +172,15 @@ All colors MUST be HSL.
         scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
     }
+
+    /* Hide scrollbars for smooth mobile pill horizontal scroll */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
 }
 
 /* Print optimization for Share & Export Report PDF generation */

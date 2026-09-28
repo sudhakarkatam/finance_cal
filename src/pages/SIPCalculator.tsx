@@ -25,6 +25,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from "@/hooks/useCurrency";
+import { triggerHaptic } from "@/lib/haptics";
+import { recordPositiveEngagement } from "@/lib/reviewManager";
 import {
   Dialog,
   DialogContent,
@@ -171,10 +173,13 @@ const SIPCalculator = () => {
   ]);
 
   const handleCalculate = () => {
+    triggerHaptic();
     setIsCalculated(true);
+    recordPositiveEngagement('calculate_sip');
   };
 
   const handleReset = () => {
+    triggerHaptic();
     setMonthlyInvestment(100000);
     setExpectedReturn(12);
     setYears(10);
@@ -756,7 +761,11 @@ const SIPCalculator = () => {
           <Button
             variant="secondary"
             className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
-            onClick={() => setScheduleModalOpen(true)}
+            onClick={() => {
+              triggerHaptic();
+              setScheduleModalOpen(true);
+              recordPositiveEngagement('view_schedule');
+            }}
           >
             <Calendar className="w-4 h-4 text-primary" />
             View Annual Growth Schedule Table
@@ -764,9 +773,13 @@ const SIPCalculator = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
-              className="w-full gap-2 h-12 text-base font-semibold"
+              className="w-full gap-2 h-12 text-base font-semibold shadow-md"
               size="lg"
-              onClick={() => setSaveDialogOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setSaveDialogOpen(true);
+                recordPositiveEngagement('save');
+              }}
             >
               <Save className="w-5 h-5" />
               Save Calculation
@@ -776,7 +789,11 @@ const SIPCalculator = () => {
               variant="outline"
               className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
               size="lg"
-              onClick={() => setShareModalOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setShareModalOpen(true);
+                recordPositiveEngagement('share_report');
+              }}
             >
               <Share2 className="w-5 h-5" />
               Export & Share Report

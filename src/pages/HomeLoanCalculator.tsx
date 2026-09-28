@@ -101,8 +101,26 @@ const HomeLoanCalculator = () => {
     const totalInterest = totalPayment - principal;
     const processingFees = (principal * processingFee) / 100;
 
-    // Tax benefit calculation (approximate - 80C + 24b)
-    const maxTaxBenefit = Math.min(totalInterest, 200000);
+    // Statutory Annual Tax benefit calculation (Year 1):
+    // - Section 24(b): Interest deduction capped at ₹2,00,000/year (self-occupied)
+    // - Section 80C: Principal repayment deduction capped at ₹1,50,000/year
+    const monthsInFirstYear = Math.min(12, months);
+    let firstYearInterest = 0;
+    let firstYearPrincipal = 0;
+    let runningBalance = principal;
+
+    for (let m = 1; m <= monthsInFirstYear; m++) {
+      const monthInterest = runningBalance * monthlyRate;
+      const monthPrincipal = emi - monthInterest;
+      firstYearInterest += monthInterest;
+      firstYearPrincipal += monthPrincipal;
+      runningBalance -= monthPrincipal;
+    }
+
+    const sec24Benefit = Math.min(Math.round(firstYearInterest), 200000);
+    const sec80CBenefit = Math.min(Math.round(firstYearPrincipal), 150000);
+    const annualTaxDeduction = sec24Benefit + sec80CBenefit;
+    const annualTaxSavings = Math.round(annualTaxDeduction * 0.312); // Assuming 30% tax bracket + 4% cess
 
     return {
       emi: Math.round(emi),
@@ -112,7 +130,10 @@ const HomeLoanCalculator = () => {
       principal: Math.round(principal),
       downPayment: isExistingLoan ? 0 : downPayment,
       propertyValue: isExistingLoan ? 0 : propertyValue,
-      taxBenefit: Math.round(maxTaxBenefit),
+      taxBenefit: Math.round(annualTaxDeduction),
+      sec24Benefit,
+      sec80CBenefit,
+      annualTaxSavings,
       tenure: months
     };
   };
@@ -215,6 +236,9 @@ const HomeLoanCalculator = () => {
     downPayment: number;
     propertyValue: number;
     taxBenefit: number;
+    sec24Benefit?: number;
+    sec80CBenefit?: number;
+    annualTaxSavings?: number;
     tenure: number;
   };
 
@@ -849,9 +873,17 @@ const HomeLoanCalculator = () => {
               <span className="font-semibold text-foreground">{formatAmount(result.processingFees)}</span>
             </div>
           )}
-          <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Tax benefit (approx)</span>
-            <span className="font-semibold text-green-600">{formatAmount(result.taxBenefit)}</span>
+          <div className="flex justify-between items-center py-2.5 border-t border-border">
+            <div>
+              <span className="text-sm font-medium text-foreground block">Annual tax deduction (Sec 24b + 80C)</span>
+              <span className="text-[11px] text-muted-foreground">
+                Sec 24(b): {formatAmount(result.sec24Benefit || 0)} + Sec 80C: {formatAmount(result.sec80CBenefit || 0)}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="font-semibold text-green-600 block">{formatAmount(result.taxBenefit)}/yr</span>
+              <span className="text-[11px] text-green-600/90 font-medium">Saves ~{formatAmount(result.annualTaxSavings || 0)}/yr @ 30%</span>
+            </div>
           </div>
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
             <span className="text-base font-semibold text-foreground">Total amount</span>
@@ -1005,7 +1037,7 @@ const HomeLoanCalculator = () => {
           { label: "Monthly Home Loan EMI", value: formatAmount(result.emi), isHighlight: true },
           { label: "Total Payable Interest", value: formatAmount(result.totalInterest) },
           { label: "Total Outflow Amount (Principal + Interest)", value: formatAmount(result.totalPayment) },
-          { label: "Annual Tax Benefit Eligibility (Sec 24 + 80C)", value: formatAmount(result.taxBenefit || 0) },
+          { label: "Annual Tax Deduction Eligibility (Sec 24b + 80C)", value: `${formatAmount(result.taxBenefit || 0)}/yr (Saves ~${formatAmount(result.annualTaxSavings || 0)} @ 30%)` },
         ]}
         isLoanSchedule={true}
         scheduleTitle="Home Loan Amortization Schedule"

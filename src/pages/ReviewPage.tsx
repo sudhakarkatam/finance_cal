@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, Heart, ExternalLink, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { launchPlayStoreReview } from "@/lib/reviewManager";
+import { triggerHaptic } from "@/lib/haptics";
 
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.easecraft.financialcalculator";
@@ -17,6 +19,7 @@ const ReviewPage = () => {
   const [hoverRating, setHoverRating] = useState<number>(0);
 
   const handleBack = () => {
+    triggerHaptic();
     if (window.history.length > 1) {
       navigate(-1);
     } else {
@@ -25,38 +28,17 @@ const ReviewPage = () => {
   };
 
   const handleOpenPlayStore = async () => {
-    const isCapacitorNative = Boolean(
-      (window as any).Capacitor?.isNativePlatform?.() ||
-      (window as any).Capacitor?.platform === "android"
-    );
-
-    if (isCapacitorNative) {
-      try {
-        const { registerPlugin } = await import("@capacitor/core");
-        const WhatsAppShare = registerPlugin<any>("WhatsAppShare");
-        await WhatsAppShare.openPlayStore();
-        return;
-      } catch (err) {
-        console.warn("Native openPlayStore failed, trying market protocol", err);
-        try {
-          window.location.href = PLAY_STORE_MARKET_URL;
-          return;
-        } catch (mErr) {
-          console.warn("Market URL failed", mErr);
-        }
-      }
-    }
-
-    // Web or fallback
-    window.open(PLAY_STORE_URL, "_blank");
+    triggerHaptic();
+    await launchPlayStoreReview();
   };
 
   const handleRating = async (stars: number) => {
+    triggerHaptic();
     setRating(stars);
     if (stars >= 4) {
       toast({
         title: "Thank you for the support!",
-        description: "Redirecting to Google Play Store to post your review ⭐",
+        description: "Launching Google Play Store review ⭐",
       });
       setTimeout(() => {
         handleOpenPlayStore();

@@ -12,7 +12,13 @@ export const SettingsDialog = () => {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" title="Settings">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Settings"
+                    aria-label="Settings"
+                    className="text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+                >
                     <Settings className="w-5 h-5" />
                 </Button>
             </DialogTrigger>

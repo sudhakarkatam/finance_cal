@@ -8,12 +8,15 @@ import {
   Users,
   PiggyBank,
   TrendingUp,
+  TrendingDown,
   Share2,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
 import ShareReportModal from "@/components/ShareReportModal";
 import { useCurrency } from "@/hooks/useCurrency";
+import { triggerHaptic } from "@/lib/haptics";
+import { recordPositiveEngagement } from "@/lib/reviewManager";
 import {
   Dialog,
   DialogContent,
@@ -95,41 +98,34 @@ const RetirementPlanner = () => {
     const corpusAtRetirement = futureSavings + futureContributions;
 
     // Calculate required corpus for retirement years
+    // 1. Inflate monthly living expenses forward to retirement age
+    const monthlyExpenseAtRetirement = inflationEnabled && yearsToRetirement > 0
+      ? lifestyleExpenses * Math.pow(1 + inflationRate / 100, yearsToRetirement)
+      : lifestyleExpenses;
+
+    // 2. Deduct pension from monthly expense at retirement
+    const netMonthlyNeeded = Math.max(
+      0,
+      monthlyExpenseAtRetirement - (pensionEnabled ? monthlyPension : 0)
+    );
+
     let requiredCorpus = 0;
-    if (pensionEnabled) {
-      // If pension is available, calculate additional corpus needed
-      const monthlyPensionNeeded = lifestyleExpenses - monthlyPension;
-      if (monthlyPensionNeeded > 0) {
-        const retirementMonths = yearsInRetirement * 12;
-        const pensionRate = inflationEnabled
-          ? (expectedReturnRetirement - inflationRate) / 100
-          : expectedReturnRetirement / 100;
-        const pensionMonthlyRate = pensionRate / 12;
-
-        if (pensionMonthlyRate === 0) {
-          requiredCorpus = monthlyPensionNeeded * retirementMonths;
-        } else {
-          requiredCorpus =
-            (monthlyPensionNeeded *
-              (1 - Math.pow(1 + pensionMonthlyRate, -retirementMonths))) /
-            pensionMonthlyRate;
-        }
-      }
-    } else {
-      // No pension, need full corpus for expenses
+    if (netMonthlyNeeded > 0 && yearsInRetirement > 0) {
       const retirementMonths = yearsInRetirement * 12;
-      const expenseRate = inflationEnabled
-        ? (expectedReturnRetirement - inflationRate) / 100
+      // Real rate of return during retirement (accounting for inflation while living on corpus)
+      // Exact Fisher relation: (1 + r) / (1 + i) - 1
+      const realAnnualRate = inflationEnabled
+        ? (1 + expectedReturnRetirement / 100) / (1 + inflationRate / 100) - 1
         : expectedReturnRetirement / 100;
-      const expenseMonthlyRate = expenseRate / 12;
+      const realMonthlyRate = realAnnualRate / 12;
 
-      if (expenseMonthlyRate === 0) {
-        requiredCorpus = lifestyleExpenses * retirementMonths;
+      if (Math.abs(realMonthlyRate) < 0.000001) {
+        requiredCorpus = netMonthlyNeeded * retirementMonths;
       } else {
         requiredCorpus =
-          (lifestyleExpenses *
-            (1 - Math.pow(1 + expenseMonthlyRate, -retirementMonths))) /
-          expenseMonthlyRate;
+          (netMonthlyNeeded *
+            (1 - Math.pow(1 + realMonthlyRate, -retirementMonths))) /
+          realMonthlyRate;
       }
     }
 
@@ -142,42 +138,30 @@ const RetirementPlanner = () => {
 
     if (shortfall > 0) {
       const targetCorpus = requiredCorpus - futureSavings;
-      if (monthlyRate > 0 && targetCorpus > 0) {
+      if (targetCorpus <= 0) {
+        requiredMonthlyContribution = 0;
+      } else if (monthlyRate === 0) {
+        requiredMonthlyContribution = targetCorpus / months;
+      } else {
         requiredMonthlyContribution =
           (targetCorpus * monthlyRate) /
           (Math.pow(1 + monthlyRate, months) - 1);
       }
     } else if (isAchievable && monthlyContribution > 0) {
-      // User is contributing more than needed - calculate how much they can reduce
-      const excessCorpus = corpusAtRetirement - requiredCorpus;
-
-      // Calculate the excess contribution by working backwards
-      const averageMonthlyRate = expectedReturnAccumulation / (12 * 100);
-      if (averageMonthlyRate > 0) {
-        excessContribution =
-          excessCorpus /
-          (Math.pow(1 + averageMonthlyRate, yearsToRetirement) - 1) /
-          averageMonthlyRate /
-          12;
-      }
-
-      // More precise calculation for excess contribution
-      let testContribution = monthlyContribution;
+      // Binary search to find the minimum contribution needed
       let minContribution = 0;
       let maxContribution = monthlyContribution;
 
-      // Binary search to find the minimum contribution needed
       for (let i = 0; i < 20; i++) {
         const midContribution = (minContribution + maxContribution) / 2;
 
-        // Calculate future contributions for test amount
         let testFutureContributions = 0;
-        if (averageMonthlyRate === 0) {
+        if (monthlyRate === 0) {
           testFutureContributions = midContribution * months;
         } else {
           testFutureContributions =
-            (midContribution * (Math.pow(1 + averageMonthlyRate, months) - 1)) /
-            averageMonthlyRate;
+            (midContribution * (Math.pow(1 + monthlyRate, months) - 1)) /
+            monthlyRate;
         }
 
         const testCorpusAtRetirement = futureSavings + testFutureContributions;
@@ -208,6 +192,7 @@ const RetirementPlanner = () => {
       ),
       excessContribution: Math.round(Math.max(excessContribution, 0)),
       requiredCorpus: Math.round(requiredCorpus),
+      monthlyExpenseAtRetirement: Math.round(monthlyExpenseAtRetirement),
       isAchievable,
       yearsToRetirement,
       yearsInRetirement,
@@ -222,6 +207,7 @@ const RetirementPlanner = () => {
     currentSavings,
     monthlyContribution,
     expectedReturnAccumulation,
+    expectedReturnRetirement,
     inflationEnabled,
     inflationRate,
     pensionEnabled,
@@ -230,11 +216,22 @@ const RetirementPlanner = () => {
     lifestyleExpenses,
   ]);
 
+  const purchasingPowerCorpus = useMemo(() => {
+    const years = Math.max(1, retirementAge - currentAge);
+    if (!inflationEnabled || years <= 0) return result.corpusAtRetirement;
+    return Math.round(
+      result.corpusAtRetirement / Math.pow(1 + inflationRate / 100, years)
+    );
+  }, [result.corpusAtRetirement, inflationRate, retirementAge, currentAge, inflationEnabled]);
+
   const handleCalculate = () => {
+    triggerHaptic();
     setIsCalculated(true);
+    recordPositiveEngagement('calculate_retirement');
   };
 
   const handleReset = () => {
+    triggerHaptic();
     setCurrentAge(30);
     setRetirementAge(60);
     setCurrentSavings(500000);
@@ -253,20 +250,28 @@ const RetirementPlanner = () => {
   // Generate year-wise projection
   const generateYearlyProjection = () => {
     const projection = [];
-    const yearsToRetirement = retirementAge - currentAge;
+    const yearsToRetirement = Math.max(0, retirementAge - currentAge);
+    const annualRate = expectedReturnAccumulation / 100;
+    const monthlyRate = annualRate / 12;
 
     for (let year = 1; year <= yearsToRetirement; year++) {
       const age = currentAge + year;
-      const yearsRemaining = yearsToRetirement - year;
+      const monthsElapsed = year * 12;
 
-      // Future value calculations
-      const futureSavingsValue =
-        currentSavings *
-        Math.pow(1 + expectedReturnAccumulation / 100, yearsRemaining);
-      const futureContributionsValue =
-        monthlyContribution * 12 * yearsRemaining;
+      // Current savings compounded for `year` years
+      const savingsValue = currentSavings * Math.pow(1 + annualRate, year);
 
-      const portfolioValue = futureSavingsValue + futureContributionsValue;
+      // Monthly contributions compounded for `monthsElapsed` months
+      let contributionsValue = 0;
+      if (monthlyRate === 0) {
+        contributionsValue = monthlyContribution * monthsElapsed;
+      } else {
+        contributionsValue =
+          (monthlyContribution * (Math.pow(1 + monthlyRate, monthsElapsed) - 1)) /
+          monthlyRate;
+      }
+
+      const portfolioValue = savingsValue + contributionsValue;
 
       projection.push({
         year,
@@ -518,6 +523,39 @@ const RetirementPlanner = () => {
           </p>
         </div>
 
+        {/* Inflation Purchasing Power Display */}
+        {inflationEnabled && (
+          <>
+            <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 p-3.5 rounded-xl space-y-1 mb-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-orange-800 dark:text-orange-300">
+                  Purchasing Power Today ({inflationRate}% Inflation)
+                </span>
+                <span className="text-base font-bold text-orange-900 dark:text-orange-200">
+                  {formatAmount(purchasingPowerCorpus)}
+                </span>
+              </div>
+              <p className="text-[11px] text-orange-700/80 dark:text-orange-300/80">
+                At retirement in {Math.max(1, retirementAge - currentAge)} years, {formatAmount(result.corpusAtRetirement)} will have the equivalent purchasing power of {formatAmount(purchasingPowerCorpus)} in today's money.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 p-3.5 rounded-xl space-y-1 mb-4">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-blue-800 dark:text-blue-300">
+                  Monthly Living Expense at Retirement (Age {retirementAge})
+                </span>
+                <span className="text-base font-bold text-blue-900 dark:text-blue-200">
+                  {formatAmount(result.monthlyExpenseAtRetirement)}/mo
+                </span>
+              </div>
+              <p className="text-[11px] text-blue-700/80 dark:text-blue-300/80">
+                Due to {inflationRate}% annual inflation, your current {formatAmount(lifestyleExpenses)}/mo living expense will grow to {formatAmount(result.monthlyExpenseAtRetirement)}/mo at age {retirementAge}.
+              </p>
+            </div>
+          </>
+        )}
+
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
             <span className="text-sm text-muted-foreground">
@@ -614,9 +652,13 @@ const RetirementPlanner = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <Button
-            className="w-full gap-2 h-12 text-base font-semibold"
+            className="w-full gap-2 h-12 text-base font-semibold shadow-md"
             size="lg"
-            onClick={() => setSaveDialogOpen(true)}
+            onClick={() => {
+              triggerHaptic();
+              setSaveDialogOpen(true);
+              recordPositiveEngagement('save');
+            }}
           >
             <Save className="w-5 h-5" />
             Save Calculation
@@ -626,7 +668,11 @@ const RetirementPlanner = () => {
             variant="outline"
             className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
             size="lg"
-            onClick={() => setShareModalOpen(true)}
+            onClick={() => {
+              triggerHaptic();
+              setShareModalOpen(true);
+              recordPositiveEngagement('share_report');
+            }}
           >
             <Share2 className="w-5 h-5" />
             Export & Share Report
@@ -655,6 +701,7 @@ const RetirementPlanner = () => {
         results={
           {
             corpusAtRetirement: result.corpusAtRetirement,
+            purchasingPowerCorpus: inflationEnabled ? purchasingPowerCorpus : undefined,
             totalContributions: result.totalContributions,
             totalReturns: result.totalReturns,
             shortfall: result.shortfall,
@@ -683,7 +730,9 @@ const RetirementPlanner = () => {
         ]}
         results={[
           { label: "Total Target Required Corpus", value: formatAmount(result.requiredCorpus) },
-          { label: "Projected Corpus at Retirement (Age 60)", value: formatAmount(result.corpusAtRetirement) },
+          { label: `Projected Corpus at Retirement (Age ${retirementAge})`, value: formatAmount(result.corpusAtRetirement) },
+          ...(inflationEnabled ? [{ label: `Est. Monthly Living Expense at Age ${retirementAge}`, value: `${formatAmount(result.monthlyExpenseAtRetirement)}/mo`, isHighlight: true }] : []),
+          ...(inflationEnabled ? [{ label: `Purchasing Power Today (${inflationRate}% Inflation)`, value: formatAmount(purchasingPowerCorpus) }] : []),
           { label: "Minimum Required Monthly Contribution", value: formatAmount(result.requiredMonthlyContribution), isHighlight: true },
           { label: "Retirement Goal Status", value: result.isAchievable ? "🎉 Fully Achievable" : `Shortfall of ${formatAmount(result.shortfall)}`, isHighlight: true },
         ]}

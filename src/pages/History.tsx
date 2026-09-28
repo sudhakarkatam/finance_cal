@@ -80,6 +80,10 @@ const History = () => {
       epf: 'EPF Calculator',
 
       // New
+      gratuity: 'Gratuity Calculator',
+      cagr: 'CAGR Calculator',
+      emergency: 'Emergency Fund',
+      currency: 'Currency Calculator',
       'time-cost': 'Time-Cost Calculator',
       'trip-cost': 'Trip Cost Calculator',
       gold: 'Gold Calculator',

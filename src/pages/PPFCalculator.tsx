@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, Landmark, Info, Calendar, Share2, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
+import { Save, RotateCcw, Landmark, Info, Calendar, Share2, ShieldCheck, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
@@ -11,6 +11,8 @@ import ShareReportModal from '@/components/ShareReportModal';
 import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { triggerHaptic } from '@/lib/haptics';
+import { recordPositiveEngagement } from '@/lib/reviewManager';
 
 const PPFCalculator = () => {
   // PPF is an Indian specific scheme, so we enforce INR
@@ -28,6 +30,8 @@ const PPFCalculator = () => {
   const [monthlyInvestment, setMonthlyInvestment] = useState(12500);
   const [years, setYears] = useState(15);
   const [extendWithoutContribution, setExtendWithoutContribution] = useState(false);
+  const [inflationEnabled, setInflationEnabled] = useState(false);
+  const [inflationRate, setInflationRate] = useState(6);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -92,17 +96,26 @@ const PPFCalculator = () => {
     };
   }, [ppfSchedule, ppfRate]);
 
+  // Real purchasing power today adjusted for inflation
+  const purchasingPowerTotal = useMemo(() => {
+    if (!inflationEnabled || years <= 0) return result.total;
+    return Math.round(result.total / Math.pow(1 + inflationRate / 100, years));
+  }, [result.total, inflationRate, years, inflationEnabled]);
+
   // Tax calculation under Section 80C (max ₹1.5L/year deduction)
   const annualDeposit = frequency === 'yearly' ? yearlyInvestment : monthlyInvestment * 12;
   const contributingYears = extendWithoutContribution ? Math.min(15, years) : years;
   const taxSaved = Math.min(150000, annualDeposit) * 0.3 * contributingYears;
 
   const handleReset = () => {
+    triggerHaptic();
     setFrequency('yearly');
     setYearlyInvestment(150000);
     setMonthlyInvestment(12500);
     setYears(15);
     setExtendWithoutContribution(false);
+    setInflationEnabled(false);
+    setInflationRate(6);
   };
 
   return (
@@ -446,10 +459,50 @@ const PPFCalculator = () => {
             <Switch
               id="ppf-extend"
               checked={extendWithoutContribution}
-              onCheckedChange={setExtendWithoutContribution}
+              onCheckedChange={(val) => {
+                triggerHaptic();
+                setExtendWithoutContribution(val);
+              }}
             />
           </div>
         )}
+
+        {/* Inflation Adjustment Toggle */}
+        <div className="bg-card p-4 rounded-xl border border-primary/20 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="ppf-inflation" className="text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
+                <TrendingDown className="w-4 h-4 text-orange-500" />
+                Adjust for Inflation
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                See real purchasing power in today's money
+              </p>
+            </div>
+            <Switch
+              id="ppf-inflation"
+              checked={inflationEnabled}
+              onCheckedChange={(val) => {
+                triggerHaptic();
+                setInflationEnabled(val);
+              }}
+            />
+          </div>
+
+          {inflationEnabled && (
+            <div className="pt-2 border-t">
+              <CalculatorInput
+                label="Expected Inflation Rate (p.a)"
+                value={inflationRate}
+                onChange={setInflationRate}
+                min={1}
+                max={20}
+                step={0.5}
+                suffix="%"
+              />
+            </div>
+          )}
+        </div>
       </Card>
 
       <Card className="p-6 space-y-4 shadow-lg">
@@ -476,6 +529,23 @@ const PPFCalculator = () => {
             <span className="text-xl font-bold text-primary">{formatAmount(result.total)}</span>
           </div>
         </div>
+
+        {/* Inflation Purchasing Power Display */}
+        {inflationEnabled && (
+          <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 p-3.5 rounded-xl space-y-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-orange-800 dark:text-orange-300">
+                Purchasing Power Today ({inflationRate}% Inflation)
+              </span>
+              <span className="text-base font-bold text-orange-900 dark:text-orange-200">
+                {formatAmount(purchasingPowerTotal)}
+              </span>
+            </div>
+            <p className="text-[11px] text-orange-700/80 dark:text-orange-300/80">
+              In {years} years, ₹{formatAmount(result.total)} will buy what {formatAmount(purchasingPowerTotal)} buys in today's money at {inflationRate}% annual inflation.
+            </p>
+          </div>
+        )}
 
         {/* Tax Saving & Equivalent FD Yield Badge */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -510,7 +580,11 @@ const PPFCalculator = () => {
           <Button
             variant="secondary"
             className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
-            onClick={() => setScheduleModalOpen(true)}
+            onClick={() => {
+              triggerHaptic();
+              setScheduleModalOpen(true);
+              recordPositiveEngagement('view_schedule');
+            }}
           >
             <Calendar className="w-4 h-4 text-primary" />
             View Annual Growth Schedule & Milestones
@@ -518,9 +592,13 @@ const PPFCalculator = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
-              className="w-full gap-2 h-12 text-base font-semibold"
+              className="w-full gap-2 h-12 text-base font-semibold shadow-md"
               size="lg"
-              onClick={() => setSaveDialogOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setSaveDialogOpen(true);
+                recordPositiveEngagement('save');
+              }}
             >
               <Save className="w-5 h-5" />
               Save Calculation
@@ -530,7 +608,11 @@ const PPFCalculator = () => {
               variant="outline"
               className="w-full gap-2 h-12 text-base font-semibold border-primary/40 text-primary hover:bg-primary/10"
               size="lg"
-              onClick={() => setShareModalOpen(true)}
+              onClick={() => {
+                triggerHaptic();
+                setShareModalOpen(true);
+                recordPositiveEngagement('share_report');
+              }}
             >
               <Share2 className="w-5 h-5" />
               Export & Share Report
@@ -573,6 +655,7 @@ const PPFCalculator = () => {
           { label: 'Total Deposited', value: formatAmount(result.invested) },
           { label: 'Tax-Free Interest Earned', value: formatAmount(result.returns) },
           { label: 'Total Tax-Free Maturity Value', value: formatAmount(result.total), isHighlight: true },
+          ...(inflationEnabled ? [{ label: `Purchasing Power Today (${inflationRate}% Inflation)`, value: formatAmount(purchasingPowerTotal), isHighlight: true }] : []),
         ]}
         scheduleTitle={`PPF ${years}-Year Growth & Milestone Schedule`}
         scheduleHeaders={{ period: 'Year / Milestone', invested: 'Total Deposited', interest: 'Interest Accrued', balance: 'PPF Balance' }}

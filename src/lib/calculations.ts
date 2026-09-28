@@ -587,45 +587,85 @@ export const calculateSSY = (
   const totalMaturityYears = 21;
   const interestRate = currentInterestRate / 100;
 
+  let balance = 0;
   let totalInvested = 0;
-  let futureValue = 0;
+  const yearlySchedule = [];
+  let balanceAtAge18 = 0;
 
-  // Calculate for each investment year
-  for (let year = 1; year <= investmentYears; year++) {
-    totalInvested += annualInvestment;
+  for (let year = 1; year <= totalMaturityYears; year++) {
+    const depositThisYear = year <= investmentYears ? annualInvestment : 0;
+    totalInvested += depositThisYear;
 
-    // Each year's investment grows for (totalMaturityYears - year + 1) years
-    // Year 1: grows for 21 years (deposited at start of year 1, matures end of year 21)
-    // Year 2: grows for 20 years (deposited at start of year 2, matures end of year 21)
-    // Year 15: grows for 7 years (deposited at start of year 15, matures end of year 21)
-    const growthYears = totalMaturityYears - year + 1;
+    const openingBalance = balance + depositThisYear;
+    const interestEarned = openingBalance * interestRate;
+    balance = openingBalance + interestEarned;
 
-    // Using the compound interest formula: A = P × (1 + r)^t
-    const futureValueOfYearInvestment =
-      annualInvestment * Math.pow(1 + interestRate, growthYears);
+    const currentGirlAge = girlAge + year;
+    const calendarYear = investmentStartYear + year - 1;
 
-    futureValue += futureValueOfYearInvestment;
+    let milestone = "";
+    if (year === investmentYears) {
+      milestone = "Final Deposit Year (Deposits Stop)";
+    }
+    if (currentGirlAge === 18) {
+      balanceAtAge18 = balance;
+      milestone = milestone
+        ? `${milestone} | 🎓 Age 18: 50% Education Withdrawal Eligible`
+        : "🎓 Age 18: 50% Higher Education Withdrawal Eligible";
+    } else if (year === totalMaturityYears) {
+      milestone = `🎉 21-Year Scheme Maturity (Age ${currentGirlAge})`;
+    }
+
+    yearlySchedule.push({
+      year,
+      calendarYear,
+      girlAge: currentGirlAge,
+      deposit: depositThisYear,
+      totalInvested: Math.round(totalInvested),
+      interestEarned: Math.round(interestEarned),
+      balance: Math.round(balance),
+      milestone,
+    });
   }
 
-  const totalInterest = futureValue - totalInvested;
-  const maturityYear = investmentStartYear + totalMaturityYears;
+  // If girl turns 18 after or during schedule
+  if (balanceAtAge18 === 0) {
+    const age18Row = yearlySchedule.find((r) => r.girlAge >= 18);
+    balanceAtAge18 = age18Row ? age18Row.balance : balance;
+  }
+  const maxEducationWithdrawal = Math.round(balanceAtAge18 * 0.5);
 
-  // Calculate inflation-adjusted value
+  const maturityValue = Math.round(balance);
+  const totalInterest = Math.round(balance - totalInvested);
+  const maturityYear = investmentStartYear + totalMaturityYears;
+  const maturityAge = girlAge + totalMaturityYears;
+  const depositEndAge = girlAge + investmentYears;
+  const depositEndYear = investmentStartYear + investmentYears;
+
   const inflationAdjustedValue =
     inflationRate > 0
-      ? futureValue / Math.pow(1 + inflationRate / 100, totalMaturityYears)
-      : futureValue;
+      ? Math.round(
+          maturityValue / Math.pow(1 + inflationRate / 100, totalMaturityYears)
+        )
+      : maturityValue;
 
   return {
     totalInvested: Math.round(totalInvested),
-    totalInterest: Math.round(totalInterest),
-    maturityValue: Math.round(futureValue),
-    inflationAdjustedValue: Math.round(inflationAdjustedValue),
+    totalInterest,
+    maturityValue,
+    inflationAdjustedValue,
     maturityYear,
+    maturityAge,
+    girlAge,
+    depositEndAge,
+    depositEndYear,
     investmentYears,
     totalMaturityYears,
+    balanceAtAge18: Math.round(balanceAtAge18),
+    maxEducationWithdrawal,
     interestRate: currentInterestRate,
     inflationRate,
+    yearlySchedule,
   };
 };
 

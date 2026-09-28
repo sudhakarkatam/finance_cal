@@ -10,12 +10,13 @@ import {
   TrendingUp,
   Info,
   Share2,
+  Calendar,
 } from "lucide-react";
 import CalculatorInput from "@/components/ui/CalculatorInput";
 import SaveDialog from "@/components/SaveDialog";
 import ShareReportModal from "@/components/ShareReportModal";
+import { InvestmentScheduleDialog, ScheduleRow } from "@/components/InvestmentScheduleDialog";
 import { calculateSSY } from "@/lib/calculations";
-import { useCurrency } from "@/hooks/useCurrency";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +47,7 @@ const SSYCalculator = () => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   const result = useMemo(() => {
     return calculateSSY(
@@ -63,6 +65,25 @@ const SSYCalculator = () => {
     inflationEnabled,
     inflationRate,
   ]);
+
+  const ssySchedule = useMemo((): ScheduleRow[] => {
+    return (result.yearlySchedule || []).map((row: any) => {
+      let periodLabel = `Age ${row.girlAge} (${row.calendarYear})`;
+      if (row.girlAge === 18) {
+        periodLabel = `🎓 Age 18 (${row.calendarYear}) - 50% Ed. Eligible`;
+      } else if (row.year === 15) {
+        periodLabel = `🛑 Age ${row.girlAge} (${row.calendarYear}) - Final Deposit`;
+      } else if (row.year === 21) {
+        periodLabel = `🎉 Age ${row.girlAge} (${row.calendarYear}) - Maturity`;
+      }
+      return {
+        period: periodLabel,
+        invested: row.totalInvested,
+        interest: row.interestEarned,
+        total: row.balance,
+      };
+    });
+  }, [result.yearlySchedule]);
 
   const handleReset = () => {
     setAnnualInvestment(150000);
@@ -152,8 +173,8 @@ const SSYCalculator = () => {
                         account opening
                       </li>
                       <li>
-                        <strong>Maturity Period:</strong> 21 years from account
-                        opening (girl's age should be 21 years)
+                        <strong>Maturity Period:</strong> Exactly 21 years from
+                        account opening (or upon marriage after age 18)
                       </li>
                       <li>Investments can be made in multiples of ₹250</li>
                       <li>
@@ -211,8 +232,9 @@ const SSYCalculator = () => {
                       </li>
                       <li>
                         <strong>Maturity:</strong> The account matures 21 years
-                        from the date of opening, or when the girl child turns
-                        21, whichever is later
+                        from the date of opening (e.g., opened at age 5 matures
+                        at age 26), or upon marriage of the girl child after
+                        attaining 18 years of age
                       </li>
                       <li>
                         After maturity, the entire balance can be withdrawn
@@ -384,8 +406,8 @@ const SSYCalculator = () => {
                         education expenses
                       </li>
                       <li>
-                        Account matures when girl turns 21 - plan big expenses
-                        accordingly
+                        Account matures 21 years from opening date - plan big
+                        milestones accordingly
                       </li>
                     </ul>
                   </div>
@@ -441,8 +463,8 @@ const SSYCalculator = () => {
             label="Investment Starting Year"
             value={investmentStartYear}
             onChange={setInvestmentStartYear}
-            min={2020}
-            max={2030}
+            min={2015}
+            max={2040}
             step={1}
           />
 
@@ -570,34 +592,58 @@ const SSYCalculator = () => {
           </div>
         </div>
 
-        {/* Investment Schedule Info */}
-        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-          <h4 className="font-semibold text-amber-800 mb-2">
-            📅 Investment Schedule
+        {/* Statutory Girl Child Milestones Roadmap */}
+        <div className="bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-950/30 dark:to-purple-950/30 p-4 rounded-xl border border-pink-200 dark:border-pink-800 space-y-3">
+          <h4 className="font-semibold text-pink-900 dark:text-pink-200 flex items-center gap-2 text-sm">
+            <span>🌸</span> Girl Child Milestone Roadmap
           </h4>
-          <div className="space-y-2 text-sm text-amber-700">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div className="bg-white/80 dark:bg-card p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
+              <span className="text-muted-foreground block text-[11px]">1. Deposit Period (15 Yrs)</span>
+              <span className="font-bold text-foreground block text-sm">Age {girlAge} to {result.depositEndAge}</span>
+              <span className="text-muted-foreground text-[10px]">Deposits stop in {result.depositEndYear}</span>
+            </div>
+            <div className="bg-white/80 dark:bg-card p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
+              <span className="text-muted-foreground block text-[11px]">2. Higher Education (Age 18)</span>
+              <span className="font-bold text-primary block text-sm">Up to {formatAmount(result.maxEducationWithdrawal)}</span>
+              <span className="text-muted-foreground text-[10px]">50% balance partial withdrawal</span>
+            </div>
+            <div className="bg-white/80 dark:bg-card p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
+              <span className="text-muted-foreground block text-[11px]">3. 21-Year Scheme Maturity</span>
+              <span className="font-bold text-green-600 dark:text-green-400 block text-sm">{formatAmount(result.maturityValue)}</span>
+              <span className="text-muted-foreground text-[10px]">At Age {result.maturityAge} ({result.maturityYear})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Investment Schedule Info */}
+        <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+          <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 text-sm">
+            📅 Investment & Maturity Schedule
+          </h4>
+          <div className="space-y-2 text-xs text-amber-700 dark:text-amber-400">
             <div className="flex justify-between">
               <span>Annual Investment:</span>
               <span className="font-semibold">
-                {formatAmount(annualInvestment)}
+                {formatAmount(annualInvestment)}/year
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Investment Period:</span>
+              <span>Investment Period (15 Years):</span>
               <span className="font-semibold">
-                {investmentStartYear} - {investmentStartYear + 15}
+                {investmentStartYear} - {result.depositEndYear} (Age {girlAge} to {result.depositEndAge})
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Interest Accumulation:</span>
+              <span>Growth Without Deposits (6 Years):</span>
               <span className="font-semibold">
-                {investmentStartYear + 15} - {result.maturityYear}
+                {result.depositEndYear} - {result.maturityYear}
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Maturity Date:</span>
-              <span className="font-semibold">
-                {result.maturityYear} (Girl's age: {girlAge + 21})
+              <span>Full Maturity Date:</span>
+              <span className="font-semibold text-foreground">
+                Year {result.maturityYear} (Girl's age: {result.maturityAge})
               </span>
             </div>
           </div>
@@ -605,27 +651,27 @@ const SSYCalculator = () => {
 
         {/* Inflation Impact */}
         {inflationEnabled && (
-          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-            <h4 className="font-semibold text-purple-800 mb-2">
+          <div className="bg-purple-50 dark:bg-purple-950/30 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+            <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-2 text-sm">
               💰 Inflation Impact Analysis
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
-                <p className="text-xs text-purple-600 mb-1">Nominal Value</p>
-                <p className="text-lg font-bold text-purple-800">
+                <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">Nominal Value</p>
+                <p className="text-lg font-bold text-purple-800 dark:text-purple-200">
                   {formatAmount(result.maturityValue)}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-purple-600 mb-1">
+                <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">
                   Real Value (Inflation-Adjusted)
                 </p>
-                <p className="text-lg font-bold text-purple-800">
+                <p className="text-lg font-bold text-purple-800 dark:text-purple-200">
                   {formatAmount(result.inflationAdjustedValue)}
                 </p>
               </div>
             </div>
-            <p className="text-xs text-purple-600 mt-2 text-center">
+            <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-2 text-center">
               Inflation erodes purchasing power by{" "}
               {Math.round(
                 ((result.maturityValue - result.inflationAdjustedValue) /
@@ -636,6 +682,15 @@ const SSYCalculator = () => {
             </p>
           </div>
         )}
+
+        <Button
+          variant="secondary"
+          className="w-full gap-2 h-11 text-sm font-semibold border border-primary/20"
+          onClick={() => setScheduleModalOpen(true)}
+        >
+          <Calendar className="w-4 h-4 text-primary" />
+          View 21-Year Milestone & Growth Table
+        </Button>
 
         <Button
           className="w-full gap-2"
@@ -655,6 +710,13 @@ const SSYCalculator = () => {
           Export & Share Report PDF
         </Button>
       </Card>
+
+      <InvestmentScheduleDialog
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title="Sukanya Samriddhi Yojana (SSY) 21-Year Schedule"
+        schedule={ssySchedule}
+      />
 
       <SaveDialog
         open={saveDialogOpen}
@@ -694,13 +756,8 @@ const SSYCalculator = () => {
           { label: "Maturity Year", value: `${result.maturityYear}` },
         ]}
         scheduleTitle="Sukanya Samriddhi Yearly Schedule"
-        scheduleHeaders={{ period: "Year", invested: "Total Deposited", interest: "Interest Earned", balance: "Account Balance" }}
-        schedule={result.yearlySchedule?.map((row: any) => ({
-          period: `Year ${row.year} (${row.calendarYear})`,
-          invested: row.totalInvested,
-          interest: row.interestEarned,
-          total: row.balance,
-        }))}
+        scheduleHeaders={{ period: "Girl Age (Year)", invested: "Total Deposited", interest: "Interest Earned", balance: "Account Balance" }}
+        schedule={ssySchedule}
       />
     </div>
   );
