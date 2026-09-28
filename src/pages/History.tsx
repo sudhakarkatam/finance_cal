@@ -82,6 +82,7 @@ const History = () => {
       // New
       'time-cost': 'Time-Cost Calculator',
       'trip-cost': 'Trip Cost Calculator',
+      gold: 'Gold Calculator',
     };
     return names[type] || type;
   };

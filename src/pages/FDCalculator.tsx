@@ -1,81 +1,152 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, RotateCcw, PiggyBank, Info, Calendar, Share2 } from 'lucide-react';
+import { Save, RotateCcw, PiggyBank, Info, Calendar, Share2, ShieldCheck, Wallet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import CalculatorInput from '@/components/ui/CalculatorInput';
+import ResultChart from '@/components/ui/ResultChart';
 import SaveDialog from '@/components/SaveDialog';
 import ShareReportModal from '@/components/ShareReportModal';
 import InvestmentScheduleDialog, { ScheduleRow } from '@/components/InvestmentScheduleDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useCurrency } from '@/hooks/useCurrency';
 
 const FDCalculator = () => {
   const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [depositAmount, setDepositAmount] = useState(100000);
   const [interestRate, setInterestRate] = useState(7);
-  const [tenure, setTenure] = useState(1); // in years
-  const [frequency, setFrequency] = useState('4'); // Quarterly
+  const [tenureMonths, setTenureMonths] = useState(12); // Default 1 Year (12 Months)
+  const [payoutType, setPayoutType] = useState<'cumulative' | 'payout'>('cumulative');
+  const [frequency, setFrequency] = useState('4'); // Quarterly compounding / payout
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
-  const fdSchedule = useMemo(() => {
-    const list: ScheduleRow[] = [];
-    const principal = depositAmount;
-    const rate = interestRate / 100;
-    const compoundingFreq = Number(frequency);
-    const totalYearsVal = Math.max(1, Math.ceil(tenure));
-    let prevAmount = principal;
-
-    for (let y = 1; y <= totalYearsVal; y++) {
-      const timeVal = y > tenure ? tenure : y;
-      const mat = principal * Math.pow(1 + rate / compoundingFreq, compoundingFreq * timeVal);
-      const openingBalance = y === 1 ? principal : prevAmount;
-      const interestForYear = mat - openingBalance;
-      prevAmount = mat;
-
-      list.push({
-        period: `Year ${y}`,
-        invested: Math.round(openingBalance),
-        interest: Math.round(interestForYear),
-        total: Math.round(mat),
-      });
-    }
-    return list;
-  }, [depositAmount, interestRate, tenure, frequency]);
+  const tenureYears = tenureMonths / 12;
+  const tenureYearsDisplay = tenureYears.toFixed(tenureMonths % 12 === 0 ? 0 : 1);
 
   const calculateFD = () => {
-    const principal = depositAmount; // P
-    const rate = interestRate / 100; // R (convert percentage to decimal)
-    const years = tenure; // N (tenure in years)
-    const compoundingFreq = Number(frequency); // F (compounding frequency per year)
+    const P = depositAmount;
+    const R = interestRate / 100;
+    const T = tenureYears;
+    const freq = Number(frequency);
 
-    // FD Formula: A = P * (1 + R/F) ^ (F * N)
-    const maturityAmount = principal * Math.pow(1 + rate / compoundingFreq, compoundingFreq * years);
-    const interest = maturityAmount - principal;
+    let maturityAmount = 0;
+    let interest = 0;
+    let periodicPayout = 0;
 
-    // TDS calculation (if interest > 40,000 for individuals)
-    const tds = interest > 40000 ? interest * 0.1 : 0;
+    if (payoutType === 'cumulative') {
+      // Standard Compound Interest: A = P * (1 + R/F)^(F * T)
+      maturityAmount = P * Math.pow(1 + R / freq, freq * T);
+      interest = Math.max(0, maturityAmount - P);
+    } else {
+      // Non-Cumulative (Regular Interest Payout)
+      // Periodic payout = P * (R / freq)
+      periodicPayout = P * (R / freq);
+      const totalPeriods = freq * T;
+      interest = periodicPayout * totalPeriods;
+      maturityAmount = P; // Principal returned at maturity
+    }
+
+    // Section 194A TDS: Evaluated per financial year (Threshold: ₹40,000 / year)
+    const annualInterest = T > 0 ? interest / T : 0;
+    const tds = annualInterest > 40000 ? Math.round(interest * 0.1) : 0;
+    const netReturn = Math.round(interest - tds);
 
     return {
-      principal,
+      principal: P,
       interest: Math.round(interest),
       maturityAmount: Math.round(maturityAmount),
-      tds: Math.round(tds),
-      netReturn: Math.round(interest - tds)
+      tds,
+      netReturn,
+      annualInterest: Math.round(annualInterest),
+      periodicPayout: Math.round(periodicPayout),
     };
   };
 
   const result = calculateFD();
 
+  const fdSchedule = useMemo(() => {
+    const list: ScheduleRow[] = [];
+    const principal = depositAmount;
+    const R = interestRate / 100;
+    const freq = Number(frequency);
+    const N = tenureMonths;
+
+    let step = 12;
+    if (N <= 12) step = 3;
+    else if (N <= 24) step = 6;
+    else step = 12;
+
+    let runningAccumulatedInterest = 0;
+
+    for (let m = step; m <= N; m += step) {
+      const curT = m / 12;
+      const periodLabel = m % 12 === 0 ? `Year ${m / 12}` : `Month ${m}`;
+
+      if (payoutType === 'cumulative') {
+        const mat = principal * Math.pow(1 + R / freq, freq * curT);
+        const curInterest = mat - principal;
+        list.push({
+          period: periodLabel,
+          invested: Math.round(principal),
+          interest: Math.round(curInterest),
+          total: Math.round(mat),
+        });
+      } else {
+        const curPeriods = freq * curT;
+        const curInterest = (principal * (R / freq)) * curPeriods;
+        runningAccumulatedInterest = curInterest;
+        list.push({
+          period: periodLabel,
+          invested: Math.round(principal),
+          interest: Math.round(curInterest),
+          total: Math.round(principal), // Principal constant in payout mode
+        });
+      }
+    }
+
+    if (N % step !== 0) {
+      const curT = N / 12;
+      const periodLabel = `Month ${N} (Maturity)`;
+      if (payoutType === 'cumulative') {
+        const mat = principal * Math.pow(1 + R / freq, freq * curT);
+        list.push({
+          period: periodLabel,
+          invested: Math.round(principal),
+          interest: Math.round(mat - principal),
+          total: Math.round(mat),
+        });
+      } else {
+        const curPeriods = freq * curT;
+        const curInterest = (principal * (R / freq)) * curPeriods;
+        list.push({
+          period: periodLabel,
+          invested: Math.round(principal),
+          interest: Math.round(curInterest),
+          total: Math.round(principal),
+        });
+      }
+    }
+
+    return list;
+  }, [depositAmount, interestRate, tenureMonths, frequency, payoutType]);
+
   const handleReset = () => {
     setDepositAmount(100000);
     setInterestRate(7);
-    setTenure(1);
+    setTenureMonths(12);
     setFrequency('4');
+    setPayoutType('cumulative');
   };
 
   const frequencyOptions = [
@@ -95,7 +166,7 @@ const FDCalculator = () => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">FD Calculator</h2>
-              <p className="text-xs text-muted-foreground">Fixed Deposit returns calculator</p>
+              <p className="text-xs text-muted-foreground">Fixed Deposit with cumulative & payout options</p>
             </div>
             <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
               <DialogTrigger asChild>
@@ -108,169 +179,55 @@ const FDCalculator = () => {
                   <Info className="w-4 h-4 text-muted-foreground hover:text-primary" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>About FD & Calculation</DialogTitle>
+                  <DialogTitle>About Fixed Deposit (FD) & Banking Guidelines</DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Fixed Deposit compounding guidelines, cumulative vs payout plans, DICGC insurance, and Section 194A TDS rules.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 text-sm">
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">What is Fixed Deposit (FD)?</h3>
+                    <h3 className="font-semibold text-foreground mb-1.5">What is a Fixed Deposit (FD)?</h3>
                     <p className="text-muted-foreground">
-                      Fixed Deposit (FD) is a financial instrument offered by banks and NBFCs where you deposit a lump sum amount for a fixed tenure at a predetermined interest rate. FD offers guaranteed returns and is one of the safest investment options in India.
+                      A Fixed Deposit is a secured lump-sum investment offered by banks and NBFCs. You lock in a fixed principal for a predetermined tenure and earn a guaranteed interest rate unaffected by market fluctuations.
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Key Features</h3>
+                    <h3 className="font-semibold text-foreground mb-1.5">Cumulative vs Non-Cumulative (Payout)</h3>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li><strong>Guaranteed Returns:</strong> Fixed interest rate for the entire tenure</li>
-                      <li><strong>Safety:</strong> Low risk, covered under DICGC insurance (up to ₹5 lakh per bank)</li>
-                      <li><strong>Flexibility:</strong> Choose tenure from 7 days to 10 years</li>
-                      <li><strong>Tax Benefits:</strong> Tax-saving FDs (5-year lock-in) eligible under Section 80C</li>
-                      <li><strong>Premature Withdrawal:</strong> Available with penalty (usually 0.5-1% reduction in interest rate)</li>
+                      <li>
+                        <strong>Cumulative (Reinvestment):</strong> Interest is compounded quarterly and paid out along with the principal at maturity. Best for wealth accumulation.
+                      </li>
+                      <li>
+                        <strong>Non-Cumulative (Regular Payout):</strong> Interest is paid out directly into your savings account monthly, quarterly, or yearly. Best for retirees seeking periodic cash flow.
+                      </li>
                     </ul>
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Interest Compounding</h3>
-                    <p className="text-muted-foreground mb-2">
-                      FD interest can be compounded at different frequencies:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li><strong>Monthly:</strong> Interest calculated and added monthly (12 times per year)</li>
-                      <li><strong>Quarterly:</strong> Interest calculated and added quarterly (4 times per year) - Most common</li>
-                      <li><strong>Half-Yearly:</strong> Interest calculated and added twice per year</li>
-                      <li><strong>Yearly:</strong> Interest calculated and added once per year</li>
-                    </ul>
-                    <p className="text-muted-foreground mt-2">
-                      <strong>Note:</strong> More frequent compounding (monthly/quarterly) generally gives higher returns than yearly compounding.
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                      🛡️ DICGC Insurance Coverage
+                    </h4>
+                    <p className="text-xs text-blue-800 dark:text-blue-300">
+                      Bank deposits (principal and interest) are insured up to <strong>₹5,00,000</strong> per depositor per bank by the Deposit Insurance and Credit Guarantee Corporation (DICGC), an RBI subsidiary.
                     </p>
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Calculation Formula</h3>
-                    <p className="text-muted-foreground mb-2">
-                      FD uses compound interest formula:
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                      📋 Section 194A TDS Rule (Annualized)
+                    </h4>
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                      TDS at 10% is deducted only if the interest in a <strong>single financial year exceeds ₹40,000</strong>. You can submit Form 15G if your total annual taxable income is below the exemption limit.
                     </p>
-                    <p className="text-muted-foreground font-mono text-xs bg-muted p-2 rounded mb-2">
-                      Maturity Amount = Principal × (1 + Rate/Frequency)^(Frequency × Years)
-                    </p>
-                    <p className="text-muted-foreground">
-                      Where: Rate = Annual interest rate, Frequency = Compounding frequency per year
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">TDS (Tax Deducted at Source)</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>TDS is deducted at 10% if interest exceeds ₹40,000 per year (₹50,000 for senior citizens)</li>
-                      <li>TDS deducted only if PAN is provided</li>
-                      <li>If no PAN, TDS is deducted at 20%</li>
-                      <li>You can submit Form 15G/15H to avoid TDS if your total income is below taxable limit</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Important Points</h3>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>FD interest rates vary by bank, tenure, and deposit amount</li>
-                      <li>Longer tenures typically offer higher interest rates</li>
-                      <li>Senior citizens usually get 0.25-0.50% extra interest rate</li>
-                      <li>FD interest is fully taxable as per your income tax slab</li>
-                      <li>Compare rates across banks before investing</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Calculator Features</h3>
-                    <p className="text-muted-foreground">
-                      The FD calculator helps you estimate the maturity amount of your fixed deposit. Enter the deposit amount, interest rate, tenure, and compounding frequency to see projected returns, interest earned, and TDS deduction. This helps you plan your investments better.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Examples to Understand Better</h3>
-                    <div className="space-y-3 text-muted-foreground">
-                      <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Example 1: Quarterly Compounding</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> Deposit ₹5,00,000 for 5 years at 7% interest, quarterly compounding<br />
-                          <strong>Quarterly Rate:</strong> 7% ÷ 4 = 1.75% per quarter<br />
-                          <strong>Compounding:</strong> 5 years × 4 = 20 quarters<br />
-                          <strong>Calculation:</strong> ₹5,00,000 × (1.0175)^20 = ₹7,07,274<br />
-                          <strong>Interest Earned:</strong> ₹2,07,274<br />
-                          <strong>vs Yearly:</strong> ₹7,01,276 (₹5,998 less) - quarterly compounding gives more<br />
-                          <strong>Benefit:</strong> More frequent compounding = higher returns
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                        <p className="font-semibold text-green-900 dark:text-green-100 mb-1">Example 2: TDS Calculation</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> ₹10,00,000 FD for 3 years at 7%, quarterly compounding<br />
-                          <strong>Annual Interest:</strong> ₹72,180 (exceeds ₹40,000 limit)<br />
-                          <strong>TDS:</strong> ₹72,180 × 10% = ₹7,218 per year<br />
-                          <strong>3-Year TDS:</strong> ₹21,654 deducted<br />
-                          <strong>Net Interest:</strong> ₹2,15,886 - ₹21,654 = ₹1,94,232<br />
-                          <strong>Maturity:</strong> ₹10,00,000 + ₹1,94,232 = ₹11,94,232<br />
-                          <strong>Save TDS:</strong> Submit Form 15G/15H if total income below taxable limit
-                        </p>
-                      </div>
-
-                      <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                        <p className="font-semibold text-purple-900 dark:text-purple-100 mb-1">Example 3: Senior Citizen Rates</p>
-                        <p className="text-sm">
-                          <strong>Regular Rate:</strong> ₹10,00,000 for 5 years at 7% → ₹14,14,778<br />
-                          <strong>Senior Citizen:</strong> ₹10,00,000 for 5 years at 7.5% → ₹14,44,057<br />
-                          <strong>Extra Interest:</strong> ₹29,279 more (0.5% rate difference)<br />
-                          <strong>Plus TDS Limit:</strong> ₹50,000 vs ₹40,000 (₹1,118 more saved)<br />
-                          <strong>Total Benefit:</strong> ₹30,397 extra over 5 years<br />
-                          <strong>Age Requirement:</strong> 60+ years to qualify for senior citizen rates
-                        </p>
-                      </div>
-
-                      <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Example 4: Tax-Saving FD</p>
-                        <p className="text-sm">
-                          <strong>Situation:</strong> ₹1,50,000 in tax-saving FD (5-year lock-in) at 6.5%<br />
-                          <strong>Tax Benefit:</strong> ₹1,50,000 deduction under Section 80C (saves ₹45,000 tax at 30%)<br />
-                          <strong>Maturity:</strong> ₹2,06,138 after 5 years<br />
-                          <strong>Interest Earned:</strong> ₹56,138 (fully taxable)<br />
-                          <strong>Net Benefit:</strong> ₹45,000 tax saved + ₹56,138 interest = ₹1,01,138 value<br />
-                          <strong>Effective Return:</strong> 13.5% including tax benefit<br />
-                          <strong>Lock-in:</strong> 5 years mandatory - no premature withdrawal
-                        </p>
-                      </div>
-
-                      <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                        <p className="font-semibold text-red-900 dark:text-red-100 mb-1">Example 5: Different Tenure Comparison</p>
-                        <p className="text-sm">
-                          <strong>₹5,00,000 Deposit at 7%:</strong><br />
-                          <strong>1 Year:</strong> ₹5,35,616 (₹35,616 interest)<br />
-                          <strong>3 Years:</strong> ₹6,15,037 (₹1,15,037 interest, 7.67% CAGR)<br />
-                          <strong>5 Years:</strong> ₹7,07,274 (₹2,07,274 interest, 7.19% CAGR)<br />
-                          <strong>10 Years:</strong> ₹10,00,000 (₹5,00,000 interest, doubles money)<br />
-                          <strong>Insight:</strong> Longer tenure = higher total interest due to compounding<br />
-                          <strong>Strategy:</strong> Lock in longer tenure if rates are attractive
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                    <p className="font-semibold text-emerald-900 dark:text-emerald-100 mb-1">Pro Tips</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
-                      <li>Choose quarterly compounding over yearly for better returns (typically 0.1-0.2% more)</li>
-                      <li>Compare FD rates across banks - differences of 0.25-0.5% add up over years</li>
-                      <li>Submit Form 15G (under 60) or 15H (60+) to avoid TDS if income below taxable limit</li>
-                      <li>Senior citizens get 0.25-0.50% extra rate - leverage if eligible</li>
-                      <li>Consider tax-saving FD only if you need Section 80C deduction - lock-in is 5 years</li>
-                    </ul>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -282,41 +239,134 @@ const FDCalculator = () => {
           </Button>
         </div>
 
+        {/* Safety & Compounding Banner */}
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 p-3.5 rounded-lg">
+          <p className="text-xs text-blue-600 dark:text-blue-300">Safety & Guarantee</p>
+          <p className="text-base font-bold text-blue-900 dark:text-blue-100">Guaranteed Fixed Returns</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Fixed interest rate locked for the entire tenure
+          </p>
+        </div>
 
+        {/* Payout Option Toggle (Cumulative vs Non-Cumulative) */}
+        <div className="space-y-1.5 bg-muted/40 p-3 rounded-lg border border-border">
+          <Label className="text-sm font-medium text-foreground">Interest Payout Plan</Label>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setPayoutType('cumulative')}
+              className={`py-2 px-3 text-xs font-medium rounded-md transition-all text-center ${
+                payoutType === 'cumulative'
+                  ? 'bg-background text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Cumulative (At Maturity)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPayoutType('payout')}
+              className={`py-2 px-3 text-xs font-medium rounded-md transition-all text-center ${
+                payoutType === 'payout'
+                  ? 'bg-background text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Regular Payout (Monthly/Quarterly)
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">
+            {payoutType === 'cumulative'
+              ? 'Interest is reinvested and compounded quarterly. Entire corpus paid at maturity.'
+              : 'Interest is paid out periodically directly into your savings account. Principal returned at maturity.'}
+          </p>
+        </div>
 
-        <CalculatorInput
-          label="Deposit amount"
-          value={depositAmount}
-          onChange={setDepositAmount}
-          min={1000}
-          max={10000000}
-          step={1000}
-          prefix={symbol}
-        />
+        {/* Deposit Amount */}
+        <div className="space-y-2">
+          <CalculatorInput
+            label="Deposit Amount"
+            value={depositAmount}
+            onChange={setDepositAmount}
+            min={1000}
+            max={10000000}
+            step={5000}
+            prefix={symbol}
+          />
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {[25000, 50000, 100000, 200000, 500000].map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setDepositAmount(val)}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                  depositAmount === val
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                ₹{val >= 100000 ? `${val / 100000} Lakh` : `${val / 1000}k`}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {/* Interest Rate */}
         <CalculatorInput
           label="Interest Rate (p.a)"
           value={interestRate}
           onChange={setInterestRate}
-          min={0}
-          max={12}
+          min={1}
+          max={15}
           step={0.1}
           suffix="%"
           placeholder="7.0"
         />
 
-        <CalculatorInput
-          label="Tenure"
-          value={tenure}
-          onChange={setTenure}
-          min={1}
-          max={30}
-          step={1}
-          suffix="Years"
-        />
-
+        {/* Tenure in Months with Presets */}
         <div className="space-y-2">
-          <Label>Interest compounding</Label>
+          <div className="flex justify-between items-center text-sm font-medium">
+            <span>Tenure: {tenureYearsDisplay} Years ({tenureMonths} Months)</span>
+          </div>
+          <CalculatorInput
+            label="Tenure (in Months)"
+            value={tenureMonths}
+            onChange={(val) => setTenureMonths(Math.max(1, Math.min(120, Math.round(val))))}
+            min={1}
+            max={120}
+            step={1}
+            suffix="Months"
+          />
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {[
+              { label: '6 Months', months: 6 },
+              { label: '1 Year', months: 12 },
+              { label: '400 Days (~13M)', months: 13 },
+              { label: '2 Years', months: 24 },
+              { label: '3 Years', months: 36 },
+              { label: '5 Years', months: 60 },
+            ].map((p) => (
+              <button
+                key={p.months}
+                type="button"
+                onClick={() => setTenureMonths(p.months)}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                  tenureMonths === p.months
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Compounding / Payout Frequency */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">
+            {payoutType === 'cumulative' ? 'Compounding Frequency' : 'Payout Frequency'}
+          </Label>
           <Select value={frequency} onValueChange={setFrequency}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -332,40 +382,61 @@ const FDCalculator = () => {
         </div>
       </Card>
 
+      {/* Results Card */}
       <Card className="p-6 space-y-4 shadow-lg">
-        <h3 className="text-lg font-semibold text-foreground">Results</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          {payoutType === 'cumulative' ? 'Maturity Returns' : 'Income & Payout Summary'}
+        </h3>
 
-        <div className="bg-gradient-to-r from-primary to-primary/80 p-5 rounded-xl text-center shadow-md mb-4">
-          <p className="text-xs text-primary-foreground/80 mb-1">Maturity Amount</p>
-          <p className="text-3xl font-bold text-primary-foreground">{formatCurrency(result.maturityAmount)}</p>
-        </div>
+        {/* Visual Donut Chart */}
+        <ResultChart
+          principal={result.principal}
+          returns={result.interest}
+          principalLabel="Principal Deposit"
+          returnsLabel="Total Interest"
+        />
+
+        {/* Payout highlight if non-cumulative */}
+        {payoutType === 'payout' && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-lg flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                {frequencyOptions.find((f) => f.value === frequency)?.label} Payout Amount
+              </p>
+              <p className="text-xs text-muted-foreground">Credited to savings account</p>
+            </div>
+            <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+              {formatCurrency(result.periodicPayout)}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2 bg-muted/30 p-4 rounded-lg">
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-muted-foreground">Principal amount</span>
+            <span className="text-sm text-muted-foreground">Principal Deposited</span>
             <span className="font-semibold text-foreground">{formatCurrency(result.principal)}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">Total interest</span>
-            <span className="font-semibold text-foreground">{formatCurrency(result.interest)}</span>
+            <span className="text-sm text-muted-foreground">Total Interest Earned</span>
+            <span className="font-semibold text-primary">{formatCurrency(result.interest)}</span>
           </div>
           {result.tds > 0 && (
             <div className="flex justify-between items-center py-2 border-t border-border">
-              <span className="text-sm text-muted-foreground">TDS (10%)</span>
+              <span className="text-sm text-muted-foreground">TDS (10% Sec 194A)</span>
               <span className="font-semibold text-destructive">-{formatCurrency(result.tds)}</span>
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t-2 border-primary/20 bg-primary/5 -mx-4 px-4 rounded">
-            <span className="text-base font-semibold text-foreground">Net returns</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(result.netReturn)}</span>
+            <span className="text-base font-semibold text-foreground">
+              {payoutType === 'cumulative' ? 'Total Maturity Value' : 'Principal Returned at Maturity'}
+            </span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(result.maturityAmount)}</span>
           </div>
         </div>
 
         {result.tds > 0 && (
-          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 p-3 rounded-lg">
-            <p className="text-xs text-yellow-800 dark:text-yellow-200">
-              TDS is deducted if interest exceeds ₹40,000 per year
-            </p>
+          <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 p-3 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
+            TDS applies because average annual interest ({formatCurrency(result.annualInterest)}/yr) exceeds ₹40,000. Submit Form 15G if total income is below the taxable threshold.
           </div>
         )}
 
@@ -376,7 +447,7 @@ const FDCalculator = () => {
             onClick={() => setScheduleModalOpen(true)}
           >
             <Calendar className="w-4 h-4 text-primary" />
-            View Annual Growth Schedule Table
+            View Growth Schedule Table
           </Button>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -406,19 +477,30 @@ const FDCalculator = () => {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         calculationType="fd"
-        inputs={{ depositAmount, interestRate, tenure, frequency: Number(frequency) }}
+        inputs={{
+          depositAmount,
+          interestRate,
+          tenure: Number(tenureYearsDisplay),
+          tenureMonths,
+          frequency: Number(frequency),
+          payoutType,
+        }}
         results={result}
       />
 
       <ShareReportModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        title="Fixed Deposit Return Report"
+        title="Fixed Deposit (FD) Report"
         inputs={[
           { label: "Deposit Amount", value: formatCurrency(depositAmount) },
           { label: "Interest Rate (p.a)", value: `${interestRate}%` },
-          { label: "FD Tenure", value: `${tenure} Years` },
-          { label: "Compounding Frequency", value: frequencyOptions.find(f => f.value === frequency)?.label || "Quarterly" },
+          { label: "FD Tenure", value: `${tenureYearsDisplay} Years (${tenureMonths} Months)` },
+          { label: "Payout Plan", value: payoutType === 'cumulative' ? 'Cumulative (At Maturity)' : 'Regular Payout' },
+          {
+            label: payoutType === 'cumulative' ? "Compounding" : "Payout Frequency",
+            value: frequencyOptions.find((f) => f.value === frequency)?.label || "Quarterly",
+          },
         ]}
         results={[
           { label: "Principal Deposit", value: formatCurrency(result.principal) },
@@ -427,7 +509,7 @@ const FDCalculator = () => {
           { label: "Total Maturity Value", value: formatCurrency(result.maturityAmount), isHighlight: true },
         ]}
         scheduleTitle="Fixed Deposit Growth Schedule"
-        scheduleHeaders={{ period: "Period", invested: "Opening Corpus", interest: "Interest Earned", balance: "Closing Corpus" }}
+        scheduleHeaders={{ period: "Period", invested: "Principal Amount", interest: "Interest Accrued", balance: "Balance / Corpus" }}
         schedule={fdSchedule}
       />
 

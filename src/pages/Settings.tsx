@@ -162,7 +162,7 @@ const Settings = () => {
               <h3 className="font-semibold text-foreground">
                 Financial Calculator
               </h3>
-              <p className="text-sm text-muted-foreground">Version 1.5.2</p>
+              <p className="text-sm text-muted-foreground">Version 1.9</p>
             </div>
 
             <Separator />

@@ -58,8 +58,35 @@ const parseNumericValue = (val: string): number => {
   return 0;
 };
 
+interface DonutItem {
+  label: string;
+  value: number;
+  pct: number;
+  pctExact: string;
+  color: string;
+}
+
+interface MultiLoanDonutItem {
+  id: string;
+  title: string;
+  principal: number;
+  interest: number;
+  outflow: number;
+  principalPct: number;
+  interestPct: number;
+  principalPctExact: string;
+  interestPctExact: string;
+  isBest: boolean;
+  color1: string;
+  color2: string;
+}
+
 interface DonutData {
   hasSplit: boolean;
+  items?: DonutItem[];
+  multiLoans?: MultiLoanDonutItem[];
+  savingsDiff?: number;
+  bestLoanTitle?: string;
   val1: number;
   val2: number;
   totalVal: number;
@@ -78,9 +105,9 @@ interface DonutData {
 // Feature 1: Pure Canvas-to-PNG Donut Generator
 // Renders 100% reliably in PDF exports (html2canvas) and across all screens with zero SVG stroke/rendering bugs
 const generateDonutDataUrl = (
-  pct1: number,
-  color1: string,
-  color2: string
+  slices: { pct: number; color: string }[],
+  centerText?: string,
+  centerSubtext?: string
 ): string => {
   if (typeof document === "undefined") return "";
   try {
@@ -98,58 +125,51 @@ const generateDonutDataUrl = (
 
     ctx.clearRect(0, 0, size, size);
 
-    // Clamp pct1 to 1..99
-    const clampedPct1 = Math.min(Math.max(pct1, 1), 99);
-    const angle1 = (clampedPct1 / 100) * 2 * Math.PI;
+    const totalPct = slices.reduce((acc, s) => acc + s.pct, 0) || 100;
     const startAngle = -Math.PI / 2; // 12 o'clock
-    const splitAngle = startAngle + angle1;
-    const endAngle = startAngle + 2 * Math.PI;
+    let currentAngle = startAngle;
 
-    // 1. Draw Slice 2 (Background / Remaining Arc)
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, splitAngle, endAngle);
-    ctx.strokeStyle = color2;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = "butt";
-    ctx.stroke();
+    slices.forEach((slice) => {
+      const sliceAngle = (Math.max(1, slice.pct) / totalPct) * 2 * Math.PI;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, currentAngle, currentAngle + sliceAngle);
+      ctx.strokeStyle = slice.color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "butt";
+      ctx.stroke();
 
-    // 2. Draw Slice 1 (Foreground / Primary Arc)
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, startAngle, splitAngle);
-    ctx.strokeStyle = color1;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = "butt";
-    ctx.stroke();
+      // Subtle Clean Dividers between segments (2.5px crisp white line)
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(
+        cx + (radius - lineWidth / 2 - 1) * Math.cos(currentAngle),
+        cy + (radius - lineWidth / 2 - 1) * Math.sin(currentAngle)
+      );
+      ctx.lineTo(
+        cx + (radius + lineWidth / 2 + 1) * Math.cos(currentAngle),
+        cy + (radius + lineWidth / 2 + 1) * Math.sin(currentAngle)
+      );
+      ctx.stroke();
 
-    // 3. Subtle Clean Dividers between segments (2px crisp white lines at 12 o'clock and split point)
+      currentAngle += sliceAngle;
+    });
+
+    // Final Divider at closing boundary
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2.5;
-
-    // Top divider (at startAngle)
     ctx.beginPath();
     ctx.moveTo(
-      cx + (radius - lineWidth / 2 - 1) * Math.cos(startAngle),
-      cy + (radius - lineWidth / 2 - 1) * Math.sin(startAngle)
+      cx + (radius - lineWidth / 2 - 1) * Math.cos(currentAngle),
+      cy + (radius - lineWidth / 2 - 1) * Math.sin(currentAngle)
     );
     ctx.lineTo(
-      cx + (radius + lineWidth / 2 + 1) * Math.cos(startAngle),
-      cy + (radius + lineWidth / 2 + 1) * Math.sin(startAngle)
+      cx + (radius + lineWidth / 2 + 1) * Math.cos(currentAngle),
+      cy + (radius + lineWidth / 2 + 1) * Math.sin(currentAngle)
     );
     ctx.stroke();
 
-    // Split divider (at splitAngle)
-    ctx.beginPath();
-    ctx.moveTo(
-      cx + (radius - lineWidth / 2 - 1) * Math.cos(splitAngle),
-      cy + (radius - lineWidth / 2 - 1) * Math.sin(splitAngle)
-    );
-    ctx.lineTo(
-      cx + (radius + lineWidth / 2 + 1) * Math.cos(splitAngle),
-      cy + (radius + lineWidth / 2 + 1) * Math.sin(splitAngle)
-    );
-    ctx.stroke();
-
-    // 4. Center Hole Disk: Crisp white circular background ensuring 100% contrast in Dark Mode, Light Mode, and PDF
+    // Center Hole Disk: Crisp white circular background
     ctx.beginPath();
     ctx.arc(cx, cy, radius - lineWidth / 2 - 2, 0, 2 * Math.PI);
     ctx.fillStyle = "#ffffff";
@@ -158,16 +178,19 @@ const generateDonutDataUrl = (
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // 5. Center Typography
+    // Center Typography
+    const displayMain = centerText || `${Math.round(slices[0]?.pct || 50)}%`;
+    const displaySub = centerSubtext || "RATIO";
+
     ctx.fillStyle = "#0f172a";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = displayMain.length > 4 ? "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" : "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`${clampedPct1}%`, cx, cy - 8);
+    ctx.fillText(displayMain, cx, cy - 8);
 
     ctx.fillStyle = "#64748b";
     ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("RATIO", cx, cy + 18);
+    ctx.fillText(displaySub, cx, cy + 18);
 
     return canvas.toDataURL("image/png");
   } catch (err) {
@@ -232,6 +255,95 @@ const extractDonutData = (
   isLoan: boolean
 ): DonutData | null => {
   const t = title.toLowerCase();
+
+  // 0. Multi-Loan Comparison (Separate Donut for Each Compared Loan)
+  if (t.includes("compare") || t.includes("comparison")) {
+    const principalInputs = inputs.filter((i) => /principal/i.test(i.label));
+    const interestResults = results.filter((r) => /total.*interest/i.test(r.label));
+    const outflowResults = results.filter((r) => /total.*outflow|total.*payment|outflow/i.test(r.label));
+
+    if (principalInputs.length >= 2) {
+      const parsedLoans: MultiLoanDonutItem[] = principalInputs
+        .map((pInp, idx) => {
+          const loanTitle = pInp.label.replace(/principal/i, "").trim() || `Loan ${idx + 1}`;
+          const principal = parseNumericValue(pInp.value);
+          const matchingInterest =
+            interestResults.find(
+              (r) => loanTitle && r.label.toLowerCase().includes(loanTitle.toLowerCase())
+            ) || interestResults[idx];
+          const interest = matchingInterest ? parseNumericValue(matchingInterest.value) : 0;
+
+          const matchingOutflow =
+            outflowResults.find(
+              (r) => loanTitle && r.label.toLowerCase().includes(loanTitle.toLowerCase())
+            ) || outflowResults[idx];
+          const outflow = matchingOutflow
+            ? parseNumericValue(matchingOutflow.value)
+            : principal + interest;
+
+          const total = outflow > 0 ? outflow : principal + interest;
+          const rawP = total > 0 ? (principal / total) * 100 : 50;
+          const pExact = rawP.toFixed(1);
+          const iExact = (100 - parseFloat(pExact)).toFixed(1);
+          const pPct = Math.round(rawP);
+          const iPct = 100 - pPct;
+
+          return {
+            id: `loan-${idx + 1}`,
+            title: loanTitle,
+            principal,
+            interest,
+            outflow: total,
+            principalPct: pPct,
+            interestPct: iPct,
+            principalPctExact: `${pExact}%`,
+            interestPctExact: `${iExact}%`,
+            isBest: false,
+            color1: "#0f172a", // Dark Slate (Principal)
+            color2: "#f59e0b", // Amber (Interest)
+          };
+        })
+        .filter((l) => l.principal > 0);
+
+      if (parsedLoans.length >= 2) {
+        let minOutflow = Infinity;
+        let maxOutflow = -Infinity;
+        let bestIdx = 0;
+        parsedLoans.forEach((l, idx) => {
+          if (l.outflow < minOutflow) {
+            minOutflow = l.outflow;
+            bestIdx = idx;
+          }
+          if (l.outflow > maxOutflow) {
+            maxOutflow = l.outflow;
+          }
+        });
+        parsedLoans[bestIdx].isBest = true;
+        const savingsDiff = maxOutflow - minOutflow;
+        const bestLoanTitle = parsedLoans[bestIdx].title;
+
+        return {
+          hasSplit: true,
+          multiLoans: parsedLoans,
+          savingsDiff,
+          bestLoanTitle,
+          val1: parsedLoans[0].principal,
+          val2: parsedLoans[0].interest,
+          totalVal: savingsDiff,
+          label1: `${parsedLoans[0].title} Principal`,
+          label2: `${parsedLoans[0].title} Interest`,
+          totalLabel: "Max Outflow Difference (Savings)",
+          pct1: parsedLoans[0].principalPct,
+          pct2: parsedLoans[0].interestPct,
+          pctExact1: parsedLoans[0].principalPctExact,
+          pctExact2: parsedLoans[0].interestPctExact,
+          color1: "#0f172a",
+          color2: "#f59e0b",
+          breakdownTitle: "Side-by-Side Loan Outflow & Interest Burden",
+        };
+      }
+    }
+  }
 
   // 1. Loans / Amortization (Principal vs Total Interest)
   if (isLoan || t.includes("loan") || t.includes("emi")) {
@@ -395,11 +507,78 @@ const generateSmartInsight = (
   title: string,
   inputs: { label: string; value: string }[],
   results: { label: string; value: string }[],
-  isLoan: boolean
+  isLoan: boolean,
+  currSymbol: string = "₹"
 ): SmartInsight | null => {
   const t = title.toLowerCase();
 
-  // 1. Loans / EMI (Borrowing cost per ₹100)
+  // 0. Multi-Loan Comparison (Comparative Borrowing Burden)
+  if (t.includes("compare") || t.includes("comparison")) {
+    const principalInputs = inputs.filter((i) => /principal/i.test(i.label));
+    const interestResults = results.filter((r) => /total.*interest/i.test(r.label));
+    const outflowResults = results.filter((r) => /total.*outflow|total.*payment|outflow/i.test(r.label));
+
+    if (principalInputs.length >= 2 && interestResults.length >= 2) {
+      const loanBurdenStats = principalInputs
+        .map((pInp, idx) => {
+          const loanTitle = pInp.label.replace(/principal/i, "").trim() || `Loan ${idx + 1}`;
+          const principal = parseNumericValue(pInp.value);
+          const matchingInterest =
+            interestResults.find(
+              (r) => loanTitle && r.label.toLowerCase().includes(loanTitle.toLowerCase())
+            ) || interestResults[idx];
+          const interest = matchingInterest ? parseNumericValue(matchingInterest.value) : 0;
+
+          const matchingOutflow =
+            outflowResults.find(
+              (r) => loanTitle && r.label.toLowerCase().includes(loanTitle.toLowerCase())
+            ) || outflowResults[idx];
+          const outflow = matchingOutflow
+            ? parseNumericValue(matchingOutflow.value)
+            : principal + interest;
+          const totalRepay = outflow > 0 ? outflow : principal + interest;
+          const costPerHundred = principal > 0 ? Math.round((totalRepay / principal) * 100) : 0;
+          const interestPct = totalRepay > 0 ? Math.round((interest / totalRepay) * 100) : 0;
+
+          return {
+            title: loanTitle,
+            principal,
+            interest,
+            outflow: totalRepay,
+            costPerHundred,
+            interestPct,
+          };
+        })
+        .filter((it) => it.principal > 0);
+
+      if (loanBurdenStats.length >= 2) {
+        const sortedByOutflow = [...loanBurdenStats].sort((a, b) => a.outflow - b.outflow);
+        const bestLoan = sortedByOutflow[0];
+        const worstLoan = sortedByOutflow[sortedByOutflow.length - 1];
+        const savingsDiff = worstLoan.outflow - bestLoan.outflow;
+
+        let burdenText = "";
+        if (loanBurdenStats.length === 2) {
+          const l1 = loanBurdenStats[0];
+          const l2 = loanBurdenStats[1];
+          burdenText = `For every ${currSymbol}100 borrowed: ${l1.title} requires ${currSymbol}${l1.costPerHundred} total repayment (${l1.interestPct}% interest), while ${l2.title} requires ${currSymbol}${l2.costPerHundred} (${l2.interestPct}% interest). Choosing ${bestLoan.title} reduces your borrowing burden, saving ${currSymbol}${savingsDiff.toLocaleString("en-IN")} in total outflow.`;
+        } else {
+          const breakdownList = loanBurdenStats
+            .map((l) => `${l.title}: ${currSymbol}${l.costPerHundred} per ${currSymbol}100 borrowed (${l.interestPct}% interest)`)
+            .join("; ");
+          burdenText = `Comparative borrowing burden: ${breakdownList}. Choosing ${bestLoan.title} minimizes your total debt outflow, saving up to ${currSymbol}${savingsDiff.toLocaleString("en-IN")}.`;
+        }
+
+        return {
+          icon: "💡",
+          title: "Borrowing Burden & Outflow Ratio",
+          text: burdenText,
+        };
+      }
+    }
+  }
+
+  // 1. Loans / EMI (Borrowing cost per unit borrowed)
   if (isLoan || t.includes("loan") || t.includes("emi")) {
     let loanVal = parseNumericValue(
       results.find((r) => /principal/i.test(r.label))?.value ||
@@ -423,7 +602,7 @@ const generateSmartInsight = (
       return {
         icon: "💡",
         title: "Borrowing Burden & Outflow Ratio",
-        text: `For every ₹100 borrowed, total repayment is ₹${costPerHundred}. Interest charges constitute ${interestPct}% of your total repayment outflow over the loan tenure.`,
+        text: `For every ${currSymbol}100 borrowed, total repayment is ${currSymbol}${costPerHundred}. Interest charges constitute ${interestPct}% of your total repayment outflow over the loan tenure.`,
       };
     }
   }
@@ -643,13 +822,20 @@ const preparePdfClone = (element: HTMLElement): HTMLElement => {
   });
 
   // 7b. Prevent sections and table rows from splitting across PDF pages
-  const avoidBreakBlocks = clone.querySelectorAll("tr, thead, .bg-muted\\/30, .bg-muted\\/40, .bg-emerald-50\\/80, .bg-amber-50, .bg-card");
+  const avoidBreakBlocks = clone.querySelectorAll("tr, thead, .bg-muted\\/30, .bg-muted\\/40, .bg-emerald-50\\/80, .bg-amber-50, .bg-blue-50\\/70, .bg-card");
   avoidBreakBlocks.forEach((el) => {
     (el as HTMLElement).style.pageBreakInside = "avoid";
     (el as HTMLElement).style.breakInside = "avoid";
   });
 
-  // 7c. Force all table cell text to solid dark color
+  // 7c. Solid background for analysis cards in PDF
+  const analysisCards = clone.querySelectorAll(".bg-blue-50\\/70");
+  analysisCards.forEach((el) => {
+    (el as HTMLElement).style.backgroundColor = "#eff6ff";
+    (el as HTMLElement).style.borderColor = "#bfdbfe";
+  });
+
+  // 7d. Force all table cell text to solid dark color
   const tableCells = clone.querySelectorAll("td");
   tableCells.forEach((el) => {
     const hEl = el as HTMLElement;
@@ -729,7 +915,7 @@ export const ShareReportModal = ({
   isLoanSchedule = false,
 }: ShareReportModalProps) => {
   const { toast } = useToast();
-  const { formatAmount: formatCurrency } = useCurrency();
+  const { formatAmount: formatCurrency, symbol } = useCurrency();
   const [copied, setCopied] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -754,7 +940,33 @@ export const ShareReportModal = ({
 
   const donutDataUrl = useMemo(() => {
     if (!donutData) return "";
-    return generateDonutDataUrl(donutData.pct1, donutData.color1, donutData.color2);
+    return generateDonutDataUrl(
+      [
+        { pct: donutData.pct1, color: donutData.color1 },
+        { pct: donutData.pct2, color: donutData.color2 },
+      ],
+      `${donutData.pct1}%`,
+      "RATIO"
+    );
+  }, [donutData]);
+
+  // Generate individual high-res canvas PNG data-URLs for each compared loan
+  const multiLoanDonuts = useMemo(() => {
+    if (!donutData?.multiLoans || donutData.multiLoans.length === 0) return [];
+    return donutData.multiLoans.map((loan) => {
+      const url = generateDonutDataUrl(
+        [
+          { pct: loan.principalPct, color: loan.color1 },
+          { pct: loan.interestPct, color: loan.color2 },
+        ],
+        `${loan.principalPct}%`,
+        "PRIN"
+      );
+      return {
+        ...loan,
+        donutDataUrl: url,
+      };
+    });
   }, [donutData]);
 
   // Contextual Statement Classification & Unique Document Reference
@@ -814,8 +1026,8 @@ export const ShareReportModal = ({
 
   // Feature 3: Compute Intelligent Financial Insight
   const smartInsight = useMemo(
-    () => generateSmartInsight(title, inputs, results, isLoanSchedule),
-    [title, inputs, results, isLoanSchedule]
+    () => generateSmartInsight(title, inputs, results, isLoanSchedule, symbol),
+    [title, inputs, results, isLoanSchedule, symbol]
   );
 
   // Feature 6: Condense schedule to annual milestones (default) or clamp to 75 rows (max 3 pages)
@@ -860,18 +1072,52 @@ export const ShareReportModal = ({
     }
     text += `-----------------------------------\n`;
     text += `INPUT PARAMETERS:\n`;
-    inputs.forEach((item) => {
-      text += `• ${item.label}: ${item.value}\n`;
-    });
+    if (donutData?.multiLoans && donutData.multiLoans.length >= 2) {
+      donutData.multiLoans.forEach((loan, lIdx) => {
+        text += `\n[${loan.title}]\n`;
+        const loanInputs = inputs.filter((inp) =>
+          loan.title && inp.label.toLowerCase().includes(loan.title.toLowerCase())
+        );
+        const itemsToRender =
+          loanInputs.length > 0
+            ? loanInputs
+            : inputs.filter((_, idx) => idx % donutData.multiLoans!.length === lIdx);
+        itemsToRender.forEach((item) => {
+          const cleanLabel = item.label.replace(new RegExp(loan.title, "i"), "").trim();
+          text += `• ${cleanLabel || item.label}: ${item.value}\n`;
+        });
+      });
+    } else {
+      inputs.forEach((item) => {
+        text += `• ${item.label}: ${item.value}\n`;
+      });
+    }
     text += `\nSUMMARY & RESULTS:\n`;
     results.forEach((item) => {
       text += `• ${item.label}: ${item.value}\n`;
     });
 
-    if (donutData) {
+    if (donutData?.multiLoans && donutData.multiLoans.length > 0) {
       text += `\n📊 ${donutData.breakdownTitle.toUpperCase()}:\n`;
-      text += `• ${donutData.label1}: ${formatCurrency(donutData.val1)} — ${donutData.pctExact1}\n`;
-      text += `• ${donutData.label2}: ${formatCurrency(donutData.val2)} — ${donutData.pctExact2}\n`;
+      donutData.multiLoans.forEach((loan) => {
+        text += `\n[${loan.title}${loan.isBest ? " ★ Lowest Outflow" : ""}]\n`;
+        text += `• Principal: ${formatCurrency(loan.principal)} (${loan.principalPctExact})\n`;
+        text += `• Interest: ${formatCurrency(loan.interest)} (${loan.interestPctExact})\n`;
+        text += `• Net Outflow: ${formatCurrency(loan.outflow)}\n`;
+      });
+      if (donutData.savingsDiff && donutData.savingsDiff > 0) {
+        text += `\n✓ ${donutData.bestLoanTitle} saves ${formatCurrency(donutData.savingsDiff)} in total net outflow.\n`;
+      }
+    } else if (donutData) {
+      text += `\n📊 ${donutData.breakdownTitle.toUpperCase()}:\n`;
+      if (donutData.items && donutData.items.length > 0) {
+        donutData.items.forEach((item) => {
+          text += `• ${item.label}: ${formatCurrency(item.value)} — ${item.pctExact}\n`;
+        });
+      } else {
+        text += `• ${donutData.label1}: ${formatCurrency(donutData.val1)} — ${donutData.pctExact1}\n`;
+        text += `• ${donutData.label2}: ${formatCurrency(donutData.val2)} — ${donutData.pctExact2}\n`;
+      }
       if (donutData.totalLabel) {
         text += `• ${donutData.totalLabel}: ${formatCurrency(donutData.totalVal)}\n`;
       }
@@ -1453,91 +1699,310 @@ export const ShareReportModal = ({
             <p className="font-semibold text-muted-foreground uppercase text-[10px]">
               Calculation Inputs
             </p>
-            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-              {inputs.map((inp, idx) => (
-                <div key={idx} className="bg-muted/40 p-2 rounded-lg border border-border/50">
-                  <span className="text-[10px] text-muted-foreground block">{inp.label}</span>
-                  <span className="font-semibold text-foreground text-xs">{inp.value}</span>
-                </div>
-              ))}
-            </div>
+            {donutData?.multiLoans && donutData.multiLoans.length >= 2 ? (
+              <div
+                className={`grid ${
+                  donutData.multiLoans.length === 3 ? "grid-cols-3" : "grid-cols-2"
+                } gap-2.5 pt-0.5`}
+              >
+                {donutData.multiLoans.map((loan, lIdx) => {
+                  const loanInputs = inputs.filter((inp) =>
+                    loan.title && inp.label.toLowerCase().includes(loan.title.toLowerCase())
+                  );
+                  const itemsToRender =
+                    loanInputs.length > 0
+                      ? loanInputs
+                      : inputs.filter((_, idx) => idx % donutData.multiLoans!.length === lIdx);
+
+                  return (
+                    <div
+                      key={lIdx}
+                      className="bg-muted/30 p-2.5 rounded-xl border border-border/60 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                        <span className="font-bold text-foreground text-xs">{loan.title}</span>
+                        {loan.isBest && (
+                          <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
+                            ★ Best Option
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-1 pt-0.5">
+                        {itemsToRender.map((inp, idx) => {
+                          const cleanLabel = inp.label
+                            .replace(new RegExp(loan.title, "i"), "")
+                            .trim();
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-background/80 dark:bg-card p-1.5 rounded-lg border border-border/40"
+                            >
+                              <span className="text-[10px] text-muted-foreground block truncate">
+                                {cleanLabel || inp.label}
+                              </span>
+                              <span className="font-semibold text-foreground text-xs block">
+                                {inp.value}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                {inputs.map((inp, idx) => (
+                  <div key={idx} className="bg-muted/40 p-2 rounded-lg border border-border/50">
+                    <span className="text-[10px] text-muted-foreground block">{inp.label}</span>
+                    <span className="font-semibold text-foreground text-xs">{inp.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Feature 1: Visual Asset Allocation & Donut Ratio Breakdown */}
           {donutData && (
-            <div className="bg-muted/30 border border-border/70 rounded-xl p-3 space-y-2.5">
-              <div className="flex items-center justify-between gap-4">
-                {/* Crisp Vector Donut with Center Text (Pure High-DPI PNG Canvas: 100% html2canvas & PDF compatible) */}
-                <div className="relative shrink-0 flex items-center justify-center">
-                  {donutDataUrl ? (
-                    <img
-                      src={donutDataUrl}
-                      alt="Allocation Ratio Donut Chart"
-                      width="76"
-                      height="76"
-                      className="w-[76px] h-[76px] shrink-0 rounded-full shadow-sm"
-                      style={{ width: "76px", height: "76px", display: "block" }}
-                    />
-                  ) : null}
+            donutData.multiLoans && donutData.multiLoans.length >= 2 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between pb-0.5">
+                  <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                    {donutData.breakdownTitle || "Side-by-Side Loan Outflow & Interest Burden"}
+                  </p>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    Principal vs Interest
+                  </span>
                 </div>
 
-                {/* Return Breakdown in simple text */}
-                <div className="flex-1 min-w-0 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between pb-0.5 border-b border-border/40">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      {donutData.breakdownTitle || "Return Breakdown"}
+                <div
+                  className={`grid ${
+                    donutData.multiLoans.length === 3 ? "grid-cols-3" : "grid-cols-2"
+                  } gap-2.5`}
+                >
+                  {donutData.multiLoans.map((loan, idx) => {
+                    const donutImgUrl = multiLoanDonuts[idx]?.donutDataUrl || "";
+                    return (
+                      <div
+                        key={idx}
+                        className={`rounded-xl p-2.5 border transition-all ${
+                          loan.isBest
+                            ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/60 shadow-xs"
+                            : "bg-muted/30 border-border/70"
+                        }`}
+                      >
+                        {/* Header Row: Loan Title + Best Option Badge */}
+                        <div className="flex items-center justify-between pb-1.5 border-b border-border/40 gap-1">
+                          <span className="font-bold text-foreground text-xs truncate">
+                            {loan.title}
+                          </span>
+                          {loan.isBest && (
+                            <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded shrink-0">
+                              ★ Lowest Outflow
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Donut Chart & Key Metrics */}
+                        <div className="flex items-center gap-2.5 pt-2">
+                          <div className="shrink-0 flex items-center justify-center">
+                            {donutImgUrl ? (
+                              <img
+                                src={donutImgUrl}
+                                alt={`${loan.title} Breakdown`}
+                                width="58"
+                                height="58"
+                                className="w-[58px] h-[58px] shrink-0 rounded-full shadow-xs"
+                                style={{ width: "58px", height: "58px", display: "block" }}
+                              />
+                            ) : null}
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-1 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-muted-foreground truncate">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: loan.color1 }}
+                                />
+                                <span className="truncate text-[10px]">Principal:</span>
+                              </span>
+                              <span className="font-semibold text-foreground shrink-0 text-[10px]">
+                                {formatCurrency(loan.principal)} ({loan.principalPct}%)
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-muted-foreground truncate">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: loan.color2 }}
+                                />
+                                <span className="truncate text-[10px]">Interest:</span>
+                              </span>
+                              <span className="font-semibold text-amber-600 dark:text-amber-400 shrink-0 text-[10px]">
+                                {formatCurrency(loan.interest)} ({loan.interestPct}%)
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-border/50 font-bold">
+                              <span className="text-muted-foreground truncate text-[10px]">
+                                Net Outflow:
+                              </span>
+                              <span
+                                className={`shrink-0 text-[11px] font-bold ${
+                                  loan.isBest
+                                    ? "text-emerald-700 dark:text-emerald-300"
+                                    : "text-foreground"
+                                }`}
+                              >
+                                {formatCurrency(loan.outflow)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Segmented Bar for visual proportion */}
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full flex overflow-hidden mt-2">
+                          <div
+                            style={{
+                              width: `${loan.principalPct}%`,
+                              backgroundColor: loan.color1,
+                            }}
+                            className="h-full"
+                          />
+                          <div
+                            style={{
+                              width: `${loan.interestPct}%`,
+                              backgroundColor: loan.color2,
+                            }}
+                            className="h-full"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Savings Callout Banner */}
+                {donutData.savingsDiff && donutData.savingsDiff > 0 && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg py-1 px-2.5 flex items-center justify-between text-xs">
+                    <span className="text-emerald-800 dark:text-emerald-300 font-medium text-[11px]">
+                      Optimal Option Advantage
                     </span>
-                    <span className="text-[10px] text-muted-foreground font-mono font-medium">
-                      100.00%
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300 text-[11px]">
+                      ✓ {donutData.bestLoanTitle} saves {formatCurrency(donutData.savingsDiff)} in total net outflow
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 truncate text-muted-foreground font-medium max-w-[55%]">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: donutData.color1 }}
+                )}
+              </div>
+            ) : (
+              <div className="bg-muted/30 border border-border/70 rounded-xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Crisp Vector Donut with Center Text (Pure High-DPI PNG Canvas: 100% html2canvas & PDF compatible) */}
+                  <div className="relative shrink-0 flex items-center justify-center">
+                    {donutDataUrl ? (
+                      <img
+                        src={donutDataUrl}
+                        alt="Allocation Ratio Donut Chart"
+                        width="76"
+                        height="76"
+                        className="w-[76px] h-[76px] shrink-0 rounded-full shadow-sm"
+                        style={{ width: "76px", height: "76px", display: "block" }}
                       />
-                      <span className="truncate">{donutData.label1}:</span>
-                    </span>
-                    <span className="font-bold shrink-0 text-foreground">
-                      {formatCurrency(donutData.val1)} — {donutData.pctExact1}
-                    </span>
+                    ) : null}
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 truncate text-muted-foreground font-medium max-w-[55%]">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: donutData.color2 }}
-                      />
-                      <span className="truncate">{donutData.label2}:</span>
-                    </span>
-                    <span className="font-bold shrink-0 text-foreground">
-                      {formatCurrency(donutData.val2)} — {donutData.pctExact2}
-                    </span>
-                  </div>
-                  {donutData.totalLabel && (
-                    <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60 font-bold text-foreground">
-                      <span className="truncate max-w-[55%]">{donutData.totalLabel}:</span>
-                      <span className="shrink-0 text-primary font-extrabold">
-                        {formatCurrency(donutData.totalVal)}
+
+                  {/* Return Breakdown in simple text */}
+                  <div className="flex-1 min-w-0 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between pb-0.5 border-b border-border/40">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {donutData.breakdownTitle || "Return Breakdown"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono font-medium">
+                        100.00%
                       </span>
                     </div>
+                    {donutData.items && donutData.items.length > 0 ? (
+                      donutData.items.map((it, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5 truncate text-muted-foreground font-medium max-w-[55%]">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: it.color }}
+                            />
+                            <span className="truncate">{it.label}:</span>
+                          </span>
+                          <span className="font-bold shrink-0 text-foreground">
+                            {formatCurrency(it.value)} — {it.pctExact}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5 truncate text-muted-foreground font-medium max-w-[55%]">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: donutData.color1 }}
+                            />
+                            <span className="truncate">{donutData.label1}:</span>
+                          </span>
+                          <span className="font-bold shrink-0 text-foreground">
+                            {formatCurrency(donutData.val1)} — {donutData.pctExact1}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1.5 truncate text-muted-foreground font-medium max-w-[55%]">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: donutData.color2 }}
+                            />
+                            <span className="truncate">{donutData.label2}:</span>
+                          </span>
+                          <span className="font-bold shrink-0 text-foreground">
+                            {formatCurrency(donutData.val2)} — {donutData.pctExact2}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {donutData.totalLabel && (
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60 font-bold text-foreground">
+                        <span className="truncate max-w-[55%]">{donutData.totalLabel}:</span>
+                        <span className="shrink-0 text-primary font-extrabold">
+                          {formatCurrency(donutData.totalVal)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Segmented Visual Allocation Bar (Guaranteed to render on every PDF engine) */}
+                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full flex overflow-hidden">
+                  {donutData.items && donutData.items.length > 0 ? (
+                    donutData.items.map((it, idx) => (
+                      <div
+                        key={idx}
+                        style={{ width: `${it.pct}%`, backgroundColor: it.color }}
+                        className="h-full"
+                      />
+                    ))
+                  ) : (
+                    <>
+                      <div
+                        style={{ width: `${donutData.pct1}%`, backgroundColor: donutData.color1 }}
+                        className="h-full"
+                      />
+                      <div
+                        style={{ width: `${donutData.pct2}%`, backgroundColor: donutData.color2 }}
+                        className="h-full"
+                      />
+                    </>
                   )}
                 </div>
               </div>
-
-              {/* Segmented Visual Allocation Bar (Guaranteed to render on every PDF engine) */}
-              <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full flex overflow-hidden">
-                <div
-                  style={{ width: `${donutData.pct1}%`, backgroundColor: donutData.color1 }}
-                  className="h-full"
-                />
-                <div
-                  style={{ width: `${donutData.pct2}%`, backgroundColor: donutData.color2 }}
-                  className="h-full"
-                />
-              </div>
-            </div>
+            )
           )}
 
           {/* Results Section */}
@@ -1588,9 +2053,9 @@ export const ShareReportModal = ({
                   <p className="font-bold text-blue-900 dark:text-blue-200 text-xs">{sec.title}</p>
                   <div className="space-y-1">
                     {sec.items.map((item, iIdx) => (
-                      <div key={iIdx} className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground">{item.label}:</span>
-                        <span className={`font-semibold ${item.isHighlight ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-foreground"}`}>
+                      <div key={iIdx} className="flex justify-between items-start gap-3 text-xs py-0.5">
+                        <span className="text-muted-foreground shrink-0 font-medium max-w-[42%]">{item.label}:</span>
+                        <span className={`font-semibold text-right leading-relaxed ${item.isHighlight ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-foreground"}`}>
                           {item.value}
                         </span>
                       </div>
