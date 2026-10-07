@@ -52,12 +52,12 @@ const MutualFund = () => {
   const [months, setMonths] = useState(0);
 
   // Direct vs Regular Plan Expense Ratio (TER)
-  const [compareDirectRegular, setCompareDirectRegular] = useState(true);
+  const [compareDirectRegular, setCompareDirectRegular] = useState(false);
   const [directTER, setDirectTER] = useState(0.5); // Direct plan expense ratio %
   const [regularTER, setRegularTER] = useState(1.5); // Regular plan expense ratio %
 
   // Latest 2026 Budget Capital Gains Tax Rules
-  const [taxEnabled, setTaxEnabled] = useState(true);
+  const [taxEnabled, setTaxEnabled] = useState(false);
   const [fundCategory, setFundCategory] = useState<FundCategory>("equity");
   const [incomeTaxSlab, setIncomeTaxSlab] = useState(30); // For debt funds
 

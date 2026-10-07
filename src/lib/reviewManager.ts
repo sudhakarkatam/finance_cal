@@ -101,7 +101,9 @@ export const launchPlayStoreReview = async () => {
       } catch (err) {
         console.warn("InAppReview failed, falling back to market URL", err);
         try {
-          window.location.href = PLAY_STORE_MARKET_URL;
+          // window.open with market:// is correctly intercepted by Android
+          // system to open the Play Store app (window.location.href does NOT work in WebView)
+          window.open(PLAY_STORE_MARKET_URL, "_system");
           return;
         } catch {
           // fallback to web

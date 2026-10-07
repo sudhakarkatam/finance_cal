@@ -468,21 +468,21 @@ const Home = () => {
       <Card
         key={calc.title}
         onClick={() => handleCardClick(calc)}
-        className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[120px] touch-manipulation select-none ${
+        className={`p-3 flex flex-col items-center justify-center gap-2 text-center transition-all min-h-[140px] touch-manipulation select-none ${
           calc.available
             ? "cursor-pointer hover:shadow-lg hover:scale-105 active:scale-95"
             : "opacity-50 cursor-not-allowed"
         }`}
       >
         <div
-          className={`p-2 rounded-full ${
+          className={`p-2.5 rounded-full ${
             calc.available ? colorClasses : "bg-muted"
           }`}
         >
-          <Icon className={`w-6 h-6 ${textColorClass}`} />
+          <Icon className={`w-7 h-7 ${textColorClass}`} />
         </div>
         <div className="flex-1 flex flex-col justify-center">
-          <h3 className="font-semibold text-xs text-foreground leading-tight">
+          <h3 className="font-semibold text-sm text-foreground leading-tight">
             {calc.title}
           </h3>
           <p className="text-xs text-muted-foreground mt-1 leading-tight">

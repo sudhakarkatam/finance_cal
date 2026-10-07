@@ -49,7 +49,7 @@ const RetirementPlanner = () => {
   const [expectedReturnRetirement, setExpectedReturnRetirement] = useState(7); // During retirement
 
   // Advanced features
-  const [inflationEnabled, setInflationEnabled] = useState(true);
+  const [inflationEnabled, setInflationEnabled] = useState(false);
   const [inflationRate, setInflationRate] = useState(6);
   const [pensionEnabled, setPensionEnabled] = useState(false);
   const [monthlyPension, setMonthlyPension] = useState(50000);
